@@ -1,4 +1,4 @@
-package de.kherud.jllama;
+package de.kherud.llama;
 
 public enum LogLevel {
 }

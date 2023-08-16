@@ -17,7 +17,7 @@
  * site: http://www.fsf.org.
  */
 
-package de.kherud.jllama;
+package de.kherud.llama;
 
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;

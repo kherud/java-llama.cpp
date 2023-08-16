@@ -1,4 +1,4 @@
-package de.kherud.jllama;
+package de.kherud.llama;
 
 import java.util.Arrays;
 import java.util.List;
