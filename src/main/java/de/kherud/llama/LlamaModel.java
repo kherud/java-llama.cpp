@@ -1,9 +1,15 @@
 package de.kherud.llama;
 
+import com.sun.jna.Pointer;
+import com.sun.jna.Structure;
 import com.sun.jna.ptr.FloatByReference;
 import de.kherud.llama.foreign.LlamaLibrary;
+import de.kherud.llama.foreign.NativeSize;
 import de.kherud.llama.foreign.llama_context_params;
+import de.kherud.llama.foreign.llama_token_data;
+import de.kherud.llama.foreign.llama_token_data_array;
 
+import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.Iterator;
 
@@ -14,11 +20,13 @@ public class LlamaModel implements AutoCloseable {
 	private final LlamaLibrary.llama_model model;
 	private final LlamaLibrary.llama_context ctx;
 	private final int[] inputIds;
-	private final int[][] scores;
+	private final float[] scores;
 	private int nTokens = 0;
 
 	private int nThreads = 1;
 	private int nVocab;
+	private int topK = 1;
+	private byte sortedCandidates = 0;
 
 
 	public LlamaModel(String filePath) {
@@ -31,7 +39,15 @@ public class LlamaModel implements AutoCloseable {
 		ctx = LlamaLibrary.llama_new_context_with_model(model, params);
 		inputIds = new int[params.n_ctx];
 		nVocab = getVocabularySize();
-		scores = new int[params.n_ctx][nVocab];
+		scores = new float[params.n_ctx * nVocab];
+	}
+
+	public Iterator<String> generate(String prompt) {
+		return new LlamaIterator(prompt);
+	}
+
+	public String complete(String prompt) {
+		return "";
 	}
 
 	public int[] encode(String prompt) {
@@ -74,7 +90,7 @@ public class LlamaModel implements AutoCloseable {
 		LlamaLibrary.llama_free(ctx);
 	}
 
-	public void forward(IntBuffer tokens) throws RuntimeException {
+	void eval(IntBuffer tokens) throws RuntimeException {
 		int nTokens = tokens.capacity();
 		for (int b = 0; b < nTokens; b += params.n_batch) {
 			int batchEnd = Math.min(nTokens, b + params.n_batch);
@@ -88,33 +104,59 @@ public class LlamaModel implements AutoCloseable {
 			for (int i = this.nTokens; i < this.nTokens + nTokens; i++) {
 				inputIds[i] = batch.get(i);
 			}
-//			int offset = params.logits_all > 0 ? 0 : 1;
-//			FloatByReference logits = LlamaLibrary.llama_get_logits(ctx);
-//			logits.
-//			for (int i = this.nTokens + offset; i < this.nTokens + nTokens; i++) {
-//				for (int j = 0; j < nVocab; j++) {
-//					scores[i][j];
-//				}
-//			}
+			int rows, offset;
+			if (params.logits_all > 0) {
+				offset = 0;
+				rows = nTokens;
+			} else {
+				offset = (nTokens - 1) * nVocab;
+				rows = 1;
+			}
+			Pointer logitsPointer = LlamaLibrary.llama_get_logits(ctx).getPointer();
+			float[] logits = logitsPointer.getFloatArray(0, rows * nVocab);
+			System.arraycopy(logits, 0, scores, offset, logits.length);
 		}
 	}
 
-//	private class LlamaIterator implements Iterator<String> {
-//
-//		public LlamaIterator(String prompt) {
-//			MemorySegment promptSegment = arena.allocateUtf8String(prompt);
-//			MemorySegment tokenized = tokenize(promptSegment);
-//		}
-//
-//
-//		@Override
-//		public boolean hasNext() {
-//			return false;
-//		}
-//
-//		@Override
-//		public String next() {
-//			return null;
-//		}
-//	}
+	private void sample() {
+		int topK = this.topK <= 0 ? nVocab : this.topK;
+		IntBuffer tokens = IntBuffer.wrap(inputIds);
+		llama_token_data[] tokenData = (llama_token_data[]) new llama_token_data().toArray(nVocab);
+		for (int i = 0; i < nVocab; i++) {
+			tokenData[i].setLogit(scores[scores.length - nVocab + i]);
+		}
+		llama_token_data_array llamaTokenDataArray = new llama_token_data_array();
+		llamaTokenDataArray.setData((llama_token_data.ByReference) tokenData[0]);
+		llamaTokenDataArray.setSize(new NativeSize(nVocab));
+		llamaTokenDataArray.setSorted(sortedCandidates);
+		LlamaLibrary.llama_sample_repetition_penalty(ctx, llamaTokenDataArray, tokens, new NativeSize(tokens.capacity()), 1);
+	}
+
+	private void setupCandidates() {
+//		Structure[] tokenData = new llama_token_data().toArray(nVocab);
+//		llama_token_data_array llamaTokenDataArray = new llama_token_data_array();
+//		llamaTokenDataArray.setData((llama_token_data.ByReference) tokenData[0]);
+//		llamaTokenDataArray.setSize(new NativeSize(nVocab));
+//		llamaTokenDataArray.setSorted(sortedCandidates);
+	}
+
+	private class LlamaIterator implements Iterator<String> {
+
+		private int token = -1;
+		private int eosToken = LlamaLibrary.llama_token_eos();
+
+		public LlamaIterator(String prompt) {
+
+		}
+
+		@Override
+		public boolean hasNext() {
+			return false;
+		}
+
+		@Override
+		public String next() {
+			return null;
+		}
+	}
 }

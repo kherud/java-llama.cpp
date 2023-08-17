@@ -6,8 +6,8 @@ public class Main {
 
 	public static void main(String... args) {
 		System.out.println(LlamaLibrary.llama_print_system_info());
-		LlamaModel model = new LlamaModel("/Users/konstantin.herud/denkbares/projects/llama.cpp/models/13B/ggml-model-q4_0.bin");
-		model.forward(model.tokenize("Hello, how are you?"));
+		LlamaModel model = new LlamaModel("/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/ggml-model-q4_0.bin");
+		model.eval(model.tokenize("Hello, how are you?"));
 	}
 
 
