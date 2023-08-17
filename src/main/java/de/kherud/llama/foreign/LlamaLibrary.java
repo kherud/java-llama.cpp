@@ -85,23 +85,13 @@ public class LlamaLibrary implements Library {
 	public static native void llama_backend_init(byte numa);
 	public static native void llama_backend_free();
 	public static native long llama_time_us();
-	@Deprecated
-	public static native LlamaLibrary.llama_model llama_load_model_from_file(Pointer path_model, de.kherud.llama.foreign.llama_context_params.ByValue params);
 	public static native LlamaLibrary.llama_model llama_load_model_from_file(String path_model, de.kherud.llama.foreign.llama_context_params.ByValue params);
 	public static native void llama_free_model(LlamaLibrary.llama_model model);
 	public static native LlamaLibrary.llama_context llama_new_context_with_model(LlamaLibrary.llama_model model, de.kherud.llama.foreign.llama_context_params.ByValue params);
-	@Deprecated
-	public static native LlamaLibrary.llama_context llama_init_from_file(Pointer path_model, de.kherud.llama.foreign.llama_context_params.ByValue params);
 	public static native LlamaLibrary.llama_context llama_init_from_file(String path_model, de.kherud.llama.foreign.llama_context_params.ByValue params);
 	public static native void llama_free(LlamaLibrary.llama_context ctx);
-	@Deprecated
-	public static native int llama_model_quantize(Pointer fname_inp, Pointer fname_out, llama_model_quantize_params params);
 	public static native int llama_model_quantize(String fname_inp, String fname_out, llama_model_quantize_params params);
-	@Deprecated
-	public static native int llama_apply_lora_from_file(LlamaLibrary.llama_context ctx, Pointer path_lora, Pointer path_base_model, int n_threads);
 	public static native int llama_apply_lora_from_file(LlamaLibrary.llama_context ctx, String path_lora, String path_base_model, int n_threads);
-	@Deprecated
-	public static native int llama_model_apply_lora_from_file(LlamaLibrary.llama_model model, Pointer path_lora, Pointer path_base_model, int n_threads);
 	public static native int llama_model_apply_lora_from_file(LlamaLibrary.llama_model model, String path_lora, String path_base_model, int n_threads);
 	public static native int llama_get_kv_cache_token_count(LlamaLibrary.llama_context ctx);
 	public static native void llama_set_rng_seed(LlamaLibrary.llama_context ctx, int seed);
@@ -115,23 +105,11 @@ public class LlamaLibrary implements Library {
 	@Deprecated
 	public static native byte llama_load_session_file(LlamaLibrary.llama_context ctx, Pointer path_session, IntByReference tokens_out, NativeSize n_token_capacity, NativeSizeByReference n_token_count_out);
 	public static native byte llama_load_session_file(LlamaLibrary.llama_context ctx, String path_session, IntBuffer tokens_out, NativeSize n_token_capacity, NativeSizeByReference n_token_count_out);
-	@Deprecated
-	public static native byte llama_save_session_file(LlamaLibrary.llama_context ctx, Pointer path_session, IntByReference tokens, NativeSize n_token_count);
 	public static native byte llama_save_session_file(LlamaLibrary.llama_context ctx, String path_session, IntBuffer tokens, NativeSize n_token_count);
-	@Deprecated
-	public static native int llama_eval(LlamaLibrary.llama_context ctx, IntByReference tokens, int n_tokens, int n_past, int n_threads);
 	public static native int llama_eval(LlamaLibrary.llama_context ctx, IntBuffer tokens, int n_tokens, int n_past, int n_threads);
-	@Deprecated
-	public static native int llama_eval_embd(LlamaLibrary.llama_context ctx, FloatByReference embd, int n_tokens, int n_past, int n_threads);
 	public static native int llama_eval_embd(LlamaLibrary.llama_context ctx, float[] embd, int n_tokens, int n_past, int n_threads);
-	@Deprecated
-	public static native int llama_eval_export(LlamaLibrary.llama_context ctx, Pointer fname);
 	public static native int llama_eval_export(LlamaLibrary.llama_context ctx, String fname);
-	@Deprecated
-	public static native int llama_tokenize(LlamaLibrary.llama_context ctx, Pointer text, IntByReference tokens, int n_max_tokens, byte add_bos);
 	public static native int llama_tokenize(LlamaLibrary.llama_context ctx, String text, IntBuffer tokens, int n_max_tokens, byte add_bos);
-	@Deprecated
-	public static native int llama_tokenize_with_model(LlamaLibrary.llama_model model, Pointer text, IntByReference tokens, int n_max_tokens, byte add_bos);
 	public static native int llama_tokenize_with_model(LlamaLibrary.llama_model model, String text, IntBuffer tokens, int n_max_tokens, byte add_bos);
 	public static native int llama_n_vocab(LlamaLibrary.llama_context ctx);
 	public static native int llama_n_ctx(LlamaLibrary.llama_context ctx);
