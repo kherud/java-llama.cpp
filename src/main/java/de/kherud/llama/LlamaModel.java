@@ -16,30 +16,35 @@ import java.util.Iterator;
 
 public class LlamaModel implements AutoCloseable {
 
-	private final llama_context_params.ByValue params;
+	private final Parameters params;
 	private final LlamaLibrary.llama_model model;
 	private final LlamaLibrary.llama_context ctx;
+	private final int nVocab;
+
 	private final int[] inputIds;
 	private final float[] scores;
 	private int nTokens = 0;
 
-	private int nThreads = 1;
-	private int nVocab;
-	private int topK = 1;
-	private byte sortedCandidates = 0;
+	static {
+		LlamaLibrary.llama_backend_init((byte) 0);
+	}
 
 
 	public LlamaModel(String filePath) {
-		this(filePath, LlamaLibrary.llama_context_default_params());
+		this(filePath, new Parameters.Builder().build());
 	}
 
-	public LlamaModel(String filePath, llama_context_params.ByValue params) {
+	public LlamaModel(String filePath, Parameters params) {
 		this.params = params;
-		model = LlamaLibrary.llama_load_model_from_file(filePath, params);
-		ctx = LlamaLibrary.llama_new_context_with_model(model, params);
-		inputIds = new int[params.n_ctx];
+		model = LlamaLibrary.llama_load_model_from_file(filePath, params.ctx);
+		if (model == null) {
+			throw new RuntimeException("error: unable to load model");
+		}
+		ctx = LlamaLibrary.llama_new_context_with_model(model, params.ctx);
+
+		inputIds = new int[params.ctx.n_ctx];
 		nVocab = getVocabularySize();
-		scores = new float[params.n_ctx * nVocab];
+		scores = new float[params.ctx.n_ctx * nVocab];
 	}
 
 	public Iterator<String> generate(String prompt) {
@@ -64,10 +69,18 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 	public IntBuffer tokenize(String prompt) {
-		IntBuffer tokens = IntBuffer.allocate(params.n_ctx);
-		int nTokens = LlamaLibrary.llama_tokenize(ctx, prompt, tokens, params.n_ctx, (byte) 1);
-		if (nTokens < 0) {
-			throw new RuntimeException("tokenization failed");
+		// Add a space in front of the first character to match OG llama tokenizer behavior (taken from main.cpp)
+		if (!prompt.startsWith(" ")) {
+			prompt = " " + prompt;
+		}
+
+		IntBuffer tokens = IntBuffer.allocate(params.ctx.n_ctx);
+		int nTokens = LlamaLibrary.llama_tokenize(ctx, prompt, tokens, params.ctx.n_ctx, (byte) 1);
+		if (nTokens < -params.ctx.n_ctx + 4) {
+			String msg = String.format("error: prompt is too long (%d tokens, max %d)\n", -nTokens, params.ctx.n_ctx - 4);
+			throw new RuntimeException(msg);
+		} else if (nTokens < 0) {
+			throw new RuntimeException("tokenization failed due to unknown reasons");
 		}
 		return tokens.slice(0, nTokens);
 	}
@@ -92,12 +105,12 @@ public class LlamaModel implements AutoCloseable {
 
 	void eval(IntBuffer tokens) throws RuntimeException {
 		int nTokens = tokens.capacity();
-		for (int b = 0; b < nTokens; b += params.n_batch) {
-			int batchEnd = Math.min(nTokens, b + params.n_batch);
+		for (int b = 0; b < nTokens; b += params.ctx.n_batch) {
+			int batchEnd = Math.min(nTokens, b + params.ctx.n_batch);
 			IntBuffer batch = tokens.slice(b, batchEnd);
 			int batchSize = batchEnd - b;
-			int nPast = Math.min(params.n_ctx - batchSize, inputIds.length);
-			int result = LlamaLibrary.llama_eval(ctx, batch, nTokens, nPast, nThreads);
+			int nPast = Math.min(params.ctx.n_ctx - batchSize, inputIds.length);
+			int result = LlamaLibrary.llama_eval(ctx, batch, nTokens, nPast, params.nThreads);
 			if (result != 0) {
 				throw new RuntimeException("llama_eval returned " + result);
 			}
@@ -105,7 +118,7 @@ public class LlamaModel implements AutoCloseable {
 				inputIds[i] = batch.get(i);
 			}
 			int rows, offset;
-			if (params.logits_all > 0) {
+			if (params.ctx.logits_all > 0) {
 				offset = 0;
 				rows = nTokens;
 			} else {
@@ -119,7 +132,7 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 	private void sample() {
-		int topK = this.topK <= 0 ? nVocab : this.topK;
+		int topK = params.topK <= 0 ? nVocab : params.topK;
 		IntBuffer tokens = IntBuffer.wrap(inputIds);
 		llama_token_data[] tokenData = (llama_token_data[]) new llama_token_data().toArray(nVocab);
 		for (int i = 0; i < nVocab; i++) {
@@ -128,7 +141,7 @@ public class LlamaModel implements AutoCloseable {
 		llama_token_data_array llamaTokenDataArray = new llama_token_data_array();
 		llamaTokenDataArray.setData((llama_token_data.ByReference) tokenData[0]);
 		llamaTokenDataArray.setSize(new NativeSize(nVocab));
-		llamaTokenDataArray.setSorted(sortedCandidates);
+//		llamaTokenDataArray.setSorted(params.sortedCandidates);
 		LlamaLibrary.llama_sample_repetition_penalty(ctx, llamaTokenDataArray, tokens, new NativeSize(tokens.capacity()), 1);
 	}
 
@@ -138,6 +151,23 @@ public class LlamaModel implements AutoCloseable {
 //		llamaTokenDataArray.setData((llama_token_data.ByReference) tokenData[0]);
 //		llamaTokenDataArray.setSize(new NativeSize(nVocab));
 //		llamaTokenDataArray.setSorted(sortedCandidates);
+	}
+
+	private void validateParams() {
+		if (params.ctx.rope_freq_base != 10000.0) {
+			System.out.printf("warning: changing RoPE frequency base to %g (default 10000.0)\n", params.ctx.rope_freq_base);
+		}
+
+		if (params.ctx.rope_freq_scale != 1.0) {
+			System.out.printf("warning: scaling RoPE frequency by %g (default 1.0)\n", params.ctx.rope_freq_scale);
+		}
+
+		if (params.ctx.n_ctx > 2048) {
+			System.out.printf("warning: base model only supports context sizes no greater than 2048 tokens (%d specified)\n", params.ctx.n_ctx);
+		} else if (params.ctx.n_ctx < 8) {
+			System.out.println("warning: minimum context size is 8, using minimum size.");
+			params.ctx.setN_ctx(8);
+		}
 	}
 
 	private class LlamaIterator implements Iterator<String> {

@@ -71,9 +71,11 @@ public class LlamaLibrary implements Library {
 	public static final int LLAMA_SESSION_VERSION = 1;
 	public static final long LLAMA_DEFAULT_SEED = 0xFFFFFFFFL;
 	public static final float LLAMA_DEFAULT_RMS_EPS = 5e-6f;
+	@FunctionalInterface
 	public interface llama_progress_callback extends Callback {
 		void apply(float progress, Pointer ctx);
 	}
+	@FunctionalInterface
 	public interface llama_log_callback extends Callback {
 		void apply(int level, Pointer text, Pointer user_data);
 	}
