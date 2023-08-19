@@ -1,28 +1,42 @@
 package de.kherud.llama;
 
+import java.nio.FloatBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.FloatByReference;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import de.kherud.llama.foreign.LlamaLibrary;
 import de.kherud.llama.foreign.NativeSize;
 import de.kherud.llama.foreign.llama_context_params;
 
-public class Parameters {
+/**
+ * Parameters used throughout the lifecycle of the llama model.
+ * Note, that they are currently blindly copied from llama.cpp.
+ * Many won't find a use in this project.
+ */
+public final class Parameters {
 
+	@NotNull
 	public final llama_context_params.ByValue ctx;
+	@NotNull
+	public final BiConsumer<Integer, String> logCallback;
 	public final int nThreads;
 	public final int nPredict;   // new tokens to predict
 	public final int nKeep;    // number of tokens to keep from initial prompt
 	public final int nChunks;   // max number of chunks to process (-1 = unlimited)
 	public final int nProbs;    // if greater than 0, output the probabilities of top nProbs tokens.
+	@Nullable
 	public final Map<Integer, Float> logitBias; // logit bias for specific tokens
 	public final int topK; // <= 0 to use vocab size
+	public final NativeSize topKMinKeep;
 	public final float topP; // 1.0 = disabled
 	public final float tfsZ; // 1.0 = disabled
 	public final float typicalP; // 1.0 = disabled
@@ -31,19 +45,28 @@ public class Parameters {
 	public final int repeatLastN; // last n tokens to penalize (0 = disable penalty, -1 = context size)
 	public final float frequencyPenalty; // 0.0 = disabled
 	public final float presencePenalty; // 0.0 = disabled
-	public final int mirostat; // 0 = disabled, 1 = mirostat, 2 = mirostat 2.0
+	public final MiroStat mirostat; // 0 = disabled, 1 = mirostat, 2 = mirostat 2.0
 	public final float mirostatTau; // target entropy
 	public final float mirostatEta; // learning rate
+	public final int mirostatM; // ??
+	public final FloatBuffer mirostatMu; // ??
 	public final String cfgNegativePrompt;       // string to help guidance
 	public final float cfgScale;   // How strong is guidance
+	@Nullable
 	public final String pathPromptCache;  // path to file for saving/loading prompt eval state
+	@Nullable
 	public final String inputPrefix;  // string to prefix user inputs with
+	@Nullable
 	public final String inputSuffix;  // string to suffix user inputs with
+	@Nullable
 	public final String grammar;  // optional BNF-like grammar to constrain sampling
-	public final List<String> antiprompt; // string upon seeing which more user input is prompted
+	public final List<@NotNull String> antiprompt; // string upon seeing which more user input is prompted
+	@Nullable
 	public final String loraAdapter;  // lora adapter path
+	@Nullable
 	public final String loraBase;  // base model path for the lora adapter
 	public final boolean hellaswag; // compute HellaSwag score over random tasks from datafile supplied in prompt
+	@Nullable
 	public final NativeSize hellaswagTasks;   // number of tasks to use when computing the HellaSwag score
 	public final boolean memoryF16;  // use f16 instead of f32 for memory kv
 	public final boolean randomPrompt; // do not randomize prompt if none provided
@@ -64,14 +87,16 @@ public class Parameters {
 	public final boolean verbosePrompt; // print prompt tokens before generation
 
 	private Parameters(
-			llama_context_params.ByValue ctx,
+			llama_context_params.@NotNull ByValue ctx,
+			@NotNull BiConsumer<Integer, String> logCallback,
 			int nThreads,
 			int nPredict,
 			int nKeep,
 			int nChunks,
 			int nProbs,
-			Map<Integer, Float> logitBias,
+			@Nullable Map<Integer, Float> logitBias,
 			int topK,
+			int topKMinKeep,
 			float topP,
 			float tfsZ,
 			float typicalP,
@@ -80,20 +105,22 @@ public class Parameters {
 			int repeatLastN,
 			float frequencyPenalty,
 			float presencePenalty,
-			int mirostat,
+			MiroStat mirostat,
 			float mirostatTau,
 			float mirostatEta,
+			int mirostatM,
+			float mirostatMu,
 			String cfgNegativePrompt,
 			float cfgScale,
-			String pathPromptCache,
-			String inputPrefix,
-			String inputSuffix,
-			String grammar,
+			@Nullable String pathPromptCache,
+			@Nullable String inputPrefix,
+			@Nullable String inputSuffix,
+			@Nullable String grammar,
 			List<String> antiprompt,
-			String loraAdapter,
-			String loraBase,
+			@Nullable String loraAdapter,
+			@Nullable String loraBase,
 			boolean hellaswag,
-			NativeSize hellaswagTasks,
+			@Nullable NativeSize hellaswagTasks,
 			boolean memoryF16,
 			boolean randomPrompt,
 			boolean useColor,
@@ -113,6 +140,7 @@ public class Parameters {
 			boolean verbosePrompt
 	) {
 		this.ctx = ctx;
+		this.logCallback = logCallback;
 		this.nThreads = nThreads;
 		this.nPredict = nPredict;
 		this.nKeep = nKeep;
@@ -120,6 +148,7 @@ public class Parameters {
 		this.nProbs = nProbs;
 		this.logitBias = logitBias;
 		this.topK = topK;
+		this.topKMinKeep = new NativeSize(topKMinKeep);
 		this.topP = topP;
 		this.tfsZ = tfsZ;
 		this.typicalP = typicalP;
@@ -131,6 +160,8 @@ public class Parameters {
 		this.mirostat = mirostat;
 		this.mirostatTau = mirostatTau;
 		this.mirostatEta = mirostatEta;
+		this.mirostatM = mirostatM;
+		this.mirostatMu = FloatBuffer.wrap(new float[]{mirostatMu});
 		this.cfgNegativePrompt = cfgNegativePrompt;
 		this.cfgScale = cfgScale;
 		this.pathPromptCache = pathPromptCache;
@@ -165,6 +196,8 @@ public class Parameters {
 
 		private final llama_context_params.ByValue ctxParams = LlamaLibrary.llama_context_default_params();
 
+		private BiConsumer<Integer, String> logCallback = (level, msg) -> System.out.println(msg);
+
 		private int nThreads = Runtime.getRuntime().availableProcessors();
 		private int nPredict = -1;   // new tokens to predict
 		private int nKeep = 0;    // number of tokens to keep from initial prompt
@@ -174,6 +207,7 @@ public class Parameters {
 		// sampling parameters
 		private Map<Integer, Float> logitBias; // logit bias for specific tokens
 		private int topK = 40;    // <= 0 to use vocab size
+		private int topKMinKeep = 1;    // <= 0 to use vocab size
 		private float topP = 0.95f; // 1.0 = disabled
 		private float tfsZ = 1.00f; // 1.0 = disabled
 		private float typicalP = 1.00f; // 1.0 = disabled
@@ -182,26 +216,25 @@ public class Parameters {
 		private int repeatLastN = 64;    // last n tokens to penalize (0 = disable penalty, -1 = context size)
 		private float frequencyPenalty = 0.00f; // 0.0 = disabled
 		private float presencePenalty = 0.00f; // 0.0 = disabled
-		private int mirostat = 0;     // 0 = disabled, 1 = mirostat, 2 = mirostat 2.0
+		private MiroStat mirostat = MiroStat.Disabled;     // 0 = disabled, 1 = mirostat, 2 = mirostat 2.0
 		private float mirostatTau = 5.00f; // target entropy
 		private float mirostatEta = 0.10f; // learning rate
+		private int mirostatM = 100; // ??
+		private float mirostatMu = 2 * mirostatTau; // ??
 
 		// Classifier-Free Guidance
 		// https://arxiv.org/abs/2306.17806
 		private String cfgNegativePrompt;       // string to help guidance
 		private float cfgScale = 1.f;   // How strong is guidance
 
-		private String model = "models/7B/ggml-model.bin"; // model path
-		private String modelAlias = "unknown"; // model alias
-		private String prompt = "";
-		private String pathPromptCache = "";  // path to file for saving/loading prompt eval state
-		private String inputPrefix = "";  // string to prefix user inputs with
-		private String inputSuffix = "";  // string to suffix user inputs with
-		private String grammar = "";  // optional BNF-like grammar to constrain sampling
+		private String pathPromptCache = null;  // path to file for saving/loading prompt eval state
+		private String inputPrefix = null;  // string to prefix user inputs with
+		private String inputSuffix = null;  // string to suffix user inputs with
+		private String grammar = null;  // optional BNF-like grammar to constrain sampling
 		private List<String> antiprompt; // string upon seeing which more user input is prompted
 
-		private String loraAdapter = "";  // lora adapter path
-		private String loraBase = "";  // base model path for the lora adapter
+		private String loraAdapter = null;  // lora adapter path
+		private String loraBase = null;  // base model path for the lora adapter
 
 		private boolean hellaswag = false; // compute HellaSwag score over random tasks from datafile supplied in prompt
 		private NativeSize hellaswagTasks = new NativeSize(400);   // number of tasks to use when computing the HellaSwag score
@@ -229,6 +262,7 @@ public class Parameters {
 		public Parameters build() {
 			return new Parameters(
 					ctxParams,
+					logCallback,
 					nThreads,
 					nPredict,
 					nKeep,
@@ -236,6 +270,7 @@ public class Parameters {
 					nProbs,
 					logitBias,
 					topK,
+					topKMinKeep,
 					topP,
 					tfsZ,
 					typicalP,
@@ -247,6 +282,8 @@ public class Parameters {
 					mirostat,
 					mirostatTau,
 					mirostatEta,
+					mirostatM,
+					mirostatMu,
 					cfgNegativePrompt,
 					cfgScale,
 					pathPromptCache,
@@ -278,6 +315,11 @@ public class Parameters {
 			);
 		}
 
+		public Builder setLogCallback(@NotNull BiConsumer<Integer, String> callback) {
+			this.logCallback = callback;
+			return this;
+		}
+
 		public Builder setnThreads(int nThreads) {
 			this.nThreads = nThreads;
 			return this;
@@ -303,13 +345,18 @@ public class Parameters {
 			return this;
 		}
 
-		public Builder setLogitBias(Map<Integer, Float> logitBias) {
+		public Builder setLogitBias(@NotNull Map<Integer, Float> logitBias) {
 			this.logitBias = Collections.unmodifiableMap(logitBias);
 			return this;
 		}
 
 		public Builder setTopK(int topK) {
 			this.topK = topK;
+			return this;
+		}
+
+		public Builder setTopKMinKeep(int topKMinKeep) {
+			this.topKMinKeep = topKMinKeep;
 			return this;
 		}
 
@@ -353,8 +400,8 @@ public class Parameters {
 			return this;
 		}
 
-		public Builder setMirostat(int mirostat) {
-			this.mirostat = mirostat;
+		public Builder setMirostat(MiroStat mode) {
+			this.mirostat = mode;
 			return this;
 		}
 
@@ -368,7 +415,17 @@ public class Parameters {
 			return this;
 		}
 
-		public Builder setCfgNegativePrompt(String cfgNegativePrompt) {
+		public Builder setMirostatM(int mirostatM) {
+			this.mirostatM = mirostatM;
+			return this;
+		}
+
+		public Builder setMirostatMu(float mirostatMu) {
+			this.mirostatMu = mirostatMu;
+			return this;
+		}
+
+		public Builder setCfgNegativePrompt(@Nullable String cfgNegativePrompt) {
 			this.cfgNegativePrompt = cfgNegativePrompt;
 			return this;
 		}
@@ -378,52 +435,37 @@ public class Parameters {
 			return this;
 		}
 
-		public Builder setModel(String model) {
-			this.model = model;
-			return this;
-		}
-
-		public Builder setModelAlias(String modelAlias) {
-			this.modelAlias = modelAlias;
-			return this;
-		}
-
-		public Builder setPrompt(String prompt) {
-			this.prompt = prompt;
-			return this;
-		}
-
-		public Builder setPathPromptCache(String pathPromptCache) {
+		public Builder setPathPromptCache(@Nullable String pathPromptCache) {
 			this.pathPromptCache = pathPromptCache;
 			return this;
 		}
 
-		public Builder setInputPrefix(String inputPrefix) {
+		public Builder setInputPrefix(@Nullable String inputPrefix) {
 			this.inputPrefix = inputPrefix;
 			return this;
 		}
 
-		public Builder setInputSuffix(String inputSuffix) {
+		public Builder setInputSuffix(@Nullable String inputSuffix) {
 			this.inputSuffix = inputSuffix;
 			return this;
 		}
 
-		public Builder setGrammar(String grammar) {
+		public Builder setGrammar(@Nullable String grammar) {
 			this.grammar = grammar;
 			return this;
 		}
 
-		public Builder setAntiprompt(String[] antiprompt) {
+		public Builder setAntiprompt(@NotNull String[] antiprompt) {
 			this.antiprompt = Collections.unmodifiableList(Arrays.asList(antiprompt));
 			return this;
 		}
 
-		public Builder setLoraAdapter(String loraAdapter) {
+		public Builder setLoraAdapter(@Nullable String loraAdapter) {
 			this.loraAdapter = loraAdapter;
 			return this;
 		}
 
-		public Builder setLoraBase(String loraBase) {
+		public Builder setLoraBase(@Nullable String loraBase) {
 			this.loraBase = loraBase;
 			return this;
 		}
@@ -635,6 +677,19 @@ public class Parameters {
 		public Builder setEmbedding(byte embedding) {
 			ctxParams.setEmbedding(embedding);
 			return this;
+		}
+	}
+
+	public enum MiroStat {
+
+		Disabled(0),
+		V1(1),
+		V2(2);
+
+		private final int level;
+
+		MiroStat(int level) {
+			this.level = level;
 		}
 	}
 }
