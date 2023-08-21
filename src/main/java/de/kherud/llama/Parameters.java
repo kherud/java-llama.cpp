@@ -33,7 +33,7 @@ public final class Parameters {
 	public final int nKeep;    // number of tokens to keep from initial prompt
 	public final int nChunks;   // max number of chunks to process (-1 = unlimited)
 	public final int nProbs;    // if greater than 0, output the probabilities of top nProbs tokens.
-	@Nullable
+	@NotNull
 	public final Map<Integer, Float> logitBias; // logit bias for specific tokens
 	public final int topK; // <= 0 to use vocab size
 	public final NativeSize topKMinKeep;
@@ -205,7 +205,7 @@ public final class Parameters {
 		private int nProbs = 0;    // if greater than 0, output the probabilities of top nProbs tokens.
 
 		// sampling parameters
-		private Map<Integer, Float> logitBias; // logit bias for specific tokens
+		private Map<Integer, Float> logitBias = Collections.emptyMap(); // logit bias for specific tokens
 		private int topK = 40;    // <= 0 to use vocab size
 		private int topKMinKeep = 1;    // <= 0 to use vocab size
 		private float topP = 0.95f; // 1.0 = disabled

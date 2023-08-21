@@ -15,27 +15,34 @@ public class LlamaModel implements AutoCloseable {
 
 	private final Parameters params;
 	private final LlamaLibrary.llama_model model;
-	private final LlamaLibrary.llama_context ctx;
-	private final int nVocab;
+	final LlamaLibrary.llama_context ctx;
 
+	// cache some things for performance
+	private final int nVocab;
 	private final int[] inputIds;
 	private final float[] scores;
-	private int nTokens = 0;
+
+	private final Pointer logitsPointer;
+
+	private final llama_token_data.ByReference[] candidateData;
+	private final llama_token_data_array candidates;
 
 	private static final int tokenBos = LlamaLibrary.llama_token_bos();
 	private static final int tokenEos = LlamaLibrary.llama_token_eos();
 	private static final int tokenNl = LlamaLibrary.llama_token_nl();
 
+	private int nTokens = 0;
+
 	static {
 		LlamaLibrary.llama_backend_init((byte) 0);
 	}
-
 
 	public LlamaModel(String filePath) {
 		this(filePath, new Parameters.Builder().build());
 	}
 
 	public LlamaModel(String filePath, Parameters params) {
+		// load the model
 		this.params = params;
 		model = LlamaLibrary.llama_load_model_from_file(filePath, params.ctx);
 		if (model == null) {
@@ -43,12 +50,28 @@ public class LlamaModel implements AutoCloseable {
 		}
 		ctx = LlamaLibrary.llama_new_context_with_model(model, params.ctx);
 
+		// load lora adapter if configured
+		if (params.loraAdapter != null
+				&& params.loraBase != null
+				&& LlamaLibrary.llama_model_apply_lora_from_file(model, params.loraAdapter, params.loraBase, params.nThreads) != 0) {
+			throw new RuntimeException("error: unable to apply lora");
+		}
+
+		// setup some cached variables used throughout lifecycle
 		inputIds = new int[params.ctx.n_ctx];
 		nVocab = getVocabularySize();
 		scores = new float[params.ctx.n_ctx * nVocab];
 
+		logitsPointer = LlamaLibrary.llama_get_logits(ctx).getPointer();
+
+		candidateData = (llama_token_data.ByReference[]) new llama_token_data.ByReference().toArray(nVocab);
+		candidates = new llama_token_data_array();
+		candidates.setData(candidateData[0]);
+		candidates.setSize(new NativeSize(nVocab));
+		candidates.setSorted((byte) 0);
+
 		// do one empty run to warm up the model (taken from main.cpp)
-		warmup();
+//		warmup();
 	}
 
 	public Iterator<String> generate(String prompt) {
@@ -107,7 +130,7 @@ public class LlamaModel implements AutoCloseable {
 		} else if (nTokens < 0) {
 			throw new RuntimeException("tokenization failed due to unknown reasons");
 		}
-		return tokens.slice(0, nTokens);
+		return tokens;
 	}
 
 	public int getContextSize() {
@@ -137,24 +160,25 @@ public class LlamaModel implements AutoCloseable {
 				msgBuilder.append(msg);
 			}
 			params.logCallback.accept(LlamaLibrary.llama_log_level.LLAMA_LOG_LEVEL_INFO, msgBuilder.toString());
-//
-//			if (ctx_guidance) {
-//				fprintf(stderr, "\n");
-//				fprintf(stderr, "%s: negative prompt: '%s'\n", __func__, params.cfg_negative_prompt.c_str());
-//				fprintf(stderr, "%s: number of tokens in negative prompt = %zu\n", __func__, guidance_inp.size());
-//				for (int i = 0; i < (int) guidance_inp.size(); i++) {
-//					fprintf(stderr, "%6d -> '%s'\n", guidance_inp[i], llama_token_to_str(ctx, guidance_inp[i]));
-//				}
-//			}
-//
-//			if (params.n_keep > 0) {
-//				fprintf(stderr, "%s: static prompt based on n_keep: '", __func__);
-//				for (int i = 0; i < params.n_keep; i++) {
-//					fprintf(stderr, "%s", llama_token_to_str(ctx, embd_inp[i]));
-//				}
-//				fprintf(stderr, "'\n");
-//			}
-//			fprintf(stderr, "\n");
+			/*
+			if (ctx_guidance) {
+				fprintf(stderr, "\n");
+				fprintf(stderr, "%s: negative prompt: '%s'\n", __func__, params.cfg_negative_prompt.c_str());
+				fprintf(stderr, "%s: number of tokens in negative prompt = %zu\n", __func__, guidance_inp.size());
+				for (int i = 0; i < (int) guidance_inp.size(); i++) {
+					fprintf(stderr, "%6d -> '%s'\n", guidance_inp[i], llama_token_to_str(ctx, guidance_inp[i]));
+				}
+			}
+
+			if (params.n_keep > 0) {
+				fprintf(stderr, "%s: static prompt based on n_keep: '", __func__);
+				for (int i = 0; i < params.n_keep; i++) {
+					fprintf(stderr, "%s", llama_token_to_str(ctx, embd_inp[i]));
+				}
+				fprintf(stderr, "'\n");
+			}
+			fprintf(stderr, "\n");
+			 */
 		}
 
 
@@ -169,28 +193,32 @@ public class LlamaModel implements AutoCloseable {
 	void eval(IntBuffer tokens) throws RuntimeException {
 		int nTokens = tokens.capacity();
 		for (int b = 0; b < nTokens; b += params.ctx.n_batch) {
+			applyLogitBias(logitsPointer);
 			int batchEnd = Math.min(nTokens, b + params.ctx.n_batch);
 			IntBuffer batch = tokens.slice(b, batchEnd);
-			int batchSize = batchEnd - b;
-			int nPast = Math.min(params.ctx.n_ctx - batchSize, inputIds.length);
-			int result = LlamaLibrary.llama_eval(ctx, batch, nTokens, nPast, params.nThreads);
+			int nBatch = batchEnd - b;
+			int nPast = Math.min(params.ctx.n_ctx - nBatch, inputIds.length);
+			int result = LlamaLibrary.llama_eval(ctx, batch, nBatch, nPast, params.nThreads);
 			if (result != 0) {
 				throw new RuntimeException("llama_eval returned " + result);
 			}
-			for (int i = this.nTokens; i < this.nTokens + nTokens; i++) {
+			for (int i = this.nTokens; i < this.nTokens + nBatch; i++) {
 				inputIds[i] = batch.get(i);
 			}
 			int rows, offset;
 			if (params.ctx.logits_all > 0) {
 				offset = 0;
-				rows = nTokens;
+				rows = nBatch;
 			} else {
-				offset = (params.ctx.n_ctx - 1) * nVocab;
+				offset = nBatch - 1;
 				rows = 1;
 			}
-			Pointer logitsPointer = LlamaLibrary.llama_get_logits(ctx).getPointer();
+
+			// Save only the last token logits if logits_all is false
 			float[] logits = logitsPointer.getFloatArray(0, rows * nVocab);
-			System.arraycopy(logits, 0, scores, offset, logits.length);
+			int destPos = (this.nTokens + offset) * nVocab;
+			System.arraycopy(logits, 0, scores, destPos, nBatch);
+			this.nTokens += nBatch;
 		}
 	}
 
@@ -198,7 +226,9 @@ public class LlamaModel implements AutoCloseable {
 	int sample() {
 		IntBuffer tokens = IntBuffer.wrap(inputIds);
 
-		llama_token_data_array candidates = sampleCandidates();
+		for (int i = 0; i < nVocab; i++) {
+			candidateData[i].setLogit(scores[scores.length - nVocab + i]);
+		}
 		samplePenalty(candidates, tokens);
 
 		if (params.grammar != null) {
@@ -225,20 +255,6 @@ public class LlamaModel implements AutoCloseable {
 		}
 
 		return token;
-	}
-
-	private llama_token_data_array sampleCandidates() {
-		llama_token_data.ByReference[] tokenData = (llama_token_data.ByReference[]) new llama_token_data.ByReference().toArray(nVocab);
-		for (int i = 0; i < nVocab; i++) {
-			tokenData[i].setLogit(scores[scores.length - nVocab + i]);
-		}
-
-		llama_token_data_array candidates = new llama_token_data_array();
-		candidates.setData(tokenData[0]);
-		candidates.setSize(new NativeSize(nVocab));
-		candidates.setSorted((byte) 0);
-
-		return candidates;
 	}
 
 	private void samplePenalty(llama_token_data_array candidates, IntBuffer lastTokens) {
@@ -368,6 +384,10 @@ public class LlamaModel implements AutoCloseable {
 
 	}
 
+	private void applyLogitBias(Pointer logits) {
+		params.logitBias.forEach((id, bias) -> logits.setFloat(id * Float.BYTES, bias));
+	}
+
 	private void warmup() {
 		int bosToken = LlamaLibrary.llama_token_bos();
 		IntBuffer intBuffer = IntBuffer.wrap(new int[]{bosToken});
@@ -378,7 +398,8 @@ public class LlamaModel implements AutoCloseable {
 	private class LlamaIterator implements Iterator<String> {
 
 		private IntBuffer tokens;
-		private int[] stopTokens;
+		private int nPast = 0;
+		private int nRemain = params.nPredict;
 
 		public LlamaIterator(String prompt) {
 			tokens = tokenize(prompt);
@@ -386,7 +407,7 @@ public class LlamaModel implements AutoCloseable {
 
 		@Override
 		public boolean hasNext() {
-			return false;
+			return nRemain != 0 && !isAntiprompt();
 		}
 
 		@Override
@@ -400,10 +421,14 @@ public class LlamaModel implements AutoCloseable {
 				maxTokens = params.ctx.n_ctx - tokens.capacity();
 			}
 
-			stopTokens = new int[1 + params.antiprompt.size()];
-			stopTokens[0] = LlamaLibrary.llama_token_eos();
+//			stopTokens = new int[1 + params.antiprompt.size()];
+//			stopTokens[0] = LlamaLibrary.llama_token_eos();
 
 
+		}
+
+		private boolean isAntiprompt() {
+			return false;
 		}
 	}
 

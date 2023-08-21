@@ -77,7 +77,7 @@ public class LlamaLibrary implements Library {
 	}
 	@FunctionalInterface
 	public interface llama_log_callback extends Callback {
-		void apply(int level, Pointer text, Pointer user_data);
+		void apply(int level, String text, Pointer user_data);
 	}
 	public static native void llama_log_set(LlamaLibrary.llama_log_callback log_callback, Pointer user_data);
 	public static native int llama_max_devices();
@@ -91,10 +91,8 @@ public class LlamaLibrary implements Library {
 	public static native LlamaLibrary.llama_model llama_load_model_from_file(String path_model, de.kherud.llama.foreign.llama_context_params.ByValue params);
 	public static native void llama_free_model(LlamaLibrary.llama_model model);
 	public static native LlamaLibrary.llama_context llama_new_context_with_model(LlamaLibrary.llama_model model, de.kherud.llama.foreign.llama_context_params.ByValue params);
-	public static native LlamaLibrary.llama_context llama_init_from_file(String path_model, de.kherud.llama.foreign.llama_context_params.ByValue params);
 	public static native void llama_free(LlamaLibrary.llama_context ctx);
 	public static native int llama_model_quantize(String fname_inp, String fname_out, llama_model_quantize_params params);
-	public static native int llama_apply_lora_from_file(LlamaLibrary.llama_context ctx, String path_lora, String path_base_model, int n_threads);
 	public static native int llama_model_apply_lora_from_file(LlamaLibrary.llama_model model, String path_lora, String path_base_model, int n_threads);
 	public static native int llama_get_kv_cache_token_count(LlamaLibrary.llama_context ctx);
 	public static native void llama_set_rng_seed(LlamaLibrary.llama_context ctx, int seed);
