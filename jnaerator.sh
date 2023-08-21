@@ -8,7 +8,7 @@ java -jar jnaerator.jar \
 	-package de.kherud.llama.foreign \
 	-limitComments \
 	-noComments \
-	-o ../src/main/java \
+	-o src/main/java \
 	 -preferJavac \
 	 -mode Directory \
 	 -runtime JNA \
