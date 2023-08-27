@@ -23,6 +23,7 @@ public class LlamaModel implements AutoCloseable {
 	private final float[] scores;
 
 	private final Pointer logitsPointer;
+	private final IntBuffer tokenBuffer;
 
 	private final llama_token_data.ByReference[] candidateData;
 	private final llama_token_data_array candidates;
@@ -32,6 +33,12 @@ public class LlamaModel implements AutoCloseable {
 	private static final int tokenNl = LlamaLibrary.llama_token_nl();
 
 	private int nTokens = 0;
+	private int nPast = 0;
+	private int nPromptTokens = 0;
+	private int nKeep = 0;
+	private int nRemain = 0;
+	boolean hasNextToken = false;
+	private int nPredicted = 0;
 
 	static {
 		LlamaLibrary.llama_backend_init((byte) 0);
@@ -58,6 +65,7 @@ public class LlamaModel implements AutoCloseable {
 		}
 
 		// setup some cached variables used throughout lifecycle
+		tokenBuffer = IntBuffer.allocate(params.ctx.n_ctx);
 		inputIds = new int[params.ctx.n_ctx];
 		nVocab = getVocabularySize();
 		scores = new float[params.ctx.n_ctx * nVocab];
@@ -65,6 +73,9 @@ public class LlamaModel implements AutoCloseable {
 		logitsPointer = LlamaLibrary.llama_get_logits(ctx).getPointer();
 
 		candidateData = (llama_token_data.ByReference[]) new llama_token_data.ByReference().toArray(nVocab);
+		for (int i = 0; i < candidateData.length; i++) {
+			candidateData[i].setId(i);
+		}
 		candidates = new llama_token_data_array();
 		candidates.setData(candidateData[0]);
 		candidates.setSize(new NativeSize(nVocab));
@@ -74,13 +85,13 @@ public class LlamaModel implements AutoCloseable {
 //		warmup();
 	}
 
-	public Iterator<String> generate(String prompt) {
+	public Iterator<Output> generate(String prompt) {
 		LlamaLibrary.llama_reset_timings(ctx);
 		return new LlamaIterator(prompt);
 	}
 
-	public String complete(String prompt) {
-		return "";
+	public float[] getEmbedding() {
+		return null;
 	}
 
 	/**
@@ -115,34 +126,54 @@ public class LlamaModel implements AutoCloseable {
 		return builder.toString();
 	}
 
-	// todo: should be private
+	/**
+	 * Returns the context size of the loaded model, e.g., how many tokens the LLM can process at most in one request.
+	 * E.g., for llama 1 this size is 2048.
+	 *
+	 * @return the context size of the loaded model
+	 */
+	public int getContextSize() {
+		return LlamaLibrary.llama_n_ctx(ctx);
+	}
+
+	/**
+	 * Returns the hidden dimensionality of the loaded model, which corresponds to the size of {@link #getEmbedding()}.
+	 * This size typically depends on the amount of parameters in the model, e.g., for llama 2 13b this size is 5120.
+	 *
+	 * @return the amount of embedding dimensions
+	 */
+	public int getEmbeddingSize() {
+		return LlamaLibrary.llama_n_embd(ctx);
+	}
+
+	/**
+	 * Returns the total amount of tokens in the vocabulary.
+	 *
+	 * @return the vocabulary size
+	 */
+	public int getVocabularySize() {
+		return LlamaLibrary.llama_n_vocab(ctx);
+	}
+
+
 	IntBuffer tokenize(String prompt) {
 		// Add a space in front of the first character to match OG llama tokenizer behavior (taken from main.cpp)
 		if (!prompt.startsWith(" ")) {
 			prompt = " " + prompt;
 		}
 
-		IntBuffer tokens = IntBuffer.allocate(params.ctx.n_ctx);
-		int nTokens = LlamaLibrary.llama_tokenize(ctx, prompt, tokens, params.ctx.n_ctx, (byte) 1);
-		if (nTokens < -params.ctx.n_ctx + 4) {
-			String msg = String.format("error: prompt is too long (%d tokens, max %d)\n", -nTokens, params.ctx.n_ctx - 4);
-			throw new RuntimeException(msg);
-		} else if (nTokens < 0) {
+		nPromptTokens = LlamaLibrary.llama_tokenize(ctx, prompt, tokenBuffer, params.ctx.n_ctx, (byte) 1);
+		if (nPromptTokens < 0) {
 			throw new RuntimeException("tokenization failed due to unknown reasons");
 		}
-		return tokens;
-	}
+		nKeep = params.nKeep < 0 ? nPromptTokens : params.nKeep;
+		nKeep = Math.min(params.ctx.n_ctx - 4, nKeep);
+		if (nPromptTokens >= params.ctx.n_ctx) {
+			int nLeft = (params.ctx.n_ctx - nKeep) / 2;
 
-	public int getContextSize() {
-		return LlamaLibrary.llama_n_ctx(ctx);
-	}
-
-	public int getEmbeddingSize() {
-		return LlamaLibrary.llama_n_embd(ctx);
-	}
-
-	public int getVocabularySize() {
-		return LlamaLibrary.llama_n_vocab(ctx);
+			int erasedBlocks = (nPromptTokens - nKeep - nLeft - 1) / nLeft;
+		}
+		return tokenBuffer.slice(0, nPromptTokens);
 	}
 
 	private void logPrompt(String prompt, IntBuffer tokens) {
@@ -180,8 +211,44 @@ public class LlamaModel implements AutoCloseable {
 			fprintf(stderr, "\n");
 			 */
 		}
+	}
 
+	Output nextToken(IntBuffer embd) {
+		Output result;
 
+		if (embd.capacity() >= params.ctx.n_ctx) {
+			// ...
+		}
+
+		while (nPast < embd.capacity()) {
+			int nEval = embd.capacity() - nPast;
+			if (nEval > params.ctx.n_batch) {
+				nEval = params.ctx.n_batch;
+			}
+			if (LlamaLibrary.llama_eval(ctx, embd.slice(nPast, embd.capacity()), nEval, nPast, params.nThreads) != 0) {
+				String msg = String.format("evaluation failed (%d to evaluate, %d past, %d threads)", nEval, nPast, params.nThreads);
+				params.logCallback.accept(LlamaLibrary.llama_log_level.LLAMA_LOG_LEVEL_ERROR, msg);
+				hasNextToken = false;
+				return new Output(-1, 0);
+			}
+			nPast += nEval;
+		}
+
+		if (params.nPredict == 0) {
+			hasNextToken = false;
+			return new Output(tokenEos, 0);
+		}
+
+		result = sample();
+		nRemain--;
+
+		if (result.token == tokenEos) {
+			hasNextToken = false;
+			return result;
+		}
+
+		hasNextToken = params.nPredict == -1 || nRemain > 0;
+		return result;
 	}
 
 	@Override
@@ -223,13 +290,14 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 	// todo: should be private
-	int sample() {
+	Output sample() {
 		IntBuffer tokens = IntBuffer.wrap(inputIds);
 
+		float[] logits = logitsPointer.getFloatArray(0, nVocab);
 		for (int i = 0; i < nVocab; i++) {
-			candidateData[i].setLogit(scores[scores.length - nVocab + i]);
+			candidateData[i].setLogit(logits[i] + params.logitBias.getOrDefault(i, 0f));
 		}
-		samplePenalty(candidates, tokens);
+//		samplePenalty(candidates, tokens);
 
 		if (params.grammar != null) {
 			// todo: how to create a native grammar object? How to obtain grammar rules etc?
@@ -254,7 +322,7 @@ public class LlamaModel implements AutoCloseable {
 			throw new IllegalStateException("grammar not yet implemented");
 		}
 
-		return token;
+		return new Output(token, candidateData[token].p);
 	}
 
 	private void samplePenalty(llama_token_data_array candidates, IntBuffer lastTokens) {
@@ -281,7 +349,11 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 	private int sampleGreedy(llama_token_data_array candidates) {
-		return LlamaLibrary.llama_sample_token_greedy(ctx, candidates);
+		int token = LlamaLibrary.llama_sample_token_greedy(ctx, candidates);
+		if (params.nProbs > 0) {
+			LlamaLibrary.llama_sample_softmax(ctx, candidates);
+		}
+		return token;
 	}
 
 	private int sampleMirostatV1(llama_token_data_array candidates) {
@@ -308,23 +380,29 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 	private int sampleTopK(llama_token_data_array candidates) {
+		NativeSize minKeep = new NativeSize(Math.max(1, params.nProbs));
 		LlamaLibrary.llama_sample_top_k(
 				ctx,
 				candidates,
 				params.topK <= 0 ? nVocab : params.topK,
-				params.topKMinKeep
+				minKeep
 		);
 		LlamaLibrary.llama_sample_tail_free(
 				ctx,
 				candidates,
 				params.tfsZ,
-				params.topKMinKeep
+				minKeep
 		);
 		LlamaLibrary.llama_sample_typical(
 				ctx,
 				candidates,
 				params.topP,
-				params.topKMinKeep
+				minKeep
+		);
+		LlamaLibrary.llama_sample_top_p(ctx,
+				candidates,
+				params.topP,
+				minKeep
 		);
 		LlamaLibrary.llama_sample_temperature(
 				ctx,
@@ -395,7 +473,7 @@ public class LlamaModel implements AutoCloseable {
 		LlamaLibrary.llama_reset_timings(ctx);
 	}
 
-	private class LlamaIterator implements Iterator<String> {
+	private class LlamaIterator implements Iterator<Output> {
 
 		private IntBuffer tokens;
 		private int nPast = 0;
@@ -411,7 +489,7 @@ public class LlamaModel implements AutoCloseable {
 		}
 
 		@Override
-		public String next() {
+		public Output next() {
 			return null;
 		}
 
@@ -432,8 +510,18 @@ public class LlamaModel implements AutoCloseable {
 		}
 	}
 
-	private static class Generation {
+	public final class Output {
+		public final int token;
+		public final float probability;
 
+		private Output(int token, float probability) {
+			this.token = token;
+			this.probability = probability;
+		}
 
+		@Override
+		public String toString() {
+			return LlamaLibrary.llama_token_to_str_with_model(model, token);
+		}
 	}
 }

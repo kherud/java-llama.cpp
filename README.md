@@ -57,3 +57,7 @@ Deployment to Maven Central is coming soon.
 - Grammar
 - Guidance
 - Caching
+- Improve error handling
+- Add synchronization
+- Separate Parameters into ModelParameters and InferenceParameters
+- Return nProp tokens with probability instead of only sampled one

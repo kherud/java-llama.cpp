@@ -15,16 +15,25 @@ public class Main {
 //				.
 		System.out.println(LlamaLibrary.llama_print_system_info());
 		LlamaModel model = new LlamaModel("/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/ggml-model-q4_0.bin");
+
 		IntBuffer tokens = model.tokenize("Hello world, how are you?");
-		FloatByReference buffer = LlamaLibrary.llama_get_logits(model.ctx);
-		buffer.setValue(0);
-		buffer.getPointer().setFloat(Float.BYTES, 1f);
-//		buffer.getPointer().share(Float.BYTES).setFloat();
-		System.out.println(Arrays.toString(buffer.getPointer().getFloatArray(0, model.getVocabularySize())));
-		System.out.println(buffer);
-		int result = LlamaLibrary.llama_eval(model.ctx, tokens, tokens.capacity(), 0, 1);
-		System.out.println(result);
-		System.out.println(Arrays.toString(buffer.getPointer().getFloatArray(0, model.getVocabularySize())));
+		model.hasNextToken = true;
+		while (model.hasNextToken) {
+			LlamaModel.Output token = model.nextToken(tokens);
+			System.out.print(token);
+		}
+
+//		System.out.println(model.getEmbeddingSize());
+//		IntBuffer tokens = model.tokenize("Hello world, how are you?");
+//		FloatByReference buffer = LlamaLibrary.llama_get_logits(model.ctx);
+//		buffer.setValue(0);
+//		buffer.getPointer().setFloat(Float.BYTES, 1f);
+////		buffer.getPointer().share(Float.BYTES).setFloat();
+//		System.out.println(Arrays.toString(buffer.getPointer().getFloatArray(0, model.getVocabularySize())));
+//		System.out.println(buffer);
+//		int result = LlamaLibrary.llama_eval(model.ctx, tokens, tokens.capacity(), 0, 1);
+//		System.out.println(result);
+//		System.out.println(Arrays.toString(buffer.getPointer().getFloatArray(0, model.getVocabularySize())));
 //		model.eval(model.tokenize("Hello, how are you?"));
 //		int token = model.sample();
 //		System.out.println(token);

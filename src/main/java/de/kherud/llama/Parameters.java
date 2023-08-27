@@ -94,7 +94,7 @@ public final class Parameters {
 			int nKeep,
 			int nChunks,
 			int nProbs,
-			@Nullable Map<Integer, Float> logitBias,
+			@NotNull Map<Integer, Float> logitBias,
 			int topK,
 			int topKMinKeep,
 			float topP,
