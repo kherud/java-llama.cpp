@@ -1,3 +1,5 @@
+![llama.cpp b1112](https://img.shields.io/badge/llama.cpp-b1112-informational)
+
 # Java Bindings for [llama.cpp](https://github.com/ggerganov/llama.cpp)
 
 ## Quick Start
