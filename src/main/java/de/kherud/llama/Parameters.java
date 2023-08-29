@@ -580,16 +580,6 @@ public final class Parameters {
 			return this;
 		}
 
-		public Builder setnGqa(int n_gqa) {
-			ctxParams.setN_gqa(n_gqa);
-			return this;
-		}
-
-		public Builder setRmsNormEps(float rms_norm_eps) {
-			ctxParams.setRms_norm_eps(rms_norm_eps);
-			return this;
-		}
-
 		public Builder setnGpuLayers(int n_gpu_layers) {
 			ctxParams.setN_gpu_layers(n_gpu_layers);
 			return this;
@@ -628,6 +618,16 @@ public final class Parameters {
 
 		public Builder setProgressCallbackUserData(Pointer progress_callback_user_data) {
 			ctxParams.setProgress_callback_user_data(progress_callback_user_data);
+			return this;
+		}
+
+		public Builder setLowVram(boolean lowVram) {
+			ctxParams.setLow_vram((byte) (lowVram ? 1 : 0));
+			return this;
+		}
+
+		public Builder setMulMatQ(boolean mulMatQ) {
+			ctxParams.setLow_vram((byte) (mulMatQ ? 1 : 0));
 			return this;
 		}
 

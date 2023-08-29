@@ -28,9 +28,9 @@ public class LlamaModel implements AutoCloseable {
 	private final llama_token_data.ByReference[] candidateData;
 	private final llama_token_data_array candidates;
 
-	private static final int tokenBos = LlamaLibrary.llama_token_bos();
-	private static final int tokenEos = LlamaLibrary.llama_token_eos();
-	private static final int tokenNl = LlamaLibrary.llama_token_nl();
+	private final int tokenBos;
+	private final int tokenEos;
+	private final int tokenNl;
 
 	private int nTokens = 0;
 	private int nPast = 0;
@@ -39,6 +39,7 @@ public class LlamaModel implements AutoCloseable {
 	private int nRemain = 0;
 	boolean hasNextToken = false;
 	private int nPredicted = 0;
+	private int nContext = 0;
 
 	static {
 		LlamaLibrary.llama_backend_init((byte) 0);
@@ -81,6 +82,10 @@ public class LlamaModel implements AutoCloseable {
 		candidates.setSize(new NativeSize(nVocab));
 		candidates.setSorted((byte) 0);
 
+		tokenBos = LlamaLibrary.llama_token_bos(ctx);
+		tokenEos = LlamaLibrary.llama_token_eos(ctx);
+		tokenNl = LlamaLibrary.llama_token_nl(ctx);
+
 		// do one empty run to warm up the model (taken from main.cpp)
 //		warmup();
 	}
@@ -101,14 +106,15 @@ public class LlamaModel implements AutoCloseable {
 	 * @return an array of integers each representing a token id (see {@link #getVocabularySize()})
 	 */
 	public int[] encode(String prompt) {
-		IntBuffer tokens = tokenize(prompt);
-		// return tokens without padding
-		for (int i = 0; i < tokens.capacity(); i++) {
-			if (tokens.get(i) == 0) {
-				return tokens.slice(0, i).array();
-			}
-		}
-		return tokens.array();
+		// IntBuffer tokens = tokenize(prompt);
+		// // return tokens without padding
+		// for (int i = 0; i < tokens.capacity(); i++) {
+		// 	if (tokens.get(i) == 0) {
+		// 		return tokens.slice(0, i).array();
+		// 	}
+		// }
+		// return tokens.array();
+		return null;
 	}
 
 	/**
@@ -120,7 +126,7 @@ public class LlamaModel implements AutoCloseable {
 	public String decode(int[] tokens) {
 		StringBuilder builder = new StringBuilder();
 		for (int token : tokens) {
-			String decoded = LlamaLibrary.llama_token_to_str(ctx, token);
+			String decoded = LlamaLibrary.llama_token_get_text(ctx, token);
 			builder.append(decoded);
 		}
 		return builder.toString();
@@ -156,7 +162,7 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 
-	IntBuffer tokenize(String prompt) {
+	void tokenize(String prompt) {
 		// Add a space in front of the first character to match OG llama tokenizer behavior (taken from main.cpp)
 		if (!prompt.startsWith(" ")) {
 			prompt = " " + prompt;
@@ -173,7 +179,7 @@ public class LlamaModel implements AutoCloseable {
 
 			int erasedBlocks = (nPromptTokens - nKeep - nLeft - 1) / nLeft;
 		}
-		return tokenBuffer.slice(0, nPromptTokens);
+		nContext = nPromptTokens;
 	}
 
 	private void logPrompt(String prompt, IntBuffer tokens) {
@@ -186,7 +192,7 @@ public class LlamaModel implements AutoCloseable {
 					.append("\n");
 			for (int i = 0; i < tokens.capacity(); i++) {
 				int tokenId = tokens.get(i);
-				String tokenStr = LlamaLibrary.llama_token_to_str(ctx, tokenId);
+				String tokenStr = LlamaLibrary.llama_token_get_text(ctx, tokenId);
 				String msg = String.format("%6d -> '%s'", tokens.get(i), tokenStr);
 				msgBuilder.append(msg);
 			}
@@ -213,19 +219,20 @@ public class LlamaModel implements AutoCloseable {
 		}
 	}
 
-	Output nextToken(IntBuffer embd) {
+	Output nextToken() {
 		Output result;
 
-		if (embd.capacity() >= params.ctx.n_ctx) {
+		if (tokenBuffer.capacity() >= params.ctx.n_ctx) {
 			// ...
 		}
 
-		while (nPast < embd.capacity()) {
-			int nEval = embd.capacity() - nPast;
+		while (nPast < nContext) {
+			int nEval = nContext - nPast;
 			if (nEval > params.ctx.n_batch) {
 				nEval = params.ctx.n_batch;
 			}
-			if (LlamaLibrary.llama_eval(ctx, embd.slice(nPast, embd.capacity()), nEval, nPast, params.nThreads) != 0) {
+			System.out.printf("eval %d to %d\n", nPast, nPast + nEval);
+			if (LlamaLibrary.llama_eval(ctx, tokenBuffer.slice(nPast, tokenBuffer.capacity() - nPast), nEval, nPast, params.nThreads) != 0) {
 				String msg = String.format("evaluation failed (%d to evaluate, %d past, %d threads)", nEval, nPast, params.nThreads);
 				params.logCallback.accept(LlamaLibrary.llama_log_level.LLAMA_LOG_LEVEL_ERROR, msg);
 				hasNextToken = false;
@@ -246,6 +253,8 @@ public class LlamaModel implements AutoCloseable {
 			hasNextToken = false;
 			return result;
 		}
+		nContext++;
+		tokenBuffer.put(nContext, result.token);
 
 		hasNextToken = params.nPredict == -1 || nRemain > 0;
 		return result;
@@ -421,7 +430,6 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 	private void createCompletion(String prompt) {
-		IntBuffer tokens = tokenize(prompt);
 
 	}
 
@@ -467,8 +475,7 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 	private void warmup() {
-		int bosToken = LlamaLibrary.llama_token_bos();
-		IntBuffer intBuffer = IntBuffer.wrap(new int[]{bosToken});
+		IntBuffer intBuffer = IntBuffer.wrap(new int[]{tokenBos});
 		eval(intBuffer);
 		LlamaLibrary.llama_reset_timings(ctx);
 	}
@@ -480,7 +487,7 @@ public class LlamaModel implements AutoCloseable {
 		private int nRemain = params.nPredict;
 
 		public LlamaIterator(String prompt) {
-			tokens = tokenize(prompt);
+
 		}
 
 		@Override
@@ -521,7 +528,7 @@ public class LlamaModel implements AutoCloseable {
 
 		@Override
 		public String toString() {
-			return LlamaLibrary.llama_token_to_str_with_model(model, token);
+			return LlamaLibrary.llama_token_get_text(ctx, token);
 		}
 	}
 }

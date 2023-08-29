@@ -35,22 +35,6 @@ public class llama_context_params extends Structure {
 	public void setN_batch(int n_batch) {
 		this.n_batch = n_batch;
 	}
-	/** grouped-query attention (TEMP - will be moved to model hparams) */
-	public int n_gqa;
-	public int getN_gqa() {
-		return n_gqa;
-	}
-	public void setN_gqa(int n_gqa) {
-		this.n_gqa = n_gqa;
-	}
-	/** rms norm epsilon (TEMP - will be moved to model hparams) */
-	public float rms_norm_eps;
-	public float getRms_norm_eps() {
-		return rms_norm_eps;
-	}
-	public void setRms_norm_eps(float rms_norm_eps) {
-		this.rms_norm_eps = rms_norm_eps;
-	}
 	/** number of layers to store in VRAM */
 	public int n_gpu_layers;
 	public int getN_gpu_layers() {
@@ -174,15 +158,15 @@ public class llama_context_params extends Structure {
 	}
 	@Override
 	protected List<String> getFieldOrder() {
-		return Arrays.asList("seed", "n_ctx", "n_batch", "n_gqa", "rms_norm_eps", "n_gpu_layers", "main_gpu", "tensor_split", "rope_freq_base", "rope_freq_scale", "progress_callback", "progress_callback_user_data", "low_vram", "mul_mat_q", "f16_kv", "logits_all", "vocab_only", "use_mmap", "use_mlock", "embedding");
+		return Arrays.asList("seed", "n_ctx", "n_batch", "n_gpu_layers", "main_gpu", "tensor_split", "rope_freq_base", "rope_freq_scale", "progress_callback", "progress_callback_user_data", "low_vram", "mul_mat_q", "f16_kv", "logits_all", "vocab_only", "use_mmap", "use_mlock", "embedding");
 	}
 	public llama_context_params(Pointer peer) {
 		super(peer);
 	}
 	public static class ByReference extends llama_context_params implements Structure.ByReference {
-
-	}
+		
+	};
 	public static class ByValue extends llama_context_params implements Structure.ByValue {
-
-	}
+		
+	};
 }

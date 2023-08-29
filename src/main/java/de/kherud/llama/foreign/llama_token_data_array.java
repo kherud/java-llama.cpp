@@ -9,11 +9,11 @@ import java.util.List;
  * For help, please visit <a href="http://nativelibs4java.googlecode.com/">NativeLibs4Java</a> , <a href="http://rococoa.dev.java.net/">Rococoa</a>, or <a href="http://jna.dev.java.net/">JNA</a>.
  */
 public class llama_token_data_array extends Structure {
-	public llama_token_data.ByReference data;
-	public llama_token_data.ByReference getData() {
+	public de.kherud.llama.foreign.llama_token_data.ByReference data;
+	public de.kherud.llama.foreign.llama_token_data.ByReference getData() {
 		return data;
 	}
-	public void setData(llama_token_data.ByReference data) {
+	public void setData(de.kherud.llama.foreign.llama_token_data.ByReference data) {
 		this.data = data;
 	}
 	public NativeSize size;
@@ -37,7 +37,7 @@ public class llama_token_data_array extends Structure {
 	protected List<String> getFieldOrder() {
 		return Arrays.asList("data", "size", "sorted");
 	}
-	public llama_token_data_array(llama_token_data.ByReference data, NativeSize size, byte sorted) {
+	public llama_token_data_array(de.kherud.llama.foreign.llama_token_data.ByReference data, NativeSize size, byte sorted) {
 		super();
 		this.data = data;
 		this.size = size;
@@ -47,9 +47,9 @@ public class llama_token_data_array extends Structure {
 		super(peer);
 	}
 	public static class ByReference extends llama_token_data_array implements Structure.ByReference {
-
-	}
+		
+	};
 	public static class ByValue extends llama_token_data_array implements Structure.ByValue {
-
-	}
+		
+	};
 }

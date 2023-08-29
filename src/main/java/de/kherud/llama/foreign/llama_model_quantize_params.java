@@ -18,7 +18,7 @@ public class llama_model_quantize_params extends Structure {
 		this.nthread = nthread;
 	}
 	/**
-	 * @see de.kherud.llama.foreign.LlamaLibrary.llama_ftype <br>
+	 * @see llama_ftype<br>
 	 * quantize to this llama_ftype
 	 */
 	public int ftype;
@@ -62,9 +62,9 @@ public class llama_model_quantize_params extends Structure {
 		super(peer);
 	}
 	public static class ByReference extends llama_model_quantize_params implements Structure.ByReference {
-
-	}
+		
+	};
 	public static class ByValue extends llama_model_quantize_params implements Structure.ByValue {
-
-	}
+		
+	};
 }

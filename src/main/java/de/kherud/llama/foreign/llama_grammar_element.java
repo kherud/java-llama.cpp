@@ -9,7 +9,7 @@ import java.util.List;
  * For help, please visit <a href="http://nativelibs4java.googlecode.com/">NativeLibs4Java</a> , <a href="http://rococoa.dev.java.net/">Rococoa</a>, or <a href="http://jna.dev.java.net/">JNA</a>.
  */
 public class llama_grammar_element extends Structure {
-	/** @see de.kherud.llama.foreign.LlamaLibrary.llama_gretype */
+	/** @see llama_gretype */
 	public int type;
 	public int getType() {
 		return type;
@@ -41,9 +41,9 @@ public class llama_grammar_element extends Structure {
 		super(peer);
 	}
 	public static class ByReference extends llama_grammar_element implements Structure.ByReference {
-
-	}
+		
+	};
 	public static class ByValue extends llama_grammar_element implements Structure.ByValue {
-
-	}
+		
+	};
 }

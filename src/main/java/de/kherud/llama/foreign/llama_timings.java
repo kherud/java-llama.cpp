@@ -95,9 +95,9 @@ public class llama_timings extends Structure {
 		super(peer);
 	}
 	public static class ByReference extends llama_timings implements Structure.ByReference {
-
-	}
+		
+	};
 	public static class ByValue extends llama_timings implements Structure.ByValue {
-
-	}
+		
+	};
 }

@@ -50,9 +50,9 @@ public class llama_token_data extends Structure {
 		super(peer);
 	}
 	public static class ByReference extends llama_token_data implements Structure.ByReference {
-
-	}
+		
+	};
 	public static class ByValue extends llama_token_data implements Structure.ByValue {
-
-	}
+		
+	};
 }

@@ -14,12 +14,12 @@ public class Main {
 //		Parameters params = new Parameters.Builder()
 //				.
 		System.out.println(LlamaLibrary.llama_print_system_info());
-		LlamaModel model = new LlamaModel("/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/ggml-model-q4_0.bin");
+		LlamaModel model = new LlamaModel("/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/gguf-model-q4_0.bin");
 
-		IntBuffer tokens = model.tokenize("Hello world, how are you?");
+		model.tokenize("Hello world, how are you?");
 		model.hasNextToken = true;
 		while (model.hasNextToken) {
-			LlamaModel.Output token = model.nextToken(tokens);
+			LlamaModel.Output token = model.nextToken();
 			System.out.print(token);
 		}
 
