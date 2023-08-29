@@ -1,6 +1,7 @@
 package de.kherud.llama;
 
 import com.sun.jna.Pointer;
+import org.jetbrains.annotations.NotNull;
 
 import de.kherud.llama.foreign.LlamaLibrary;
 import de.kherud.llama.foreign.NativeSize;
@@ -8,6 +9,7 @@ import de.kherud.llama.foreign.llama_token_data;
 import de.kherud.llama.foreign.llama_token_data_array;
 
 import java.nio.IntBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 
 
@@ -18,27 +20,24 @@ public class LlamaModel implements AutoCloseable {
 	final LlamaLibrary.llama_context ctx;
 
 	// cache some things for performance
-	private final int nVocab;
-	private final int[] inputIds;
-	private final float[] scores;
-
 	private final Pointer logitsPointer;
 	private final IntBuffer tokenBuffer;
+	private final byte[] tokenPieceBuffer;
 
 	private final llama_token_data.ByReference[] candidateData;
 	private final llama_token_data_array candidates;
+
+	private final int nVocab;
 
 	private final int tokenBos;
 	private final int tokenEos;
 	private final int tokenNl;
 
-	private int nTokens = 0;
 	private int nPast = 0;
 	private int nPromptTokens = 0;
 	private int nKeep = 0;
 	private int nRemain = 0;
 	boolean hasNextToken = false;
-	private int nPredicted = 0;
 	private int nContext = 0;
 
 	static {
@@ -67,20 +66,13 @@ public class LlamaModel implements AutoCloseable {
 
 		// setup some cached variables used throughout lifecycle
 		tokenBuffer = IntBuffer.allocate(params.ctx.n_ctx);
-		inputIds = new int[params.ctx.n_ctx];
+		tokenPieceBuffer = new byte[64];
 		nVocab = getVocabularySize();
-		scores = new float[params.ctx.n_ctx * nVocab];
 
 		logitsPointer = LlamaLibrary.llama_get_logits(ctx).getPointer();
 
 		candidateData = (llama_token_data.ByReference[]) new llama_token_data.ByReference().toArray(nVocab);
-		for (int i = 0; i < candidateData.length; i++) {
-			candidateData[i].setId(i);
-		}
 		candidates = new llama_token_data_array();
-		candidates.setData(candidateData[0]);
-		candidates.setSize(new NativeSize(nVocab));
-		candidates.setSorted((byte) 0);
 
 		tokenBos = LlamaLibrary.llama_token_bos(ctx);
 		tokenEos = LlamaLibrary.llama_token_eos(ctx);
@@ -90,9 +82,15 @@ public class LlamaModel implements AutoCloseable {
 //		warmup();
 	}
 
-	public Iterator<Output> generate(String prompt) {
+	public Iterable<Output> generate(String prompt) {
 		LlamaLibrary.llama_reset_timings(ctx);
-		return new LlamaIterator(prompt);
+		return new Iterable<>() {
+			@NotNull
+			@Override
+			public Iterator<Output> iterator() {
+				return new LlamaIterator(prompt);
+			}
+		};
 	}
 
 	public float[] getEmbedding() {
@@ -164,7 +162,7 @@ public class LlamaModel implements AutoCloseable {
 
 	void tokenize(String prompt) {
 		// Add a space in front of the first character to match OG llama tokenizer behavior (taken from main.cpp)
-		if (!prompt.startsWith(" ")) {
+		if (nContext == 0 && !prompt.startsWith(" ")) {
 			prompt = " " + prompt;
 		}
 
@@ -231,8 +229,8 @@ public class LlamaModel implements AutoCloseable {
 			if (nEval > params.ctx.n_batch) {
 				nEval = params.ctx.n_batch;
 			}
-			System.out.printf("eval %d to %d\n", nPast, nPast + nEval);
-			if (LlamaLibrary.llama_eval(ctx, tokenBuffer.slice(nPast, tokenBuffer.capacity() - nPast), nEval, nPast, params.nThreads) != 0) {
+//			System.out.printf("eval %d to %d\n", nPast, nPast + nEval);
+			if (LlamaLibrary.llama_eval(ctx, tokenBuffer.slice(nPast, nEval), nEval, nPast, params.nThreads) != 0) {
 				String msg = String.format("evaluation failed (%d to evaluate, %d past, %d threads)", nEval, nPast, params.nThreads);
 				params.logCallback.accept(LlamaLibrary.llama_log_level.LLAMA_LOG_LEVEL_ERROR, msg);
 				hasNextToken = false;
@@ -253,8 +251,8 @@ public class LlamaModel implements AutoCloseable {
 			hasNextToken = false;
 			return result;
 		}
-		nContext++;
 		tokenBuffer.put(nContext, result.token);
+		nContext++;
 
 		hasNextToken = params.nPredict == -1 || nRemain > 0;
 		return result;
@@ -266,47 +264,54 @@ public class LlamaModel implements AutoCloseable {
 		LlamaLibrary.llama_free(ctx);
 	}
 
-	void eval(IntBuffer tokens) throws RuntimeException {
-		int nTokens = tokens.capacity();
-		for (int b = 0; b < nTokens; b += params.ctx.n_batch) {
-			applyLogitBias(logitsPointer);
-			int batchEnd = Math.min(nTokens, b + params.ctx.n_batch);
-			IntBuffer batch = tokens.slice(b, batchEnd);
-			int nBatch = batchEnd - b;
-			int nPast = Math.min(params.ctx.n_ctx - nBatch, inputIds.length);
-			int result = LlamaLibrary.llama_eval(ctx, batch, nBatch, nPast, params.nThreads);
-			if (result != 0) {
-				throw new RuntimeException("llama_eval returned " + result);
-			}
-			for (int i = this.nTokens; i < this.nTokens + nBatch; i++) {
-				inputIds[i] = batch.get(i);
-			}
-			int rows, offset;
-			if (params.ctx.logits_all > 0) {
-				offset = 0;
-				rows = nBatch;
-			} else {
-				offset = nBatch - 1;
-				rows = 1;
-			}
-
-			// Save only the last token logits if logits_all is false
-			float[] logits = logitsPointer.getFloatArray(0, rows * nVocab);
-			int destPos = (this.nTokens + offset) * nVocab;
-			System.arraycopy(logits, 0, scores, destPos, nBatch);
-			this.nTokens += nBatch;
-		}
-	}
+//	void eval(IntBuffer tokens) throws RuntimeException {
+//		int nTokens = tokens.capacity();
+//		for (int b = 0; b < nTokens; b += params.ctx.n_batch) {
+//			applyLogitBias(logitsPointer);
+//			int batchEnd = Math.min(nTokens, b + params.ctx.n_batch);
+//			IntBuffer batch = tokens.slice(b, batchEnd);
+//			int nBatch = batchEnd - b;
+//			int nPast = Math.min(params.ctx.n_ctx - nBatch, inputIds.length);
+//			int result = LlamaLibrary.llama_eval(ctx, batch, nBatch, nPast, params.nThreads);
+//			if (result != 0) {
+//				throw new RuntimeException("llama_eval returned " + result);
+//			}
+//			for (int i = this.nTokens; i < this.nTokens + nBatch; i++) {
+//				inputIds[i] = batch.get(i);
+//			}
+//			int rows, offset;
+//			if (params.ctx.logits_all > 0) {
+//				offset = 0;
+//				rows = nBatch;
+//			} else {
+//				offset = nBatch - 1;
+//				rows = 1;
+//			}
+//
+//			// Save only the last token logits if logits_all is false
+//			float[] logits = logitsPointer.getFloatArray(0, rows * nVocab);
+//			int destPos = (this.nTokens + offset) * nVocab;
+//			System.arraycopy(logits, 0, scores, destPos, nBatch);
+//			this.nTokens += nBatch;
+//		}
+//	}
 
 	// todo: should be private
 	Output sample() {
-		IntBuffer tokens = IntBuffer.wrap(inputIds);
-
-		float[] logits = logitsPointer.getFloatArray(0, nVocab);
+		float[] logits = LlamaLibrary.llama_get_logits(ctx).getPointer().getFloatArray(0, nVocab);
+		// I'm not sure why anything but `setLogit` has to be called here for `candidateData` and `candidates` again.
+		// Otherwise, the results are garbage, however. Maybe the JVM/JIT is moving stuff around.
 		for (int i = 0; i < nVocab; i++) {
-			candidateData[i].setLogit(logits[i] + params.logitBias.getOrDefault(i, 0f));
+			candidateData[i].setId(i);
+			candidateData[i].setLogit(logits[i]);
+//			candidateData[i].setP(0f);
 		}
-//		samplePenalty(candidates, tokens);
+		candidates.setData(candidateData[0]);
+		candidates.setSize(new NativeSize(nVocab));
+		candidates.setSorted((byte) 0);
+
+		samplePenalty();
+
 
 		if (params.grammar != null) {
 			// todo: how to create a native grammar object? How to obtain grammar rules etc?
@@ -315,14 +320,14 @@ public class LlamaModel implements AutoCloseable {
 		}
 
 		int token;
-		if (params.temp == 0.) {
-			token = sampleGreedy(candidates);
+		if (params.temp == 0) {
+			token = sampleGreedy();
 		} else if (params.mirostat == Parameters.MiroStat.V1) {
-			token = sampleMirostatV1(candidates);
+			token = sampleMirostatV1();
 		} else if (params.mirostat == Parameters.MiroStat.V2) {
-			token = sampleMirostatV2(candidates);
+			token = sampleMirostatV2();
 		} else {
-			token = sampleTopK(candidates);
+			token = sampleTopK();
 		}
 
 		if (params.grammar != null) {
@@ -334,9 +339,12 @@ public class LlamaModel implements AutoCloseable {
 		return new Output(token, candidateData[token].p);
 	}
 
-	private void samplePenalty(llama_token_data_array candidates, IntBuffer lastTokens) {
-		float nlLogit = scores[scores.length - nVocab + tokenNl];
-		NativeSize nTokens = new NativeSize(lastTokens.capacity());
+	private void samplePenalty() {
+//		float nlLogit = scores[scores.length - nVocab + tokenNl];
+		int repeat_last_n = params.repeatLastN < 0 ? params.ctx.n_ctx : params.repeatLastN;
+		int last_n_repeat = Math.min(Math.min(nContext, repeat_last_n), params.ctx.n_ctx);
+		NativeSize nTokens = new NativeSize(last_n_repeat);
+		IntBuffer lastTokens = tokenBuffer.slice(nContext - last_n_repeat, last_n_repeat);
 		LlamaLibrary.llama_sample_repetition_penalty(
 				ctx,
 				candidates,
@@ -357,7 +365,7 @@ public class LlamaModel implements AutoCloseable {
 //		}
 	}
 
-	private int sampleGreedy(llama_token_data_array candidates) {
+	private int sampleGreedy() {
 		int token = LlamaLibrary.llama_sample_token_greedy(ctx, candidates);
 		if (params.nProbs > 0) {
 			LlamaLibrary.llama_sample_softmax(ctx, candidates);
@@ -365,7 +373,7 @@ public class LlamaModel implements AutoCloseable {
 		return token;
 	}
 
-	private int sampleMirostatV1(llama_token_data_array candidates) {
+	private int sampleMirostatV1() {
 		LlamaLibrary.llama_sample_temperature(ctx, candidates, params.temp);
 		return LlamaLibrary.llama_sample_token_mirostat(
 				ctx,
@@ -377,7 +385,7 @@ public class LlamaModel implements AutoCloseable {
 		);
 	}
 
-	private int sampleMirostatV2(llama_token_data_array candidates) {
+	private int sampleMirostatV2() {
 		LlamaLibrary.llama_sample_temperature(ctx, candidates, params.temp);
 		return LlamaLibrary.llama_sample_token_mirostat_v2(
 				ctx,
@@ -388,7 +396,7 @@ public class LlamaModel implements AutoCloseable {
 		);
 	}
 
-	private int sampleTopK(llama_token_data_array candidates) {
+	private int sampleTopK() {
 		NativeSize minKeep = new NativeSize(Math.max(1, params.nProbs));
 		LlamaLibrary.llama_sample_top_k(
 				ctx,
@@ -405,7 +413,7 @@ public class LlamaModel implements AutoCloseable {
 		LlamaLibrary.llama_sample_typical(
 				ctx,
 				candidates,
-				params.topP,
+				params.typicalP,
 				minKeep
 		);
 		LlamaLibrary.llama_sample_top_p(ctx,
@@ -419,18 +427,6 @@ public class LlamaModel implements AutoCloseable {
 				params.temp
 		);
 		return LlamaLibrary.llama_sample_token(ctx, candidates);
-	}
-
-	private void setupCandidates() {
-		llama_token_data[] candidateData = (llama_token_data[]) new llama_token_data().toArray(nVocab);
-		llama_token_data_array candidates = new llama_token_data_array();
-		candidates.setData((llama_token_data.ByReference) candidateData[0]);
-		candidates.setSize(new NativeSize(nVocab));
-		candidates.setSorted((byte) 0);
-	}
-
-	private void createCompletion(String prompt) {
-
 	}
 
 	private void validateParams() {
@@ -476,7 +472,7 @@ public class LlamaModel implements AutoCloseable {
 
 	private void warmup() {
 		IntBuffer intBuffer = IntBuffer.wrap(new int[]{tokenBos});
-		eval(intBuffer);
+//		eval(intBuffer);
 		LlamaLibrary.llama_reset_timings(ctx);
 	}
 
@@ -528,7 +524,8 @@ public class LlamaModel implements AutoCloseable {
 
 		@Override
 		public String toString() {
-			return LlamaLibrary.llama_token_get_text(ctx, token);
+			int size = LlamaLibrary.llama_token_to_piece(ctx, token, tokenPieceBuffer, tokenPieceBuffer.length);
+			return new String(tokenPieceBuffer, 0, size, StandardCharsets.UTF_8);
 		}
 	}
 }

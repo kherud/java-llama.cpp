@@ -220,7 +220,7 @@ public final class Parameters {
 		private float mirostatTau = 5.00f; // target entropy
 		private float mirostatEta = 0.10f; // learning rate
 		private int mirostatM = 100; // ??
-		private float mirostatMu = 2 * mirostatTau; // ??
+		private float mirostatMu = 2f * mirostatTau; // ??
 
 		// Classifier-Free Guidance
 		// https://arxiv.org/abs/2306.17806
@@ -375,7 +375,7 @@ public final class Parameters {
 			return this;
 		}
 
-		public Builder setTemp(float temp) {
+		public Builder setTemperature(float temp) {
 			this.temp = temp;
 			return this;
 		}

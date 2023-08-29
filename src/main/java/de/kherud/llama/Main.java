@@ -1,22 +1,24 @@
 package de.kherud.llama;
 
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
-import java.util.Arrays;
-
-import com.sun.jna.ptr.FloatByReference;
-
 import de.kherud.llama.foreign.LlamaLibrary;
 
 public class Main {
 
 	public static void main(String... args) {
-//		Parameters params = new Parameters.Builder()
-//				.
+		Parameters params = new Parameters.Builder()
+				.setnProbs(0)
+				.setTopK(40)
+				.setTfsZ(1)
+				.setTypicalP(1)
+				.setTopP(0.5f)
+				.setTemperature(0.7f)
+//				.setTemperature(0.0f)
+//				.setMirostat(Parameters.MiroStat.V2)
+				.build();
 		System.out.println(LlamaLibrary.llama_print_system_info());
-		LlamaModel model = new LlamaModel("/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/gguf-model-q4_0.bin");
+		LlamaModel model = new LlamaModel("/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/gguf-model-q4_0.bin", params);
 
-		model.tokenize("Hello world, how are you?");
+		model.tokenize("This is a conversation between User and Llama, a friendly chatbot. Llama is helpful, kind, honest, good at writing, and never fails to answer any requests immediately and with precision.\\n\\nUser: Hello, how are you?\\nLlama:");
 		model.hasNextToken = true;
 		while (model.hasNextToken) {
 			LlamaModel.Output token = model.nextToken();
