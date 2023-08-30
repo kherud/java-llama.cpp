@@ -92,9 +92,11 @@ Look for the shared library in `build`.
 > [!IMPORTANT]
 > If you are running MacOS with Metal, you have to put the file `ggml-metal.metal` from `build/bin` in the same directory as the shared library.
 
-Depending on your platform, move the file then to the correct directory, e.g.,
-`/usr/local/lib` for most linux distributions. If you're not sure where to put it, just run the code. Java will throw
-an error explaining where it looks.
+Depending on your platform, either:
+
+- Move the file then to the correct directory, e.g., `/usr/local/lib` for most linux distributions. 
+If you're not sure where to put it, just run the code. Java will throw an error explaining where it looks.
+- Set the JVM option `-Djna.library.path="/path/to/library/"` (IDEs like IntelliJ make this easy) 
 
 Deployment to Maven Central is coming soon. The installation will also be improved soon. 
 
