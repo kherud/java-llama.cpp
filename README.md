@@ -52,7 +52,10 @@ cmake --build . --config Release
 
 Look for the shared library in `build`.
 
-Deployment to Maven Central is coming soon.
+> [!IMPORTANT]
+> If you are running MacOS with Metal, you have to put the file `ggml-metal.metal` from `build/bin` in the same directory as the shared library.
+
+Deployment to Maven Central is coming soon. The installation will also be improved soon. 
 
 ## Todo-List
 
