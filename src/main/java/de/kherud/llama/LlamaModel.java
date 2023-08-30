@@ -1,31 +1,34 @@
 package de.kherud.llama;
 
 import com.sun.jna.Pointer;
-import org.jetbrains.annotations.NotNull;
-
 import de.kherud.llama.foreign.LlamaLibrary;
 import de.kherud.llama.foreign.NativeSize;
 import de.kherud.llama.foreign.llama_token_data;
 import de.kherud.llama.foreign.llama_token_data_array;
+import org.jetbrains.annotations.NotNull;
 
 import java.nio.IntBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
 
 
 public class LlamaModel implements AutoCloseable {
 
 	private final Parameters params;
 	private final LlamaLibrary.llama_model model;
-	final LlamaLibrary.llama_context ctx;
+	private final LlamaLibrary.llama_context ctx;
 
 	// cache some things for performance
-	private final Pointer logitsPointer;
-	private final IntBuffer tokenBuffer;
-	private final byte[] tokenPieceBuffer;
+	private final Pointer logitsPointer; // pointer to retrieve the logits of the llm
+	private final IntBuffer contextBuffer; // used to hold all tokens of a conversation
+	private final IntBuffer tokenBuffer; // used for tokenization
+	private final byte[] tokenPieceBuffer; // used to decode tokens to string
 
-	private final llama_token_data.ByReference[] candidateData;
-	private final llama_token_data_array candidates;
+	private final llama_token_data.ByReference[] candidateData; // candidates used for sampling
+	private final llama_token_data_array candidates; // array holding the candidates
 
 	private final int nVocab;
 
@@ -33,12 +36,8 @@ public class LlamaModel implements AutoCloseable {
 	private final int tokenEos;
 	private final int tokenNl;
 
-	private int nPast = 0;
-	private int nPromptTokens = 0;
-	private int nKeep = 0;
-	private int nRemain = 0;
-	boolean hasNextToken = false;
-	private int nContext = 0;
+	private int nPast = 0; // how many evaluated tokens are currently in the context buffer
+	private int nContext = 0; // how many tokens currently are in the context buffer
 
 	static {
 		LlamaLibrary.llama_backend_init((byte) 0);
@@ -65,25 +64,28 @@ public class LlamaModel implements AutoCloseable {
 		}
 
 		// setup some cached variables used throughout lifecycle
+		contextBuffer = IntBuffer.allocate(params.ctx.n_ctx);
 		tokenBuffer = IntBuffer.allocate(params.ctx.n_ctx);
 		tokenPieceBuffer = new byte[64];
 		nVocab = getVocabularySize();
 
 		logitsPointer = LlamaLibrary.llama_get_logits(ctx).getPointer();
-
 		candidateData = (llama_token_data.ByReference[]) new llama_token_data.ByReference().toArray(nVocab);
 		candidates = new llama_token_data_array();
 
 		tokenBos = LlamaLibrary.llama_token_bos(ctx);
 		tokenEos = LlamaLibrary.llama_token_eos(ctx);
 		tokenNl = LlamaLibrary.llama_token_nl(ctx);
-
-		// do one empty run to warm up the model (taken from main.cpp)
-//		warmup();
 	}
 
+	/**
+	 * Generate and stream outputs. Unless {@link #reset()} is called, the previous conversation is used as context.
+	 * Note, that the prompt isn't preprocessed in any way, nothing like "User: ", "###Instruction", etc. is added.
+	 *
+	 * @param prompt the LLM prompt
+	 * @return iterable LLM outputs
+	 */
 	public Iterable<Output> generate(String prompt) {
-		LlamaLibrary.llama_reset_timings(ctx);
 		return new Iterable<>() {
 			@NotNull
 			@Override
@@ -93,8 +95,35 @@ public class LlamaModel implements AutoCloseable {
 		};
 	}
 
+	/**
+	 * Generate and return a whole answer. Unless {@link #reset()} is called, the previous conversation is used as context.
+	 * Note, that the prompt isn't preprocessed in any way, nothing like "User: ", "###Instruction", etc. is added.
+	 *
+	 * @param prompt the LLM prompt
+	 * @return an LLM response
+	 */
+	public String complete(String prompt) {
+		StringBuilder builder = new StringBuilder();
+		Iterator<Output> iterator = new LlamaIterator(prompt);
+		while (iterator.hasNext()) {
+			Output output = iterator.next();
+			builder.append(output);
+		}
+		return builder.toString();
+	}
+
 	public float[] getEmbedding() {
 		return null;
+	}
+
+	/**
+	 * Resets the state of the LLM, its timings, and discards any previous conversation.
+	 */
+	public void reset() {
+		LlamaLibrary.llama_reset_timings(ctx);
+		this.contextBuffer.clear();
+		this.nContext = 0;
+		this.nPast = 0;
 	}
 
 	/**
@@ -104,15 +133,10 @@ public class LlamaModel implements AutoCloseable {
 	 * @return an array of integers each representing a token id (see {@link #getVocabularySize()})
 	 */
 	public int[] encode(String prompt) {
-		// IntBuffer tokens = tokenize(prompt);
-		// // return tokens without padding
-		// for (int i = 0; i < tokens.capacity(); i++) {
-		// 	if (tokens.get(i) == 0) {
-		// 		return tokens.slice(0, i).array();
-		// 	}
-		// }
-		// return tokens.array();
-		return null;
+		IntBuffer buffer = tokenize(prompt, false);
+		int[] tokens = new int[buffer.capacity()];
+		System.arraycopy(buffer.array(), 0, tokens, 0, buffer.capacity());
+		return tokens;
 	}
 
 	/**
@@ -124,7 +148,7 @@ public class LlamaModel implements AutoCloseable {
 	public String decode(int[] tokens) {
 		StringBuilder builder = new StringBuilder();
 		for (int token : tokens) {
-			String decoded = LlamaLibrary.llama_token_get_text(ctx, token);
+			String decoded = decodeToken(token);
 			builder.append(decoded);
 		}
 		return builder.toString();
@@ -160,102 +184,20 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 
-	void tokenize(String prompt) {
-		// Add a space in front of the first character to match OG llama tokenizer behavior (taken from main.cpp)
-		if (nContext == 0 && !prompt.startsWith(" ")) {
-			prompt = " " + prompt;
-		}
-
-		nPromptTokens = LlamaLibrary.llama_tokenize(ctx, prompt, tokenBuffer, params.ctx.n_ctx, (byte) 1);
-		if (nPromptTokens < 0) {
+	/**
+	 * Internally tokenizes a prompt and returns its tokens without any padding.
+	 * At most {@link #getContextSize()} tokens can be tokenized. Makes use of {@link #tokenBuffer}.
+	 *
+	 * @param prompt the prompt to tokenize
+	 * @return an IntBuffer containing the tokenized prompt without any padding
+	 * @throws RuntimeException if tokenization fails
+	 */
+	private IntBuffer tokenize(String prompt, boolean addBos) {
+		int nTokens = LlamaLibrary.llama_tokenize(ctx, prompt, tokenBuffer, params.ctx.n_ctx, addBos ? (byte) 1 : 0);
+		if (nTokens < 0) {
 			throw new RuntimeException("tokenization failed due to unknown reasons");
 		}
-		nKeep = params.nKeep < 0 ? nPromptTokens : params.nKeep;
-		nKeep = Math.min(params.ctx.n_ctx - 4, nKeep);
-		if (nPromptTokens >= params.ctx.n_ctx) {
-			int nLeft = (params.ctx.n_ctx - nKeep) / 2;
-
-			int erasedBlocks = (nPromptTokens - nKeep - nLeft - 1) / nLeft;
-		}
-		nContext = nPromptTokens;
-	}
-
-	private void logPrompt(String prompt, IntBuffer tokens) {
-		if (params.verbosePrompt) {
-			StringBuilder msgBuilder = new StringBuilder();
-			msgBuilder.append("prompt: '")
-					.append(prompt)
-					.append("'\nnumber of tokens in prompt =")
-					.append(tokens.capacity())
-					.append("\n");
-			for (int i = 0; i < tokens.capacity(); i++) {
-				int tokenId = tokens.get(i);
-				String tokenStr = LlamaLibrary.llama_token_get_text(ctx, tokenId);
-				String msg = String.format("%6d -> '%s'", tokens.get(i), tokenStr);
-				msgBuilder.append(msg);
-			}
-			params.logCallback.accept(LlamaLibrary.llama_log_level.LLAMA_LOG_LEVEL_INFO, msgBuilder.toString());
-			/*
-			if (ctx_guidance) {
-				fprintf(stderr, "\n");
-				fprintf(stderr, "%s: negative prompt: '%s'\n", __func__, params.cfg_negative_prompt.c_str());
-				fprintf(stderr, "%s: number of tokens in negative prompt = %zu\n", __func__, guidance_inp.size());
-				for (int i = 0; i < (int) guidance_inp.size(); i++) {
-					fprintf(stderr, "%6d -> '%s'\n", guidance_inp[i], llama_token_to_str(ctx, guidance_inp[i]));
-				}
-			}
-
-			if (params.n_keep > 0) {
-				fprintf(stderr, "%s: static prompt based on n_keep: '", __func__);
-				for (int i = 0; i < params.n_keep; i++) {
-					fprintf(stderr, "%s", llama_token_to_str(ctx, embd_inp[i]));
-				}
-				fprintf(stderr, "'\n");
-			}
-			fprintf(stderr, "\n");
-			 */
-		}
-	}
-
-	Output nextToken() {
-		Output result;
-
-		if (tokenBuffer.capacity() >= params.ctx.n_ctx) {
-			// ...
-		}
-
-		while (nPast < nContext) {
-			int nEval = nContext - nPast;
-			if (nEval > params.ctx.n_batch) {
-				nEval = params.ctx.n_batch;
-			}
-//			System.out.printf("eval %d to %d\n", nPast, nPast + nEval);
-			if (LlamaLibrary.llama_eval(ctx, tokenBuffer.slice(nPast, nEval), nEval, nPast, params.nThreads) != 0) {
-				String msg = String.format("evaluation failed (%d to evaluate, %d past, %d threads)", nEval, nPast, params.nThreads);
-				params.logCallback.accept(LlamaLibrary.llama_log_level.LLAMA_LOG_LEVEL_ERROR, msg);
-				hasNextToken = false;
-				return new Output(-1, 0);
-			}
-			nPast += nEval;
-		}
-
-		if (params.nPredict == 0) {
-			hasNextToken = false;
-			return new Output(tokenEos, 0);
-		}
-
-		result = sample();
-		nRemain--;
-
-		if (result.token == tokenEos) {
-			hasNextToken = false;
-			return result;
-		}
-		tokenBuffer.put(nContext, result.token);
-		nContext++;
-
-		hasNextToken = params.nPredict == -1 || nRemain > 0;
-		return result;
+		return tokenBuffer.slice(0, nTokens);
 	}
 
 	@Override
@@ -264,41 +206,25 @@ public class LlamaModel implements AutoCloseable {
 		LlamaLibrary.llama_free(ctx);
 	}
 
-//	void eval(IntBuffer tokens) throws RuntimeException {
-//		int nTokens = tokens.capacity();
-//		for (int b = 0; b < nTokens; b += params.ctx.n_batch) {
-//			applyLogitBias(logitsPointer);
-//			int batchEnd = Math.min(nTokens, b + params.ctx.n_batch);
-//			IntBuffer batch = tokens.slice(b, batchEnd);
-//			int nBatch = batchEnd - b;
-//			int nPast = Math.min(params.ctx.n_ctx - nBatch, inputIds.length);
-//			int result = LlamaLibrary.llama_eval(ctx, batch, nBatch, nPast, params.nThreads);
-//			if (result != 0) {
-//				throw new RuntimeException("llama_eval returned " + result);
-//			}
-//			for (int i = this.nTokens; i < this.nTokens + nBatch; i++) {
-//				inputIds[i] = batch.get(i);
-//			}
-//			int rows, offset;
-//			if (params.ctx.logits_all > 0) {
-//				offset = 0;
-//				rows = nBatch;
-//			} else {
-//				offset = nBatch - 1;
-//				rows = 1;
-//			}
-//
-//			// Save only the last token logits if logits_all is false
-//			float[] logits = logitsPointer.getFloatArray(0, rows * nVocab);
-//			int destPos = (this.nTokens + offset) * nVocab;
-//			System.arraycopy(logits, 0, scores, destPos, nBatch);
-//			this.nTokens += nBatch;
-//		}
-//	}
+	private void evaluate() {
+		while (nPast < nContext) {
+			int nEval = nContext - nPast;
+			if (nEval > params.ctx.n_batch) {
+				nEval = params.ctx.n_batch;
+			}
+			if (LlamaLibrary.llama_eval(ctx, contextBuffer.slice(nPast, nEval), nEval, nPast, params.nThreads) != 0) {
+				String msg = String.format("evaluation failed (%d to evaluate, %d past, %d threads)", nEval, nPast, params.nThreads);
+				params.logCallback.accept(LlamaLibrary.llama_log_level.LLAMA_LOG_LEVEL_ERROR, msg);
+				throw new RuntimeException("token evaluation failed");
+			}
+			nPast += nEval;
+		}
+	}
 
-	// todo: should be private
-	Output sample() {
-		float[] logits = LlamaLibrary.llama_get_logits(ctx).getPointer().getFloatArray(0, nVocab);
+	private Output sample() {
+		float[] logits = logitsPointer.getFloatArray(0, nVocab);
+		float nlLogit = logits[tokenNl];
+		params.logitBias.forEach((i, bias) -> logits[i] += bias);
 		// I'm not sure why anything but `setLogit` has to be called here for `candidateData` and `candidates` again.
 		// Otherwise, the results are garbage, however. Maybe the JVM/JIT is moving stuff around.
 		for (int i = 0; i < nVocab; i++) {
@@ -312,9 +238,11 @@ public class LlamaModel implements AutoCloseable {
 
 		samplePenalty();
 
+		if (!params.penalizeNl) {
+			candidateData[tokenNl].setLogit(nlLogit);
+		}
 
 		if (params.grammar != null) {
-			// todo: how to create a native grammar object? How to obtain grammar rules etc?
 			// LlamaLibrary.llama_sample_grammar(ctx, candidates, params.grammar);
 			throw new IllegalStateException("grammar not yet supported");
 		}
@@ -340,7 +268,6 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 	private void samplePenalty() {
-//		float nlLogit = scores[scores.length - nVocab + tokenNl];
 		int repeat_last_n = params.repeatLastN < 0 ? params.ctx.n_ctx : params.repeatLastN;
 		int last_n_repeat = Math.min(Math.min(nContext, repeat_last_n), params.ctx.n_ctx);
 		NativeSize nTokens = new NativeSize(last_n_repeat);
@@ -360,9 +287,6 @@ public class LlamaModel implements AutoCloseable {
 				params.frequencyPenalty,
 				params.presencePenalty
 		);
-//		if (!params.penalizeNl) {
-//			token_data[nlOffset].setLogit(nlLogit);
-//		}
 	}
 
 	private int sampleGreedy() {
@@ -429,23 +353,6 @@ public class LlamaModel implements AutoCloseable {
 		return LlamaLibrary.llama_sample_token(ctx, candidates);
 	}
 
-	private void validateParams() {
-		if (params.ctx.rope_freq_base != 10000.0) {
-			System.out.printf("warning: changing RoPE frequency base to %g (default 10000.0)\n", params.ctx.rope_freq_base);
-		}
-
-		if (params.ctx.rope_freq_scale != 1.0) {
-			System.out.printf("warning: scaling RoPE frequency by %g (default 1.0)\n", params.ctx.rope_freq_scale);
-		}
-
-		if (params.ctx.n_ctx > 2048) {
-			System.out.printf("warning: base model only supports context sizes no greater than 2048 tokens (%d specified)\n", params.ctx.n_ctx);
-		} else if (params.ctx.n_ctx < 8) {
-			System.out.println("warning: minimum context size is 8, using minimum size.");
-			params.ctx.setN_ctx(8);
-		}
-	}
-
 	private void predict(IntBuffer tokens) {
 		// Note: n_ctx - 4 here is to match the logic for commandline prompt handling via
 		// --prompt or --file which uses the same value.
@@ -466,50 +373,80 @@ public class LlamaModel implements AutoCloseable {
 
 	}
 
-	private void applyLogitBias(Pointer logits) {
-		params.logitBias.forEach((id, bias) -> logits.setFloat(id * Float.BYTES, bias));
-	}
-
-	private void warmup() {
-		IntBuffer intBuffer = IntBuffer.wrap(new int[]{tokenBos});
-//		eval(intBuffer);
-		LlamaLibrary.llama_reset_timings(ctx);
+	private String decodeToken(int token) {
+		int size = LlamaLibrary.llama_token_to_piece(ctx, token, tokenPieceBuffer, tokenPieceBuffer.length);
+		return new String(tokenPieceBuffer, 0, size, StandardCharsets.UTF_8);
 	}
 
 	private class LlamaIterator implements Iterator<Output> {
 
-		private IntBuffer tokens;
-		private int nPast = 0;
+		private boolean hasNext = true;
 		private int nRemain = params.nPredict;
+		private final List<int[]> antiPrompts = new ArrayList<>();
 
 		public LlamaIterator(String prompt) {
-
+			setup(prompt);
 		}
 
 		@Override
 		public boolean hasNext() {
-			return nRemain != 0 && !isAntiprompt();
+			return hasNext;
 		}
 
 		@Override
 		public Output next() {
-			return null;
-		}
-
-		private void setup() {
-			int maxTokens;
-			if (params.nPredict < 0) {
-				maxTokens = params.ctx.n_ctx - tokens.capacity();
+			if (!hasNext) {
+				throw new NoSuchElementException();
 			}
-
-//			stopTokens = new int[1 + params.antiprompt.size()];
-//			stopTokens[0] = LlamaLibrary.llama_token_eos();
-
-
+			evaluate();
+			Output result = sample();
+			contextBuffer.put(nContext, result.token);
+			nContext++;
+			nRemain--;
+			checkHasNext();
+			return result;
 		}
 
-		private boolean isAntiprompt() {
+		private void checkHasNext() {
+			hasNext = (params.nPredict < 0 || nRemain > 0) // if there are infinite or more tokens to predict
+					&& nContext < params.ctx.n_ctx // // if there is enough space to generate more tokens
+					&& contextBuffer.get(nContext - 1) != tokenEos // if the last token was not a stop token
+					&& !isAntiPrompt(); // if the last tokens don't form an anti-prompt
+		}
+
+		private void setup(String prompt) {
+			buildAntiPrompts();
+			// add a space in front of the first character to match OG llama tokenizer behavior (taken from main.cpp)
+			if (nContext == 0 && !prompt.startsWith(" ")) {
+				prompt = " " + prompt;
+			}
+			IntBuffer tokens = tokenize(prompt, true);
+			if (nContext + tokens.capacity() > params.ctx.n_ctx) {
+				params.logCallback.accept(LlamaLibrary.llama_log_level.LLAMA_LOG_LEVEL_WARN, "truncating context");
+				throw new IllegalStateException("out of context");
+			}
+			System.arraycopy(tokens.array(), 0, contextBuffer.array(), nContext, tokens.capacity());
+			nContext += tokens.capacity();
+		}
+
+		private boolean isAntiPrompt() {
+			prompt:
+			for (int[] antiPrompt : antiPrompts) {
+				// I have to figure out how to only tokenize the given string (probably by accessing the tokenizer directly)
+				for (int i = 1; i <= antiPrompt.length; i++) {
+					if (contextBuffer.get(nContext - i) != antiPrompt[antiPrompt.length - i]) {
+						continue prompt;
+					}
+				}
+				return antiPrompt.length > 0;
+			}
 			return false;
+		}
+
+		private void buildAntiPrompts() {
+			for (String antiPrompt : params.antiprompt) {
+				antiPrompts.add(encode(antiPrompt));
+			}
 		}
 	}
 

@@ -25,5 +25,3 @@ find src/main/java/de/kherud/llama/foreign \
 	-type f \
 	-name "*.java" \
 	-exec sed -i -E '/import com\.ochafik\.lang\.jnaerator\.runtime\.NativeSize(ByReference)?;/d' {} +
-# remove deprecated
-find src/main/java/de/kherud/llama/foreign -type f -name "*.java" -exec sed -i '/@Deprecated/{N; d;}' {} +

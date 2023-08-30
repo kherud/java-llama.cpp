@@ -60,6 +60,7 @@ public final class Parameters {
 	public final String inputSuffix;  // string to suffix user inputs with
 	@Nullable
 	public final String grammar;  // optional BNF-like grammar to constrain sampling
+	@NotNull
 	public final List<@NotNull String> antiprompt; // string upon seeing which more user input is prompted
 	@Nullable
 	public final String loraAdapter;  // lora adapter path
@@ -116,7 +117,7 @@ public final class Parameters {
 			@Nullable String inputPrefix,
 			@Nullable String inputSuffix,
 			@Nullable String grammar,
-			List<String> antiprompt,
+			@NotNull List<String> antiprompt,
 			@Nullable String loraAdapter,
 			@Nullable String loraBase,
 			boolean hellaswag,
@@ -231,7 +232,7 @@ public final class Parameters {
 		private String inputPrefix = null;  // string to prefix user inputs with
 		private String inputSuffix = null;  // string to suffix user inputs with
 		private String grammar = null;  // optional BNF-like grammar to constrain sampling
-		private List<String> antiprompt; // string upon seeing which more user input is prompted
+		private List<String> antiprompt = Collections.emptyList(); // string upon seeing which more user input is prompted
 
 		private String loraAdapter = null;  // lora adapter path
 		private String loraBase = null;  // base model path for the lora adapter
