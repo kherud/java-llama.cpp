@@ -5,18 +5,20 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 public class Example {
 
     public static void main(String... args) throws IOException {
         Parameters params = new Parameters.Builder()
-                .setNGpuLayers(1)
+                .setNGpuLayers(43)
                 .setTemperature(0.7f)
                 .setPenalizeNl(true)
                 .setMirostat(Parameters.MiroStat.V2)
+                .setAntiPrompt(new String[]{"\n"})
                 .build();
 
-        String modelPath = "/Users/konstantin.herud/denkbares/projects/llama.cpp/models/13B/gguf-model-q4_0.bin";
+        String modelPath = "/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/gguf-model-q4_0.bin";
         String system = "This is a conversation between User and Llama, a friendly chatbot.\n" +
                 "Llama is helpful, kind, honest, good at writing, and never fails to answer any " +
                 "requests immediately and with precision.\n";

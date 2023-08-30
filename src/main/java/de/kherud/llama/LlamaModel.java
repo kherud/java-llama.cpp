@@ -1,18 +1,18 @@
 package de.kherud.llama;
 
-import com.sun.jna.Pointer;
-import de.kherud.llama.foreign.LlamaLibrary;
-import de.kherud.llama.foreign.NativeSize;
-import de.kherud.llama.foreign.llama_token_data;
-import de.kherud.llama.foreign.llama_token_data_array;
-import org.jetbrains.annotations.NotNull;
-
 import java.nio.IntBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.NoSuchElementException;
+
+import com.sun.jna.Pointer;
+import org.jetbrains.annotations.NotNull;
+
+import de.kherud.llama.foreign.LlamaLibrary;
+import de.kherud.llama.foreign.NativeSize;
+import de.kherud.llama.foreign.llama_context_params;
+import de.kherud.llama.foreign.llama_token_data;
+import de.kherud.llama.foreign.llama_token_data_array;
 
 
 public class LlamaModel implements AutoCloseable {
@@ -112,8 +112,22 @@ public class LlamaModel implements AutoCloseable {
 		return builder.toString();
 	}
 
-	public float[] getEmbedding() {
-		return null;
+	/**
+	 * Get the embedding of a string. Unless {@link #reset()} is called, the previous conversation is used as context.
+	 * Note, that the prompt isn't preprocessed in any way, nothing like "User: ", "###Instruction", etc. is added.
+	 *
+	 * @param prompt the string to embed
+	 * @return an embedding float array the size of {@link #getEmbeddingSize()}
+	 * @throws IllegalStateException if embedding mode was not activated (see {@link Parameters.Builder#setEmbedding(boolean)})
+	 */
+	public float[] getEmbedding(String prompt) {
+		if (params.ctx.embedding == 0) {
+			throw new IllegalStateException("embedding mode not activated (see parameters)");
+		}
+		IntBuffer tokens = tokenize(prompt, false);
+		addContext(tokens);
+		evaluate();
+		return LlamaLibrary.llama_get_embeddings(ctx).getPointer().getFloatArray(0, getEmbeddingSize());
 	}
 
 	/**
@@ -165,7 +179,7 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 	/**
-	 * Returns the hidden dimensionality of the loaded model, which corresponds to the size of {@link #getEmbedding()}.
+	 * Returns the hidden dimensionality of the loaded model, which corresponds to the size of {@link #getEmbedding(String)}.
 	 * This size typically depends on the amount of parameters in the model, e.g., for llama 2 13b this size is 5120.
 	 *
 	 * @return the amount of embedding dimensions
@@ -259,7 +273,6 @@ public class LlamaModel implements AutoCloseable {
 		}
 
 		if (params.grammar != null) {
-			// todo: see above, not yet implemented
 			// LlamaLibrary.llama_grammar_accept_token(ctx, params.grammar, token);
 			throw new IllegalStateException("grammar not yet implemented");
 		}
@@ -353,24 +366,21 @@ public class LlamaModel implements AutoCloseable {
 		return LlamaLibrary.llama_sample_token(ctx, candidates);
 	}
 
-	private void predict(IntBuffer tokens) {
-		// Note: n_ctx - 4 here is to match the logic for commandline prompt handling via
-		// --prompt or --file which uses the same value.
-		int nTokens = tokens.capacity();
-		int maxEmbedSize = params.ctx.n_ctx - 4;
-		// Ensure the input doesn't exceed the context size by truncating the input if necessary.
-		if (nTokens > maxEmbedSize) {
-			int skipTokens = nTokens - params.ctx.n_ctx;
-			String msg = String.format("<<input too long: skipped %d token%s>>", skipTokens, skipTokens == 1 ? "" : "s");
-			params.logCallback.accept(LlamaLibrary.llama_log_level.LLAMA_LOG_LEVEL_WARN, msg);
-			tokens = tokens.slice(0, maxEmbedSize);
+	private void addContext(IntBuffer tokens) {
+		truncateContext(tokens.capacity());
+		System.arraycopy(tokens.array(), 0, contextBuffer.array(), nContext, tokens.capacity());
+		nContext += tokens.capacity();
+	}
+
+	private void truncateContext(int nAdd) {
+		if (nContext + nAdd > params.ctx.n_ctx) {
+			int nCtxKeep = params.ctx.n_ctx / 2 - nAdd;
+			String msg = "truncating context from " + nContext + " to " + nCtxKeep + " tokens (+" + nAdd + " to add)";
+			params.logCallback.accept(LlamaLibrary.llama_log_level.LLAMA_LOG_LEVEL_INFO, msg);
+			System.arraycopy(contextBuffer.array(), nContext - nCtxKeep, contextBuffer.array(), 0, nCtxKeep);
+			nPast = 0;
+			nContext = nCtxKeep;
 		}
-
-		// infinite text generation via context swapping
-		// if we run out of context:
-		// - take the n_keep first tokens from the original prompt (via n_past)
-		// - take half of the last (n_ctx - n_keep) tokens and recompute the logits in batches
-
 	}
 
 	private String decodeToken(int token) {
@@ -382,7 +392,7 @@ public class LlamaModel implements AutoCloseable {
 
 		private boolean hasNext = true;
 		private int nRemain = params.nPredict;
-		private final List<int[]> antiPrompts = new ArrayList<>();
+		private final StringBuilder builder = new StringBuilder();
 
 		public LlamaIterator(String prompt) {
 			setup(prompt);
@@ -400,6 +410,8 @@ public class LlamaModel implements AutoCloseable {
 			}
 			evaluate();
 			Output result = sample();
+			builder.append(result.text);
+			truncateContext(1);
 			contextBuffer.put(nContext, result.token);
 			nContext++;
 			nRemain--;
@@ -409,60 +421,44 @@ public class LlamaModel implements AutoCloseable {
 
 		private void checkHasNext() {
 			hasNext = (params.nPredict < 0 || nRemain > 0) // if there are infinite or more tokens to predict
-					&& nContext < params.ctx.n_ctx // // if there is enough space to generate more tokens
 					&& contextBuffer.get(nContext - 1) != tokenEos // if the last token was not a stop token
 					&& !isAntiPrompt(); // if the last tokens don't form an anti-prompt
 		}
 
 		private void setup(String prompt) {
-			buildAntiPrompts();
 			// add a space in front of the first character to match OG llama tokenizer behavior (taken from main.cpp)
 			if (nContext == 0 && !prompt.startsWith(" ")) {
 				prompt = " " + prompt;
 			}
 			IntBuffer tokens = tokenize(prompt, true);
-			if (nContext + tokens.capacity() > params.ctx.n_ctx) {
-				params.logCallback.accept(LlamaLibrary.llama_log_level.LLAMA_LOG_LEVEL_WARN, "truncating context");
-				throw new IllegalStateException("out of context");
-			}
-			System.arraycopy(tokens.array(), 0, contextBuffer.array(), nContext, tokens.capacity());
-			nContext += tokens.capacity();
+			addContext(tokens);
 		}
 
 		private boolean isAntiPrompt() {
-			prompt:
-			for (int[] antiPrompt : antiPrompts) {
-				// I have to figure out how to only tokenize the given string (probably by accessing the tokenizer directly)
-				for (int i = 1; i <= antiPrompt.length; i++) {
-					if (contextBuffer.get(nContext - i) != antiPrompt[antiPrompt.length - i]) {
-						continue prompt;
-					}
+			for (String antiPrompt : params.antiprompt) {
+				if (builder.lastIndexOf(antiPrompt) > 0) {
+					return true;
 				}
-				return antiPrompt.length > 0;
 			}
 			return false;
-		}
-
-		private void buildAntiPrompts() {
-			for (String antiPrompt : params.antiprompt) {
-				antiPrompts.add(encode(antiPrompt));
-			}
 		}
 	}
 
 	public final class Output {
 		public final int token;
 		public final float probability;
+		public final String text;
 
 		private Output(int token, float probability) {
 			this.token = token;
 			this.probability = probability;
+			int size = LlamaLibrary.llama_token_to_piece(ctx, token, tokenPieceBuffer, tokenPieceBuffer.length);
+			text = new String(tokenPieceBuffer, 0, size, StandardCharsets.UTF_8);
 		}
 
 		@Override
 		public String toString() {
-			int size = LlamaLibrary.llama_token_to_piece(ctx, token, tokenPieceBuffer, tokenPieceBuffer.length);
-			return new String(tokenPieceBuffer, 0, size, StandardCharsets.UTF_8);
+			return text;
 		}
 	}
 }

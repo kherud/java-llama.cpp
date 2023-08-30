@@ -232,7 +232,7 @@ public final class Parameters {
 		private String inputPrefix = null;  // string to prefix user inputs with
 		private String inputSuffix = null;  // string to suffix user inputs with
 		private String grammar = null;  // optional BNF-like grammar to constrain sampling
-		private List<String> antiprompt = Collections.emptyList(); // string upon seeing which more user input is prompted
+		private List<String> antiPrompt = Collections.emptyList(); // string upon seeing which more user input is prompted
 
 		private String loraAdapter = null;  // lora adapter path
 		private String loraBase = null;  // base model path for the lora adapter
@@ -291,7 +291,7 @@ public final class Parameters {
 					inputPrefix,
 					inputSuffix,
 					grammar,
-					antiprompt,
+					antiPrompt,
 					loraAdapter,
 					loraBase,
 					hellaswag,
@@ -456,8 +456,8 @@ public final class Parameters {
 			return this;
 		}
 
-		public Builder setAntiprompt(@NotNull String[] antiprompt) {
-			this.antiprompt = Collections.unmodifiableList(Arrays.asList(antiprompt));
+		public Builder setAntiPrompt(@NotNull String[] antiprompt) {
+			this.antiPrompt = Collections.unmodifiableList(Arrays.asList(antiprompt));
 			return this;
 		}
 
@@ -635,48 +635,48 @@ public final class Parameters {
 		/**
 		 * use fp16 for KV cache
 		 */
-		public Builder setF16Kv(byte f16_kv) {
-			ctxParams.setF16_kv(f16_kv);
+		public Builder setF16Kv(boolean f16_kv) {
+			ctxParams.setF16_kv(f16_kv ? (byte) 1 : 0);
 			return this;
 		}
 
 		/**
 		 * the llama_eval() call computes all logits, not just the last one
 		 */
-		public Builder setLogitsAll(byte logits_all) {
-			ctxParams.setLogits_all(logits_all);
+		public Builder setLogitsAll(boolean logits_all) {
+			ctxParams.setLogits_all(logits_all ? (byte) 1 : 0);
 			return this;
 		}
 
 		/**
 		 * only load the vocabulary, no weights
 		 */
-		public Builder setVocabOnly(byte vocab_only) {
-			ctxParams.setVocab_only(vocab_only);
+		public Builder setVocabOnly(boolean vocab_only) {
+			ctxParams.setVocab_only(vocab_only ? (byte) 1 : 0);
 			return this;
 		}
 
 		/**
 		 * use mmap if possible
 		 */
-		public Builder setUseMmap(byte use_mmap) {
-			ctxParams.setUse_mmap(use_mmap);
+		public Builder setUseMmap(boolean use_mmap) {
+			ctxParams.setUse_mmap(use_mmap ? (byte) 1 : 0);
 			return this;
 		}
 
 		/**
 		 * force system to keep model in RAM
 		 */
-		public Builder setUseMLock(byte use_mlock) {
-			ctxParams.setUse_mlock(use_mlock);
+		public Builder setUseMLock(boolean use_mlock) {
+			ctxParams.setUse_mlock(use_mlock ? (byte) 1 : 0);
 			return this;
 		}
 
 		/**
 		 * embedding mode only
 		 */
-		public Builder setEmbedding(byte embedding) {
-			ctxParams.setEmbedding(embedding);
+		public Builder setEmbedding(boolean embedding) {
+			ctxParams.setEmbedding(embedding ? (byte) 1 : 0);
 			return this;
 		}
 	}
