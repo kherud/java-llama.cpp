@@ -6,17 +6,19 @@ public class Main {
 
 	public static void main(String... args) {
 		Parameters params = new Parameters.Builder()
-				.setnProbs(0)
+				.setNProbs(0)
 				.setTopK(40)
 				.setTfsZ(1)
 				.setTypicalP(1)
 				.setTopP(0.5f)
 				.setTemperature(0.7f)
+				.setNGpuLayers(1)
 //				.setTemperature(0.0f)
 //				.setMirostat(Parameters.MiroStat.V2)
 				.build();
 		System.out.println(LlamaLibrary.llama_print_system_info());
-		LlamaModel model = new LlamaModel("/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/gguf-model-q4_0.bin", params);
+		// LlamaModel model = new LlamaModel("/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/gguf-model-q4_0.bin", params);
+		LlamaModel model = new LlamaModel("/Users/konstantin.herud/denkbares/projects/llama.cpp/models/13B/gguf-model-q4_0.bin", params);
 
 		model.tokenize("This is a conversation between User and Llama, a friendly chatbot. Llama is helpful, kind, honest, good at writing, and never fails to answer any requests immediately and with precision.\\n\\nUser: Hello, how are you?\\nLlama:");
 		model.hasNextToken = true;

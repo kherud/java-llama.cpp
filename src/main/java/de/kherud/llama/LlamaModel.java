@@ -320,7 +320,7 @@ public class LlamaModel implements AutoCloseable {
 		}
 
 		int token;
-		if (params.temp == 0) {
+		if (params.temperature == 0) {
 			token = sampleGreedy();
 		} else if (params.mirostat == Parameters.MiroStat.V1) {
 			token = sampleMirostatV1();
@@ -374,7 +374,7 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 	private int sampleMirostatV1() {
-		LlamaLibrary.llama_sample_temperature(ctx, candidates, params.temp);
+		LlamaLibrary.llama_sample_temperature(ctx, candidates, params.temperature);
 		return LlamaLibrary.llama_sample_token_mirostat(
 				ctx,
 				candidates,
@@ -386,7 +386,7 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 	private int sampleMirostatV2() {
-		LlamaLibrary.llama_sample_temperature(ctx, candidates, params.temp);
+		LlamaLibrary.llama_sample_temperature(ctx, candidates, params.temperature);
 		return LlamaLibrary.llama_sample_token_mirostat_v2(
 				ctx,
 				candidates,
@@ -424,7 +424,7 @@ public class LlamaModel implements AutoCloseable {
 		LlamaLibrary.llama_sample_temperature(
 				ctx,
 				candidates,
-				params.temp
+				params.temperature
 		);
 		return LlamaLibrary.llama_sample_token(ctx, candidates);
 	}

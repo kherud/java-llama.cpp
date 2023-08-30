@@ -40,7 +40,7 @@ public final class Parameters {
 	public final float topP; // 1.0 = disabled
 	public final float tfsZ; // 1.0 = disabled
 	public final float typicalP; // 1.0 = disabled
-	public final float temp; // 1.0 = disabled
+	public final float temperature; // 1.0 = disabled
 	public final float repeatPenalty; // 1.0 = disabled
 	public final int repeatLastN; // last n tokens to penalize (0 = disable penalty, -1 = context size)
 	public final float frequencyPenalty; // 0.0 = disabled
@@ -100,7 +100,7 @@ public final class Parameters {
 			float topP,
 			float tfsZ,
 			float typicalP,
-			float temp,
+			float temperature,
 			float repeatPenalty,
 			int repeatLastN,
 			float frequencyPenalty,
@@ -152,7 +152,7 @@ public final class Parameters {
 		this.topP = topP;
 		this.tfsZ = tfsZ;
 		this.typicalP = typicalP;
-		this.temp = temp;
+		this.temperature = temperature;
 		this.repeatPenalty = repeatPenalty;
 		this.repeatLastN = repeatLastN;
 		this.frequencyPenalty = frequencyPenalty;
@@ -320,27 +320,27 @@ public final class Parameters {
 			return this;
 		}
 
-		public Builder setnThreads(int nThreads) {
+		public Builder setNThreads(int nThreads) {
 			this.nThreads = nThreads;
 			return this;
 		}
 
-		public Builder setnPredict(int nPredict) {
+		public Builder setNPredict(int nPredict) {
 			this.nPredict = nPredict;
 			return this;
 		}
 
-		public Builder setnKeep(int nKeep) {
+		public Builder setNKeep(int nKeep) {
 			this.nKeep = nKeep;
 			return this;
 		}
 
-		public Builder setnChunks(int nChunks) {
+		public Builder setNChunks(int nChunks) {
 			this.nChunks = nChunks;
 			return this;
 		}
 
-		public Builder setnProbs(int nProbs) {
+		public Builder setNProbs(int nProbs) {
 			this.nProbs = nProbs;
 			return this;
 		}
@@ -570,17 +570,17 @@ public final class Parameters {
 			return this;
 		}
 
-		public Builder setnCtx(int n_ctx) {
+		public Builder setNCtx(int n_ctx) {
 			ctxParams.setN_ctx(n_ctx);
 			return this;
 		}
 
-		public Builder setnBbatch(int n_batch) {
+		public Builder setNBbatch(int n_batch) {
 			ctxParams.setN_batch(n_batch);
 			return this;
 		}
 
-		public Builder setnGpuLayers(int n_gpu_layers) {
+		public Builder setNGpuLayers(int n_gpu_layers) {
 			ctxParams.setN_gpu_layers(n_gpu_layers);
 			return this;
 		}
