@@ -1,6 +1,9 @@
 package de.kherud.llama;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.FloatBuffer;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -59,7 +62,7 @@ public final class Parameters {
 	@Nullable
 	public final String inputSuffix;  // string to suffix user inputs with
 	@Nullable
-	public final String grammar;  // optional BNF-like grammar to constrain sampling
+	public final LlamaGrammar grammar;  // optional BNF-like grammar to constrain sampling
 	@NotNull
 	public final List<@NotNull String> antiprompt; // string upon seeing which more user input is prompted
 	@Nullable
@@ -116,7 +119,7 @@ public final class Parameters {
 			@Nullable String pathPromptCache,
 			@Nullable String inputPrefix,
 			@Nullable String inputSuffix,
-			@Nullable String grammar,
+			@Nullable LlamaGrammar grammar,
 			@NotNull List<String> antiprompt,
 			@Nullable String loraAdapter,
 			@Nullable String loraBase,
@@ -231,7 +234,7 @@ public final class Parameters {
 		private String pathPromptCache = null;  // path to file for saving/loading prompt eval state
 		private String inputPrefix = null;  // string to prefix user inputs with
 		private String inputSuffix = null;  // string to suffix user inputs with
-		private String grammar = null;  // optional BNF-like grammar to constrain sampling
+		private LlamaGrammar grammar = null;  // optional BNF-like grammar to constrain sampling
 		private List<String> antiPrompt = Collections.emptyList(); // string upon seeing which more user input is prompted
 
 		private String loraAdapter = null;  // lora adapter path
@@ -451,8 +454,18 @@ public final class Parameters {
 			return this;
 		}
 
+		public Builder setGrammar(@NotNull File file) throws IOException {
+			this.grammar = new LlamaGrammar(file);
+			return this;
+		}
+
+		public Builder setGrammar(@NotNull Path path) throws IOException {
+			this.grammar = new LlamaGrammar(path);
+			return this;
+		}
+
 		public Builder setGrammar(@Nullable String grammar) {
-			this.grammar = grammar;
+			this.grammar = grammar == null ? null : new LlamaGrammar(grammar);
 			return this;
 		}
 
