@@ -22,6 +22,7 @@ public class LlamaModel implements AutoCloseable {
     private final Parameters params;
     private final LlamaLibrary.llama_model model;
     private final LlamaLibrary.llama_context ctx;
+
     // cache some things for performance
     private final Pointer logitsPointer; // pointer to retrieve the logits of the llm
     private final IntBuffer contextBuffer; // used to hold all tokens of a conversation

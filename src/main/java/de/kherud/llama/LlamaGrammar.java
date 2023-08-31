@@ -3,10 +3,8 @@ package de.kherud.llama;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
-import com.sun.jna.ptr.PointerByReference;
 import de.kherud.llama.foreign.LlamaLibrary;
 import de.kherud.llama.foreign.NativeSize;
-import de.kherud.llama.foreign.llama_grammar_element;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,7 +44,7 @@ public class LlamaGrammar {
     static final class ParseState {
 
         final Map<String, Integer> symbolIds = new HashMap<>();
-        final List<List<llama_grammar_element>> rules = new ArrayList<>();
+        final List<List<Pair<Integer, Integer>>> rules = new ArrayList<>();
         private String string;
 
         ParseState(String grammar) {
@@ -61,34 +59,32 @@ public class LlamaGrammar {
         }
 
         private LlamaLibrary.llama_grammar create() {
-            // 1. Flatten the 'rules' and get their native pointers.
-            List<Pointer> pointersToRules = new ArrayList<>();
-            int elementSize = 4;
+            // creating the grammar is a bit tricky, since we need to allocate contiguous memory segments for the
+            // elements of each rule
 
-            for (List<llama_grammar_element> rule : rules) {
-                llama_grammar_element[] ruleArray = rule.toArray(new llama_grammar_element[0]);
-                Memory ruleMemory = new Memory((long) ruleArray.length * elementSize);
-                for (int i = 0; i < ruleArray.length; i++) {
-                    byte[] buffer = new byte[elementSize];
-                    ruleArray[i].write();
-                    ruleArray[i].getPointer().read(0, buffer, 0, elementSize);
-                    ruleMemory.write((long) i * elementSize, buffer, 0, elementSize);
+            List<Pointer> rulePointers = new ArrayList<>();
+            for (List<Pair<Integer, Integer>> rule : rules) {
+                if (rule.isEmpty()) {
+                    continue;
                 }
-                pointersToRules.add(ruleMemory);
+                Memory memory = new Memory((long) rule.size() * 8);
+                for (int i = 0; i < rule.size(); i++) {
+                    Pair<Integer, Integer> element = rule.get(i);
+                    memory.setInt((long) i * 8, element.a);
+                    memory.setInt((long) i * 8 + 4, element.b);
+                }
+                rulePointers.add(memory);
             }
 
-            // 3. Prepare the array of pointers
-            PointerByReference rulesArray = new PointerByReference();
-            Memory rulesMemory = new Memory((long) pointersToRules.size() * Native.POINTER_SIZE);
-            for (int i = 0; i < pointersToRules.size(); i++) {
-                rulesMemory.setPointer((long) i * Native.POINTER_SIZE, pointersToRules.get(i));
+            Pointer memory = new Memory((long) Native.POINTER_SIZE * rulePointers.size());
+            for (int i = 0; i < rulePointers.size(); i++) {
+                memory.setPointer((long) i * Native.POINTER_SIZE, rulePointers.get(i));
             }
-            rulesArray.setValue(rulesMemory);
 
-            NativeSize nRules = new NativeSize(pointersToRules.size());
-            NativeSize rootId = new NativeSize(symbolIds.get("root"));
+            NativeSize nRules = new NativeSize(rulePointers.size());
+            NativeSize startRuleIndex = new NativeSize(symbolIds.get("root"));
 
-            return LlamaLibrary.llama_grammar_init(rulesArray, nRules, rootId);
+            return LlamaLibrary.llama_grammar_init(memory, nRules, startRuleIndex);
         }
 
         private int parseSpace(byte[] src, int pos, boolean newlineOk) {
@@ -170,22 +166,22 @@ public class LlamaGrammar {
         }
 
         private int parseAlternates(byte[] src, int startPos, String ruleName, int ruleId, boolean isNested) {
-            List<llama_grammar_element> rule = new ArrayList<>();
+            List<Pair<Integer, Integer>> rule = new ArrayList<>();
             int pos = parseSequence(ruleName, src, startPos, rule, isNested);
 
             while (pos < src.length && src[pos] == '|') {
-                rule.add(new llama_grammar_element(LLAMA_GRETYPE_ALT, 0));
+                rule.add(new Pair<>(LLAMA_GRETYPE_ALT, 0));
                 pos = parseSpace(src, pos + 1, true);
                 pos = parseSequence(ruleName, src, pos, rule, isNested);
             }
 
-            rule.add(new llama_grammar_element(LLAMA_GRETYPE_END, 0));
+            rule.add(new Pair<>(LLAMA_GRETYPE_END, 0));
             addRule(ruleId, rule);  // Assume addRule is a method that takes ruleId and rule list to add the rule
 
             return pos;
         }
 
-        private void addRule(int ruleId, List<llama_grammar_element> rule) {
+        private void addRule(int ruleId, List<Pair<Integer, Integer>> rule) {
             // resize the rules ArrayList if necessary
             while (rules.size() <= ruleId) {
                 rules.add(null);
@@ -193,7 +189,7 @@ public class LlamaGrammar {
             rules.set(ruleId, rule);
         }
 
-        private int parseSequence(String ruleName, byte[] src, int startPos, List<llama_grammar_element> outElements, boolean isNested) {
+        private int parseSequence(String ruleName, byte[] src, int startPos, List<Pair<Integer, Integer>> outElements, boolean isNested) {
             int lastSymStart = outElements.size();
             int pos = startPos;
 
@@ -204,7 +200,7 @@ public class LlamaGrammar {
                     while (src[pos] != '"') {
                         Pair<Integer, Integer> charPair = parseChar(src, pos);
                         pos = charPair.b;
-                        outElements.add(new llama_grammar_element(LLAMA_GRETYPE_CHAR, charPair.a));
+                        outElements.add(new Pair<>(LLAMA_GRETYPE_CHAR, charPair.a));
                     }
                     pos = parseSpace(src, pos + 1, isNested);
                 } else if (src[pos] == '[') { // char range(s)
@@ -220,11 +216,11 @@ public class LlamaGrammar {
                         pos = charPair.b;
                         int type = lastSymStart < outElements.size() ? LLAMA_GRETYPE_CHAR_ALT : startType;
 
-                        outElements.add(new llama_grammar_element(type, charPair.a));
+                        outElements.add(new Pair<>(type, charPair.a));
                         if (src[pos] == '-' && src[pos + 1] != ']') {
                             Pair<Integer, Integer> endCharPair = parseChar(src, pos + 1);
                             pos = endCharPair.b;
-                            outElements.add(new llama_grammar_element(LLAMA_GRETYPE_CHAR_RNG_UPPER, endCharPair.a));
+                            outElements.add(new Pair<>(LLAMA_GRETYPE_CHAR_RNG_UPPER, endCharPair.a));
                         }
                     }
                     pos = parseSpace(src, pos + 1, isNested);
@@ -233,13 +229,13 @@ public class LlamaGrammar {
                     int refRuleId = getSymbolId(src, pos, nameEnd - pos);
                     pos = parseSpace(src, nameEnd, isNested);
                     lastSymStart = outElements.size();
-                    outElements.add(new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, refRuleId));
+                    outElements.add(new Pair<>(LLAMA_GRETYPE_RULE_REF, refRuleId));
                 } else if (src[pos] == '(') { // grouping
                     pos = parseSpace(src, pos + 1, true);
                     int subRuleId = generateSymbolId(ruleName);
                     pos = parseAlternates(src, pos, ruleName, subRuleId, true);
                     lastSymStart = outElements.size();
-                    outElements.add(new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, subRuleId));
+                    outElements.add(new Pair<>(LLAMA_GRETYPE_RULE_REF, subRuleId));
                     if (src[pos] != ')') {
                         throw new RuntimeException("expecting ')' at " + pos);
                     }
@@ -255,23 +251,23 @@ public class LlamaGrammar {
                     // S? --> S' ::= S |
                     int subRuleId = generateSymbolId(ruleName);
                     // Add preceding symbol to generated rule
-                    List<llama_grammar_element> subRule = new ArrayList<>(outElements.subList(lastSymStart, outElements.size()));
+                    List<Pair<Integer, Integer>> subRule = new ArrayList<>(outElements.subList(lastSymStart, outElements.size()));
                     if (src[pos] == '*' || src[pos] == '+') {
                         // Cause generated rule to recurse
-                        subRule.add(new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, subRuleId));
+                        subRule.add(new Pair<>(LLAMA_GRETYPE_RULE_REF, subRuleId));
                     }
                     // Mark start of alternate def
-                    subRule.add(new llama_grammar_element(LLAMA_GRETYPE_ALT, 0));
+                    subRule.add(new Pair<>(LLAMA_GRETYPE_ALT, 0));
                     if (src[pos] == '+') {
                         // Add preceding symbol as alternate only for '+' (otherwise empty)
                         subRule.addAll(outElements.subList(lastSymStart, outElements.size()));
                     }
-                    subRule.add(new llama_grammar_element(LLAMA_GRETYPE_END, 0));
+                    subRule.add(new Pair<>(LLAMA_GRETYPE_END, 0));
                     addRule(subRuleId, subRule);
 
                     // In original rule, replace previous symbol with reference to generated rule
                     outElements.subList(lastSymStart, outElements.size()).clear();
-                    outElements.add(new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, subRuleId));
+                    outElements.add(new Pair<>(LLAMA_GRETYPE_RULE_REF, subRuleId));
 
                     pos = parseSpace(src, pos + 1, isNested);
                 } else {
@@ -364,36 +360,36 @@ public class LlamaGrammar {
             StringBuilder grammarBuilder = new StringBuilder();
             for (int i = 0, end = rules.size(); i < end; i++) {
                 grammarBuilder.append(i).append(": ");
-                List<llama_grammar_element> rule = rules.get(i);
+                List<Pair<Integer, Integer>> rule = rules.get(i);
                 appendRule(grammarBuilder, symbolIdNames, i, rule);
             }
             string = grammarBuilder.toString();
             return string;
         }
 
-        private void appendRule(StringBuilder builder, Map<Integer, String> symbolIdNames, int ruleId, List<llama_grammar_element> rule) {
-            if (rule.isEmpty() || rule.get(rule.size() - 1).type != LLAMA_GRETYPE_END) {
+        private void appendRule(StringBuilder builder, Map<Integer, String> symbolIdNames, int ruleId, List<Pair<Integer, Integer>> rule) {
+            if (rule.isEmpty() || rule.get(rule.size() - 1).a != LLAMA_GRETYPE_END) {
                 throw new RuntimeException("Malformed rule, does not end with LLAMA_GRETYPE_END: " + ruleId);
             }
             builder.append(symbolIdNames.get(ruleId)).append(" ::= ");
             for (int i = 0, end = rule.size() - 1; i < end; i++) {
-                llama_grammar_element elem = rule.get(i);
-                switch (elem.type) {
+                Pair<Integer, Integer> elem = rule.get(i);
+                switch (elem.a) {
                     case LLAMA_GRETYPE_END:
                         throw new RuntimeException("Unexpected end of rule: " + ruleId + "," + i);
                     case LLAMA_GRETYPE_ALT:
                         builder.append("| ");
                         break;
                     case LLAMA_GRETYPE_RULE_REF:
-                        builder.append(symbolIdNames.get(elem.value)).append(" ");
+                        builder.append(symbolIdNames.get(elem.b)).append(" ");
                         break;
                     case LLAMA_GRETYPE_CHAR:
                         builder.append("[");
-                        printGrammarChar(builder, elem.value);
+                        printGrammarChar(builder, elem.b);
                         break;
                     case LLAMA_GRETYPE_CHAR_NOT:
                         builder.append("[^");
-                        printGrammarChar(builder, elem.value);
+                        printGrammarChar(builder, elem.b);
                         break;
                     case LLAMA_GRETYPE_CHAR_RNG_UPPER:
                         if (i == 0 || !isCharElement(rule.get(i - 1))) {
@@ -401,20 +397,20 @@ public class LlamaGrammar {
                                     "LLAMA_GRETYPE_CHAR_RNG_UPPER without preceding char: " + ruleId + "," + i);
                         }
                         builder.append("-");
-                        printGrammarChar(builder, elem.value);
+                        printGrammarChar(builder, elem.b);
                         break;
                     case LLAMA_GRETYPE_CHAR_ALT:
                         if (i == 0 || !isCharElement(rule.get(i - 1))) {
                             throw new RuntimeException(
                                     "LLAMA_GRETYPE_CHAR_ALT without preceding char: " + ruleId + "," + i);
                         }
-                        printGrammarChar(builder, elem.value);
+                        printGrammarChar(builder, elem.b);
                         break;
                     default:
-                        throw new RuntimeException("Unknown type: " + elem.type);
+                        throw new RuntimeException("Unknown type: " + elem.b);
                 }
                 if (isCharElement(elem)) {
-                    switch (rule.get(i + 1).type) {
+                    switch (rule.get(i + 1).b) {
                         case LLAMA_GRETYPE_CHAR_ALT:
                         case LLAMA_GRETYPE_CHAR_RNG_UPPER:
                             break;
@@ -434,8 +430,8 @@ public class LlamaGrammar {
             }
         }
 
-        private boolean isCharElement(llama_grammar_element element) {
-            switch (element.type) {
+        private boolean isCharElement(Pair<Integer, Integer> element) {
+            switch (element.a) {
                 case LLAMA_GRETYPE_CHAR:
                 case LLAMA_GRETYPE_CHAR_NOT:
                 case LLAMA_GRETYPE_CHAR_ALT:

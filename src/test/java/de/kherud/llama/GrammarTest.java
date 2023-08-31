@@ -1,6 +1,5 @@
 package de.kherud.llama;
 
-import de.kherud.llama.foreign.llama_grammar_element;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -8,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static de.kherud.llama.LlamaGrammar.Pair;
 import static de.kherud.llama.foreign.LlamaLibrary.llama_gretype.*;
 
 public class GrammarTest {
@@ -38,50 +38,50 @@ public class GrammarTest {
             Assert.assertEquals("values of rule " + expectedValue + " do not match", expectedValue, actualValue);
         });
 
-        List<llama_grammar_element> expectedRules = List.of(
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 4),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 2),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR, 61),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 3),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR, 10),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 3),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 6),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 7),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 1),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 4),
-                new llama_grammar_element(LLAMA_GRETYPE_ALT, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 1),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR, 45),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_ALT, 43),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_ALT, 42),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_ALT, 47),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 3),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 5),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 6),
-                new llama_grammar_element(LLAMA_GRETYPE_ALT, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR, 48),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_RNG_UPPER, 57),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 7),
-                new llama_grammar_element(LLAMA_GRETYPE_ALT, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR, 48),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_RNG_UPPER, 57),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0)
+        List<Pair<Integer, Integer>> expectedRules = List.of(
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 4),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 2),
+                new Pair<>(LLAMA_GRETYPE_CHAR, 61),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 3),
+                new Pair<>(LLAMA_GRETYPE_CHAR, 10),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 3),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 6),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 7),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 1),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 4),
+                new Pair<>(LLAMA_GRETYPE_ALT, 0),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 1),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_CHAR, 45),
+                new Pair<>(LLAMA_GRETYPE_CHAR_ALT, 43),
+                new Pair<>(LLAMA_GRETYPE_CHAR_ALT, 42),
+                new Pair<>(LLAMA_GRETYPE_CHAR_ALT, 47),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 3),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 5),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 6),
+                new Pair<>(LLAMA_GRETYPE_ALT, 0),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_CHAR, 48),
+                new Pair<>(LLAMA_GRETYPE_CHAR_RNG_UPPER, 57),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 7),
+                new Pair<>(LLAMA_GRETYPE_ALT, 0),
+                new Pair<>(LLAMA_GRETYPE_CHAR, 48),
+                new Pair<>(LLAMA_GRETYPE_CHAR_RNG_UPPER, 57),
+                new Pair<>(LLAMA_GRETYPE_END, 0)
         );
 
 
         int index = 0;
-        for (List<llama_grammar_element> rule : state.rules) {
-            for (llama_grammar_element actualElement : rule) {
-                llama_grammar_element expectedElement = expectedRules.get(index);
-                Assert.assertEquals("grammar element types do not match", expectedElement.type, actualElement.type);
-                Assert.assertEquals("grammar element values do not match", expectedElement.value, actualElement.value);
+        for (List<Pair<Integer, Integer>> rule : state.rules) {
+            for (Pair<Integer, Integer> actualElement : rule) {
+                Pair<Integer, Integer> expectedElement = expectedRules.get(index);
+                Assert.assertEquals("grammar element types do not match", expectedElement.a, actualElement.a);
+                Assert.assertEquals("grammar element values do not match", expectedElement.b, actualElement.b);
                 index++;
             }
         }
@@ -122,83 +122,83 @@ public class GrammarTest {
             Assert.assertEquals("values of rule " + expectedValue + " do not match", expectedValue, actualValue);
         });
 
-        List<llama_grammar_element> expectedRules = List.of(
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 5),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 2),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR, 61),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 3),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 4),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR, 10),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 4),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 7),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 12),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 8),
-                new llama_grammar_element(LLAMA_GRETYPE_ALT, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 9),
-                new llama_grammar_element(LLAMA_GRETYPE_ALT, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR, 40),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 3),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 2),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR, 41),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 3),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 1),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 5),
-                new llama_grammar_element(LLAMA_GRETYPE_ALT, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 1),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR, 45),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_ALT, 43),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_ALT, 42),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_ALT, 47),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 4),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 6),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 7),
-                new llama_grammar_element(LLAMA_GRETYPE_ALT, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR, 97),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_RNG_UPPER, 122),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 10),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 3),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 11),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 3),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR, 97),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_RNG_UPPER, 122),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_ALT, 48),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_RNG_UPPER, 57),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_ALT, 95),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 10),
-                new llama_grammar_element(LLAMA_GRETYPE_ALT, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR, 48),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_RNG_UPPER, 57),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 11),
-                new llama_grammar_element(LLAMA_GRETYPE_ALT, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR, 48),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_RNG_UPPER, 57),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR, 32),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_ALT, 9),
-                new llama_grammar_element(LLAMA_GRETYPE_CHAR_ALT, 10),
-                new llama_grammar_element(LLAMA_GRETYPE_RULE_REF, 12),
-                new llama_grammar_element(LLAMA_GRETYPE_ALT, 0),
-                new llama_grammar_element(LLAMA_GRETYPE_END, 0)
+        List<Pair<Integer, Integer>> expectedRules = List.of(
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 5),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 2),
+                new Pair<>(LLAMA_GRETYPE_CHAR, 61),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 3),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 4),
+                new Pair<>(LLAMA_GRETYPE_CHAR, 10),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 4),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 7),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 12),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 8),
+                new Pair<>(LLAMA_GRETYPE_ALT, 0),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 9),
+                new Pair<>(LLAMA_GRETYPE_ALT, 0),
+                new Pair<>(LLAMA_GRETYPE_CHAR, 40),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 3),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 2),
+                new Pair<>(LLAMA_GRETYPE_CHAR, 41),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 3),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 1),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 5),
+                new Pair<>(LLAMA_GRETYPE_ALT, 0),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 1),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_CHAR, 45),
+                new Pair<>(LLAMA_GRETYPE_CHAR_ALT, 43),
+                new Pair<>(LLAMA_GRETYPE_CHAR_ALT, 42),
+                new Pair<>(LLAMA_GRETYPE_CHAR_ALT, 47),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 4),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 6),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 7),
+                new Pair<>(LLAMA_GRETYPE_ALT, 0),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_CHAR, 97),
+                new Pair<>(LLAMA_GRETYPE_CHAR_RNG_UPPER, 122),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 10),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 3),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 11),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 3),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_CHAR, 97),
+                new Pair<>(LLAMA_GRETYPE_CHAR_RNG_UPPER, 122),
+                new Pair<>(LLAMA_GRETYPE_CHAR_ALT, 48),
+                new Pair<>(LLAMA_GRETYPE_CHAR_RNG_UPPER, 57),
+                new Pair<>(LLAMA_GRETYPE_CHAR_ALT, 95),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 10),
+                new Pair<>(LLAMA_GRETYPE_ALT, 0),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_CHAR, 48),
+                new Pair<>(LLAMA_GRETYPE_CHAR_RNG_UPPER, 57),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 11),
+                new Pair<>(LLAMA_GRETYPE_ALT, 0),
+                new Pair<>(LLAMA_GRETYPE_CHAR, 48),
+                new Pair<>(LLAMA_GRETYPE_CHAR_RNG_UPPER, 57),
+                new Pair<>(LLAMA_GRETYPE_END, 0),
+                new Pair<>(LLAMA_GRETYPE_CHAR, 32),
+                new Pair<>(LLAMA_GRETYPE_CHAR_ALT, 9),
+                new Pair<>(LLAMA_GRETYPE_CHAR_ALT, 10),
+                new Pair<>(LLAMA_GRETYPE_RULE_REF, 12),
+                new Pair<>(LLAMA_GRETYPE_ALT, 0),
+                new Pair<>(LLAMA_GRETYPE_END, 0)
         );
 
 
         int index = 0;
-        for (List<llama_grammar_element> rule : state.rules) {
-            for (llama_grammar_element actualElement : rule) {
-                llama_grammar_element expectedElement = expectedRules.get(index);
-                Assert.assertEquals("grammar element types do not match", expectedElement.type, actualElement.type);
-                Assert.assertEquals("grammar element values do not match", expectedElement.value, actualElement.value);
+        for (List<Pair<Integer, Integer>> rule : state.rules) {
+            for (Pair<Integer, Integer> actualElement : rule) {
+                Pair<Integer, Integer> expectedElement = expectedRules.get(index);
+                Assert.assertEquals("grammar element types do not match", expectedElement.a, actualElement.a);
+                Assert.assertEquals("grammar element values do not match", expectedElement.b, actualElement.b);
                 index++;
             }
         }

@@ -16,7 +16,7 @@ public class GrammarExample {
 
         String modelPath = "/Users/konstantin.herud/denkbares/projects/llama.cpp/models/13B/gguf-model-q4_0.bin";
         try (LlamaModel model = new LlamaModel(modelPath, params)) {
-            for (LlamaModel.Output output : model.generate("")) {
+            for (LlamaModel.Output output : model.generate("1+1=")) {
                 System.out.print(output);
             }
         }
