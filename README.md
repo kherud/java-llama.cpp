@@ -99,13 +99,3 @@ If you're not sure where to put it, just run the code. Java will throw an error 
 - Set the JVM option `-Djna.library.path="/path/to/library/"` (IDEs like IntelliJ make this easy) 
 
 Deployment to Maven Central is coming soon. The installation will also be improved soon. 
-
-## Todo-List
-
-- Grammar
-- Guidance
-- Caching
-- Improve error handling
-- Add synchronization
-- Separate Parameters into ModelParameters and InferenceParameters
-- Return nProp tokens with probability instead of only sampled one
