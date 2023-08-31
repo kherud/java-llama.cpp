@@ -176,7 +176,7 @@ public class LlamaGrammar {
             }
 
             rule.add(new Pair<>(LLAMA_GRETYPE_END, 0));
-            addRule(ruleId, rule);  // Assume addRule is a method that takes ruleId and rule list to add the rule
+            addRule(ruleId, rule);
 
             return pos;
         }
@@ -207,7 +207,7 @@ public class LlamaGrammar {
                     pos++;
                     int startType = LLAMA_GRETYPE_CHAR;
                     if (src[pos] == '^') {
-                        pos = pos++;
+                        pos++;
                         startType = LLAMA_GRETYPE_CHAR_NOT;
                     }
                     lastSymStart = outElements.size();
