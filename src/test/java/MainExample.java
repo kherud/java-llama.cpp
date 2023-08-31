@@ -5,9 +5,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
-public class Example {
+public class MainExample {
 
     public static void main(String... args) throws IOException {
         Parameters params = new Parameters.Builder()
@@ -38,6 +37,5 @@ public class Example {
                 prompt = "";
             }
         }
-
     }
 }
