@@ -9,7 +9,7 @@ import java.util.List;
  * For help, please visit <a href="http://nativelibs4java.googlecode.com/">NativeLibs4Java</a> , <a href="http://rococoa.dev.java.net/">Rococoa</a>, or <a href="http://jna.dev.java.net/">JNA</a>.
  */
 public class llama_grammar_element extends Structure {
-	/** @see llama_gretype */
+	/** @see LlamaLibrary.llama_gretype */
 	public int type;
 	public int getType() {
 		return type;

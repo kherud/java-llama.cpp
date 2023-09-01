@@ -26,4 +26,9 @@ find src/main/java/de/kherud/llama/foreign \
 	-type f \
 	-name "*.java" \
 	-exec sed -i -E '/import com\.ochafik\.lang\.jnaerator\.runtime\.NativeSize(ByReference)?;/d' {} +
+# fix invalid java doc strings (important for javadoc maven plugin)
+find src/main/java/de/kherud/llama/foreign \
+	-type f \
+	-name "*.java" \
+	-exec perl -i -pe 's|\* \@see (?!LlamaLibrary\.)|* \@see LlamaLibrary.|g' {} +
 cd scripts

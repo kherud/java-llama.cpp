@@ -9,7 +9,7 @@ import java.util.List;
  * For help, please visit <a href="http://nativelibs4java.googlecode.com/">NativeLibs4Java</a> , <a href="http://rococoa.dev.java.net/">Rococoa</a>, or <a href="http://jna.dev.java.net/">JNA</a>.
  */
 public class llama_model_quantize_params extends Structure {
-	/** number of threads to use for quantizing, if <=0 will use std::thread::hardware_concurrency() */
+	/** number of threads to use for quantizing, if less than 0 will use std::thread::hardware_concurrency() */
 	public int nthread;
 	public int getNthread() {
 		return nthread;
@@ -18,7 +18,7 @@ public class llama_model_quantize_params extends Structure {
 		this.nthread = nthread;
 	}
 	/**
-	 * @see llama_ftype<br>
+	 * @see LlamaLibrary.llama_ftype
 	 * quantize to this llama_ftype
 	 */
 	public int ftype;
