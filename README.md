@@ -59,10 +59,10 @@ public class Example {
 
 Also have a look at the [examples](src/test/java/examples).
 
-#### Configuration
+### Configuration
 
 You can configure every option the library offers. 
-Note however that most options aren't relevant to this Java binding (in particular everything that concerns command line interfacing). 
+Note however that most options aren't relevant to this Java binding yet (in particular everything that concerns command line interfacing). 
 
 ```java
 Parameters params = new Parameters.Builder()
@@ -73,9 +73,9 @@ Parameters params = new Parameters.Builder()
 LlamaModel model = new LlamaModel("/path/to/model.bin", params);
 ```
 
-## Installation
+### Installing the llama.cpp library
 
-First, make sure to appropriately install the `llama.cpp` shared library for your platform:
+Make sure the the `llama.cpp` shared library is appropriately installed for your platform:
 
 - `libllama.so` (linux)
 - `libllama.dylib` (macos)
@@ -83,16 +83,6 @@ First, make sure to appropriately install the `llama.cpp` shared library for you
 
 Refer to the official [readme](https://github.com/ggerganov/llama.cpp#build) for details.
 The library can be built with the `llama.cpp` project:
-
-#### make
-
-```shell
-make libllama.so
-```
-
-Look for the shared library in the working directory `.`.
-
-#### cmake
 
 ```shell
 mkdir build
@@ -110,6 +100,4 @@ Depending on your platform, either:
 
 - Move the file then to the correct directory, e.g., `/usr/local/lib` for most linux distributions. 
 If you're not sure where to put it, just run the code. Java will throw an error explaining where it looks.
-- Set the JVM option `-Djna.library.path="/path/to/library/"` (IDEs like IntelliJ make this easy) 
-
-Deployment to Maven Central is coming soon. The installation will also be improved soon. 
+- Set the JVM option `-Djna.library.path="/path/to/library/"` (IDEs like IntelliJ make this easy)
