@@ -4,7 +4,7 @@
 
 	<groupId>de.kherud</groupId>
 	<artifactId>llama</artifactId>
-	<version>0.0.0</version>
+	<version>1.0.0</version>
 	<packaging>jar</packaging>
 
 	<name>${project.groupId}:${project.artifactId}</name>
@@ -79,6 +79,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.11.0</version>
 				<configuration>
 					<source>13</source>
 					<target>13</target>
