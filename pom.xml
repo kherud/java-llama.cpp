@@ -18,6 +18,20 @@
 		</license>
 	</licenses>
 
+	<developers>
+		<developer>
+			<name>Konstantin Herud</name>
+			<email>konstantin.herud@gmail.com</email>
+			<organizationUrl>https://github.com/kherud</organizationUrl>
+		</developer>
+	</developers>
+
+	<scm>
+		<connection>scm:git:git://github.com/kherud/java-llama.cpp.git</connection>
+		<developerConnection>scm:git:ssh://github.com:kherud/java-llama.cpp.git</developerConnection>
+		<url>https://github.com/kherud/java-llama.cpp/tree/master</url>
+	</scm>
+
 	<properties>
 		<jna.version>5.13.0</jna.version>
 		<junit.version>4.13.1</junit.version>
