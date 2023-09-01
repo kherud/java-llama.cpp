@@ -1,3 +1,5 @@
+package examples;
+
 import de.kherud.llama.LlamaModel;
 import de.kherud.llama.Parameters;
 

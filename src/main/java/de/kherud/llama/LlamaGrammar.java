@@ -18,19 +18,48 @@ import java.util.Map;
 
 import static de.kherud.llama.foreign.LlamaLibrary.llama_gretype.*;
 
+/**
+ * Implements a parser for an extended Backus-Naur form (BNF), producing the binary context-free grammar format
+ * specified by llama.h. Supports character ranges, grouping, and repetition operators. As an example, a grammar for
+ * arithmetic might look like:
+ * <pre>
+ * root  ::= expr
+ * expr  ::= term ([-+/] term)
+ * term  ::= num | "(" space expr ")" space
+ * num   ::= [0-9]+ space
+ * space ::= [ \t\n]*
+ * </pre>
+ */
 public class LlamaGrammar {
 
     private final ParseState state;
     final LlamaLibrary.llama_grammar foreign;
 
+    /**
+     * Loads a grammar from a file, directly parses it, and allocates a native {@link LlamaLibrary.llama_grammar}.
+     *
+     * @param file the file containing a grammar
+     * @throws IOException on problems reading the file
+     */
     public LlamaGrammar(File file) throws IOException {
         this(file.toPath());
     }
 
+    /**
+     * Loads a grammar from a path, directly parses it, and allocates a native {@link LlamaLibrary.llama_grammar}.
+     *
+     * @param path the path to a file containing a grammar
+     * @throws IOException on problems reading the file
+     */
     public LlamaGrammar(Path path) throws IOException {
         this(Files.readString(path, StandardCharsets.UTF_8));
     }
 
+    /**
+     * Parses a grammar given as string and allocates a native {@link LlamaLibrary.llama_grammar}.
+     *
+     * @param grammar the grammar string
+     */
     public LlamaGrammar(String grammar) {
         this.state = new ParseState(grammar);
         this.foreign = state.create();
@@ -41,6 +70,10 @@ public class LlamaGrammar {
         return state.toString();
     }
 
+    /**
+     * The state object used for parsing a grammar.
+     * It can't be modified and is used to allocate the native {@link LlamaLibrary.llama_grammar}.
+     */
     static final class ParseState {
 
         final Map<String, Integer> symbolIds = new HashMap<>();

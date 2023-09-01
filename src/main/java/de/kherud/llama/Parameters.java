@@ -21,7 +21,7 @@ import de.kherud.llama.foreign.NativeSize;
 import de.kherud.llama.foreign.llama_context_params;
 
 /**
- * Parameters used throughout the lifecycle of the llama model.
+ * Parameters used throughout the lifecycle of a {@link LlamaModel}.
  * Note, that they are currently blindly copied from llama.cpp.
  * Many won't find a use in this project.
  */
@@ -90,6 +90,9 @@ public final class Parameters {
 	public final boolean exportCgraph; // export the computation graph
 	public final boolean verbosePrompt; // print prompt tokens before generation
 
+	/**
+	 * Private constructor to build immutable parameters object. Called via {@link Builder}.
+	 */
 	private Parameters(
 			llama_context_params.@NotNull ByValue ctx,
 			@NotNull BiConsumer<Integer, String> logCallback,
@@ -196,6 +199,9 @@ public final class Parameters {
 		this.verbosePrompt = verbosePrompt;
 	}
 
+	/**
+	 * The builder class used for creating new {@link Parameters} of a {@link LlamaModel}.
+	 */
 	public static class Builder {
 
 		private final llama_context_params.ByValue ctxParams = LlamaLibrary.llama_context_default_params();
@@ -263,6 +269,12 @@ public final class Parameters {
 		private boolean exportCgraph = false; // export the computation graph
 		private boolean verbosePrompt = false; // print prompt tokens before generation
 
+		/**
+		 * Constructs the immutable {@link Parameters} objects with the configured options.
+		 * Note, that all options not configured are expected to have sensible defaults.
+		 *
+		 * @return an immutable parameters object
+		 */
 		public Parameters build() {
 			return new Parameters(
 					ctxParams,

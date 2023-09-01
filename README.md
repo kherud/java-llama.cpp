@@ -45,6 +45,8 @@ public class Example {
 }
 ```
 
+Also have a look at the [examples](src/test/java/examples).
+
 #### Configuration
 
 You can configure every option the library offers. 
