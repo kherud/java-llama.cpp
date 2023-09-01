@@ -9,6 +9,18 @@ This repository provides Java bindings for the C++ library.
 
 ## Quick Start
 
+Access this library via Maven:
+
+```xml
+<dependency>
+    <groupId>de.kherud</groupId>
+    <artifactId>llama</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+You can then use this library. This is a short example: 
+
 ```java
 public class Example {
 
