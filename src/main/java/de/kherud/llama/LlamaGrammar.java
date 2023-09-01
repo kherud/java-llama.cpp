@@ -29,8 +29,10 @@ import static de.kherud.llama.foreign.LlamaLibrary.llama_gretype.*;
  * num   ::= [0-9]+ space
  * space ::= [ \t\n]*
  * </pre>
+ * This class is implemented as an {@link AutoCloseable} in order to free the natively allocated memory for this
+ * grammar, after it is no longer needed.
  */
-public class LlamaGrammar {
+public class LlamaGrammar implements AutoCloseable {
 
     private final ParseState state;
     final LlamaLibrary.llama_grammar foreign;
@@ -68,6 +70,11 @@ public class LlamaGrammar {
     @Override
     public String toString() {
         return state.toString();
+    }
+
+    @Override
+    public void close() {
+        LlamaLibrary.llama_grammar_free(foreign);
     }
 
     /**
