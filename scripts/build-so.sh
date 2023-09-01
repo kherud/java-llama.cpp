@@ -1,3 +1,5 @@
+#!/bin/bash
+cd ..
 git clone https://github.com/ggerganov/llama.cpp.git
 cd llama.cpp
 cp llama.h ..
@@ -8,3 +10,4 @@ cmake --build . --config Release
 cd ../..
 mv -f llama.cpp/build/libllama.so src/main/resources/
 rm -rf llama.cpp
+cd scripts

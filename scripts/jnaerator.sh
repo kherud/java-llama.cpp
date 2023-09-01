@@ -1,4 +1,5 @@
 #!/bin/bash
+cd ..
 jnaerator \
 	-beanStructs \
 	-direct \
@@ -25,3 +26,4 @@ find src/main/java/de/kherud/llama/foreign \
 	-type f \
 	-name "*.java" \
 	-exec sed -i -E '/import com\.ochafik\.lang\.jnaerator\.runtime\.NativeSize(ByReference)?;/d' {} +
+cd scripts
