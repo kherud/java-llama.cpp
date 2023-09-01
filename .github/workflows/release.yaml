@@ -1,5 +1,11 @@
 name: Publish package to the Maven Central Repository
 on:
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Create new release'
+        required: true
+        type: boolean
   release:
     types: [created]
 jobs:
