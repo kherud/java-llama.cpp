@@ -579,6 +579,12 @@ public final class Parameters {
 			return this;
 		}
 
+		/**
+		 * Set a callback that will be used to report progress loading the model with a float value of 0-1.
+		 *
+		 * @param progressCallback the function to call ony any progress
+		 * @return this builder object
+		 */
 		public Builder setProgressCallback(@Nullable Consumer<Float> progressCallback) {
 			// Similarly to setting the logger, we don't allow passing any user data to the progress callback, since
 			// the JVM might move the object around in the memory, thus invalidating any pointers.

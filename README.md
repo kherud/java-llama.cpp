@@ -120,7 +120,7 @@ LlamaModel.setLogger(null);
 LlamaModel.setLogger((level, message) -> {});
 
 // Similarly, a progress callback can be set (only the C++ side will call this).
-// I think this is only used for reporting progress loading the model.
+// I think this is only used to report progress loading the model with a value of 0-1.
 // It is thus state specific and can be done via the parameters.
 new Parameters.Builder()
         .setProgressCallback(progress -> System.out.println("progress: " + progress))
