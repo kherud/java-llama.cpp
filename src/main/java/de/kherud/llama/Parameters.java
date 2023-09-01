@@ -8,7 +8,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -29,8 +28,6 @@ public final class Parameters {
 
 	@NotNull
 	public final llama_context_params.ByValue ctx;
-	@NotNull
-	public final BiConsumer<Integer, String> logCallback;
 	public final int nThreads;
 	public final int nPredict;   // new tokens to predict
 	public final int nKeep;    // number of tokens to keep from initial prompt
@@ -95,7 +92,6 @@ public final class Parameters {
 	 */
 	private Parameters(
 			llama_context_params.@NotNull ByValue ctx,
-			@NotNull BiConsumer<Integer, String> logCallback,
 			int nThreads,
 			int nPredict,
 			int nKeep,
@@ -147,7 +143,6 @@ public final class Parameters {
 			boolean verbosePrompt
 	) {
 		this.ctx = ctx;
-		this.logCallback = logCallback;
 		this.nThreads = nThreads;
 		this.nPredict = nPredict;
 		this.nKeep = nKeep;
@@ -205,8 +200,6 @@ public final class Parameters {
 	public static class Builder {
 
 		private final llama_context_params.ByValue ctxParams = LlamaLibrary.llama_context_default_params();
-
-		private BiConsumer<Integer, String> logCallback = (level, msg) -> System.out.println(msg);
 
 		private int nThreads = Runtime.getRuntime().availableProcessors();
 		private int nPredict = -1;   // new tokens to predict
@@ -278,7 +271,6 @@ public final class Parameters {
 		public Parameters build() {
 			return new Parameters(
 					ctxParams,
-					logCallback,
 					nThreads,
 					nPredict,
 					nKeep,
@@ -329,11 +321,6 @@ public final class Parameters {
 					exportCgraph,
 					verbosePrompt
 			);
-		}
-
-		public Builder setLogCallback(@NotNull BiConsumer<Integer, String> callback) {
-			this.logCallback = callback;
-			return this;
 		}
 
 		public Builder setNThreads(int nThreads) {

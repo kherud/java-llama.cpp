@@ -59,20 +59,6 @@ public class Example {
 
 Also have a look at the [examples](src/test/java/examples).
 
-### Configuration
-
-You can configure every option the library offers. 
-Note however that most options aren't relevant to this Java binding yet (in particular everything that concerns command line interfacing). 
-
-```java
-Parameters params = new Parameters.Builder()
-                            .setInputPrefix("...")
-                            .setLoraAdapter("/path/to/lora/adapter")
-                            .setLoraBase("/path/to/lora/base")
-                            .build();
-LlamaModel model = new LlamaModel("/path/to/model.bin", params);
-```
-
 ### Installing the llama.cpp library
 
 Make sure the the `llama.cpp` shared library is appropriately installed for your platform:
@@ -101,3 +87,35 @@ Depending on your platform, either:
 - Move the file then to the correct directory, e.g., `/usr/local/lib` for most linux distributions. 
 If you're not sure where to put it, just run the code. Java will throw an error explaining where it looks.
 - Set the JVM option `-Djna.library.path="/path/to/library/"` (IDEs like IntelliJ make this easy)
+
+## Documentation
+
+
+
+### Model Configuration
+
+You can configure most options the library offers.
+Note however that most options aren't relevant to this Java binding yet (in particular everything that concerns command line interfacing).
+
+```java
+Parameters params = new Parameters.Builder()
+                            .setInputPrefix("...")
+                            .setLoraAdapter("/path/to/lora/adapter")
+                            .setLoraBase("/path/to/lora/base")
+                            .build();
+LlamaModel model = new LlamaModel("/path/to/model.bin", params);
+```
+
+### Logging
+
+Both Java and C++ logging can be configured via the static method `LlamaModel.setLogger`:
+
+```java
+// the method accepts a BiConsumer<LogLevel, String>
+LlamaModel.setLogger((level, message) -> System.out.println(level.name() + ": " + message));
+// this can also be set to null to disable Java logging
+// however, in this case the C++ side will still output to stdout/stderr
+LlamaModel.setLogger(null);
+// to completely silence any output, pass a no-op
+LlamaModel.setLogger((level, message) -> {});
+```

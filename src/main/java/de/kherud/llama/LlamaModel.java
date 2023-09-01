@@ -6,11 +6,13 @@ import de.kherud.llama.foreign.NativeSize;
 import de.kherud.llama.foreign.llama_token_data;
 import de.kherud.llama.foreign.llama_token_data_array;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.nio.IntBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.function.BiConsumer;
 
 /**
  * This class is a wrapper around the llama.cpp functionality.
@@ -33,6 +35,7 @@ public class LlamaModel implements AutoCloseable {
     static {
         LlamaLibrary.llama_backend_init((byte) 0);
     }
+    private static BiConsumer<LogLevel, String> logCallback;
 
     private final Parameters params;
     private final LlamaLibrary.llama_model model;
@@ -189,6 +192,29 @@ public class LlamaModel implements AutoCloseable {
     }
 
     /**
+     * Sets a callback for both Java and C++ log messages.
+     * Can be set to {@code null} to disable logging.
+     * Note, that in that case C++ output will appear in stdout/err, however.
+     * To completely silence output provide a callback like:
+     * <pre>
+     * LlamaModel.setLogger((level, message) -> {});
+     * </pre>
+     *
+     * @param logCallback a method to call for log messages
+     */
+    public static void setLogger(@Nullable BiConsumer<LogLevel, String> logCallback) {
+        LlamaModel.logCallback = logCallback;
+        if (logCallback == null) {
+            LlamaLibrary.llama_log_set(null, null);
+        } else {
+            LlamaLibrary.llama_log_set((code, text, user_data) -> {
+                LogLevel level = LogLevel.fromCode(code);
+                logCallback.accept(level, text);
+            }, null);
+        }
+    }
+
+    /**
      * Returns the context size of the loaded model, e.g., how many tokens the LLM can process at most in one request.
      * E.g., for llama 1 this size is 2048.
      *
@@ -248,7 +274,7 @@ public class LlamaModel implements AutoCloseable {
             }
             if (LlamaLibrary.llama_eval(ctx, contextBuffer.slice(nPast, nEval), nEval, nPast, params.nThreads) != 0) {
                 String msg = String.format("evaluation failed (%d to evaluate, %d past, %d threads)", nEval, nPast, params.nThreads);
-                params.logCallback.accept(LlamaLibrary.llama_log_level.LLAMA_LOG_LEVEL_ERROR, msg);
+                log(LogLevel.ERROR, msg);
                 throw new RuntimeException("token evaluation failed");
             }
             nPast += nEval;
@@ -394,7 +420,7 @@ public class LlamaModel implements AutoCloseable {
         if (nContext + nAdd > params.ctx.n_ctx) {
             int nCtxKeep = params.ctx.n_ctx / 2 - nAdd;
             String msg = "truncating context from " + nContext + " to " + nCtxKeep + " tokens (+" + nAdd + " to add)";
-            params.logCallback.accept(LlamaLibrary.llama_log_level.LLAMA_LOG_LEVEL_INFO, msg);
+            log(LogLevel.INFO, msg);
             System.arraycopy(contextBuffer.array(), nContext - nCtxKeep, contextBuffer.array(), 0, nCtxKeep);
             nPast = 0;
             nContext = nCtxKeep;
@@ -404,6 +430,12 @@ public class LlamaModel implements AutoCloseable {
     private String decodeToken(int token) {
         int size = LlamaLibrary.llama_token_to_piece(ctx, token, tokenPieceBuffer, tokenPieceBuffer.length);
         return new String(tokenPieceBuffer, 0, size, StandardCharsets.UTF_8);
+    }
+
+    private void log(LogLevel level, String message) {
+        if (logCallback != null) {
+            logCallback.accept(level, message);
+        }
     }
 
     private class LlamaIterator implements Iterator<Output> {

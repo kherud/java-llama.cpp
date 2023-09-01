@@ -78,7 +78,7 @@ public class LlamaLibrary implements Library {
 		void apply(float progress, Pointer ctx);
 	};
 	public interface llama_log_callback extends Callback {
-		void apply(int level, Pointer text, Pointer user_data);
+		void apply(int level, String text, Pointer user_data);
 	};
 	public interface llama_beam_search_callback_fn_t extends Callback {
 		void apply(Pointer callback_data, de.kherud.llama.foreign.llama_beams_state.ByValue llama_beams_state1);
@@ -160,15 +160,6 @@ public class LlamaLibrary implements Library {
 			super(address);
 		}
 		public llama_grammar() {
-			super();
-		}
-	};
-	/** Pointer to unknown (opaque) type */
-	public static class FILE extends PointerType {
-		public FILE(Pointer address) {
-			super(address);
-		}
-		public FILE() {
 			super();
 		}
 	};
