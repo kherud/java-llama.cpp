@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -568,13 +569,26 @@ public final class Parameters {
 			return this;
 		}
 
-		public Builder setExportCgraph(boolean exportCgraph) {
+		public Builder setExportCGraph(boolean exportCgraph) {
 			this.exportCgraph = exportCgraph;
 			return this;
 		}
 
 		public Builder setVerbosePrompt(boolean verbosePrompt) {
 			this.verbosePrompt = verbosePrompt;
+			return this;
+		}
+
+		public Builder setProgressCallback(@Nullable Consumer<Float> progressCallback) {
+			// Similarly to setting the logger, we don't allow passing any user data to the progress callback, since
+			// the JVM might move the object around in the memory, thus invalidating any pointers.
+			if (progressCallback == null) {
+				ctxParams.setProgress_callback(null);
+			} else {
+				ctxParams.setProgress_callback((progress, ctx) -> {
+					progressCallback.accept(progress);
+				});
+			}
 			return this;
 		}
 

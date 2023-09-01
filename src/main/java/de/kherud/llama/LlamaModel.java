@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * This class is a wrapper around the llama.cpp functionality.
@@ -204,6 +205,10 @@ public class LlamaModel implements AutoCloseable {
      */
     public static void setLogger(@Nullable BiConsumer<LogLevel, String> logCallback) {
         LlamaModel.logCallback = logCallback;
+        // We currently do not allow to pass any user data to `llama_log_set`, since the JVM might move
+        // the object around in the memory, thus invalidating any pointers.
+        // Maybe this could be circumvented by allowing something like <T extends Structure> to be passed
+        // as user data. However, the use cases for this are minuscule I think.
         if (logCallback == null) {
             LlamaLibrary.llama_log_set(null, null);
         } else {

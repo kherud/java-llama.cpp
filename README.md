@@ -111,11 +111,18 @@ LlamaModel model = new LlamaModel("/path/to/model.bin", params);
 Both Java and C++ logging can be configured via the static method `LlamaModel.setLogger`:
 
 ```java
-// the method accepts a BiConsumer<LogLevel, String>
+// The method accepts a BiConsumer<LogLevel, String>.
 LlamaModel.setLogger((level, message) -> System.out.println(level.name() + ": " + message));
-// this can also be set to null to disable Java logging
-// however, in this case the C++ side will still output to stdout/stderr
+// This can also be set to null to disable Java logging.
+// However, in this case the C++ side will still output to stdout/stderr.
 LlamaModel.setLogger(null);
-// to completely silence any output, pass a no-op
+// To completely silence any output, pass a no-op.
 LlamaModel.setLogger((level, message) -> {});
+
+// Similarly, a progress callback can be set (only the C++ side will call this).
+// I think this is only used for reporting progress loading the model.
+// It is thus state specific and can be done via the parameters.
+new Parameters.Builder()
+        .setProgressCallback(progress -> System.out.println("progress: " + progress))
+        .build();
 ```
