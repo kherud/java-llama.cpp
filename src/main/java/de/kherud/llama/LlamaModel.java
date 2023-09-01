@@ -248,6 +248,16 @@ public class LlamaModel implements AutoCloseable {
         return LlamaLibrary.llama_n_vocab(ctx);
     }
 
+    /**
+     * Returns the tokenization method / vocabulary type used by this model.
+     *
+     * @return the vocabulary type
+     */
+    public VocabularyType getVocabularyType() {
+        int code = LlamaLibrary.llama_vocab_type(ctx);
+        return VocabularyType.fromCode(code);
+    }
+
 
     /**
      * Internally tokenizes a prompt and returns its tokens without any padding.
