@@ -4,11 +4,19 @@
 
 	<groupId>de.kherud</groupId>
 	<artifactId>llama</artifactId>
-	<version>1.0-SNAPSHOT</version>
+	<version>0.0.0</version>
 	<packaging>jar</packaging>
 
-	<name>java-llama.cpp</name>
-	<url>https://maven.apache.org</url>
+	<name>${project.groupId}:${project.artifactId}</name>
+	<description>Java Bindings for llama.cpp - A Port of Facebook's LLaMA model in C/C++.</description>
+	<url>https://github.com/kherud/java-llama.cpp</url>
+
+	<licenses>
+		<license>
+			<name>MIT License</name>
+			<url>https://www.opensource.org/licenses/mit-license.php</url>
+		</license>
+	</licenses>
 
 	<properties>
 		<jna.version>5.13.0</jna.version>
