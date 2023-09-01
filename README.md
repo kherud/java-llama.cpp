@@ -91,6 +91,48 @@ If you're not sure where to put it, just run the code. Java will throw an error 
 ## Documentation
 
 
+### Inference
+
+There are multiple inference tasks. In general, `LlamaModel` is stateful, i.e., unless `LlamaModel#reset()` is called,
+each subsequent call takes the previous requests and responses into context.
+
+```java
+try (LlamaModel model = new LlamaModel("/path/to/gguf-model")) {
+    // Stream a response and access more information about each output.
+    for (LlamaModel.Output output : model.generate("Tell me a joke.")) {
+        System.out.print(output);
+    }
+    // Calculate a whole response before returning it.
+    String response = model.complete("Tell me another one");
+    // Returns the hidden representation of the context + prompt.
+    float[] embedding = model.getEmbedding("Embed this");
+}
+```
+
+If the model runs out of context at any point, it truncates the saved context to keep half of the maximal context size.
+
+> [!NOTE]
+> Since llama.cpp allocates memory that can't be garbage collected by the JVM, `LlamaModel` is implemented as an
+> AutoClosable. If you use the objects with `try-with` blocks like the examples, the memory will be automatically
+> freed when the model is no longer needed. This isn't strictly required, but avoids memory leaks if you use different
+> models throughout the lifecycle of your application.
+
+### Model Information
+
+There is some information you can access of your loaded model.
+
+```java
+try (LlamaModel model = new LlamaModel("/path/to/gguf-model")) {
+    // the maximal amount of tokens this model can process
+    int contextSize = model.getContextSize();
+    // the hidden dimensionality of this model 
+    int embeddingSize = model.getEmbeddingSize();
+    // the total amount of tokens known in the vocabulary
+    int vocabularySize = model.getVocabularySize();
+    // the tokenization method of the model, i.e., sentence piece or byte pair encoding
+    VocabularyType vocabType = model.getVocabularyType();
+}
+```
 
 ### Model Configuration
 
@@ -125,4 +167,32 @@ LlamaModel.setLogger((level, message) -> {});
 new Parameters.Builder()
         .setProgressCallback(progress -> System.out.println("progress: " + progress))
         .build();
+```
+
+### Debugging Information
+
+There are some methods to debug your shared library:
+
+```java
+// Returns some information like "AVX = 1 | AVX2 = 1 | AVX512 = 0 | ...".
+String systemInfo = LlamaLibrary.llama_print_system_info();
+// I think this returns the amount of logical cores llama.cpp can use (not completely sure though).
+int maxDevices = llama_max_devices();
+// These two methods return a C bool, which is a byte in Java (0 = false, >0 = true).
+boolean mmapSupported = llama_mmap_supported() > 0;
+boolean mLockSupported = llama_mlock_supported() > 0;
+// Returns a timestamp of the llama.cpp backend 
+long time = LlamaLibrary.llama_time_us();
+```
+
+### Backend
+
+The `llama.cpp` backend is statically initialized upon accessing `LlamaModel`. If you want to de-allocate and maybe 
+later re-initialize it for whatever reason, there are two methods: 
+
+```
+// This method takes a bool (byte, 0 = false, >0 = true) to enable NUMA optimizations.
+// Per default, they are off. If you want to enable them, first free the backend, then initialize it again with 1.
+LLamaLibrary.llama_backend_init((byte) 0);
+LLamaLibrary.llama_backend_free();
 ```
