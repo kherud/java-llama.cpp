@@ -31,9 +31,9 @@ public class GrammarTest {
                 "term_7", 7
         );
 
-        Assert.assertEquals("unexpected amount of symbol ids", expectedIds.size(), state.symbolIds.size());
+        Assert.assertEquals("unexpected amount of symbol ids", expectedIds.size(), state.symbol2Id.size());
         expectedIds.forEach((expectedKey, expectedValue) -> {
-            Integer actualValue = state.symbolIds.get(expectedKey);
+            Integer actualValue = state.symbol2Id.get(expectedKey);
             Assert.assertNotNull("expected key " + expectedKey + " missing ", actualValue);
             Assert.assertEquals("values of rule " + expectedValue + " do not match", expectedValue, actualValue);
         });
@@ -115,9 +115,9 @@ public class GrammarTest {
         expectedIds.put("ws", 3);
         expectedIds.put("ws_12", 12);
 
-        Assert.assertEquals("unexpected amount of symbol ids", expectedIds.size(), state.symbolIds.size());
+        Assert.assertEquals("unexpected amount of symbol ids", expectedIds.size(), state.symbol2Id.size());
         expectedIds.forEach((expectedKey, expectedValue) -> {
-            Integer actualValue = state.symbolIds.get(expectedKey);
+            Integer actualValue = state.symbol2Id.get(expectedKey);
             Assert.assertNotNull("expected key " + expectedKey + " missing ", actualValue);
             Assert.assertEquals("values of rule " + expectedValue + " do not match", expectedValue, actualValue);
         });

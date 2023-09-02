@@ -83,7 +83,8 @@ public class LlamaGrammar implements AutoCloseable {
      */
     static final class ParseState {
 
-        final Map<String, Integer> symbolIds = new HashMap<>();
+        final Map<String, Integer> symbol2Id = new HashMap<>();
+        final Map<Integer, String> id2Symbol = new HashMap<>();
         final List<List<Pair<Integer, Integer>>> rules = new ArrayList<>();
         private String string;
 
@@ -103,18 +104,19 @@ public class LlamaGrammar implements AutoCloseable {
             // elements of each rule
 
             List<Pointer> rulePointers = new ArrayList<>();
-            for (List<Pair<Integer, Integer>> rule : rules) {
-                if (rule.isEmpty()) {
-                    continue;
-                }
-                Memory memory = new Memory((long) rule.size() * 8);
-                for (int i = 0; i < rule.size(); i++) {
-                    Pair<Integer, Integer> element = rule.get(i);
-                    memory.setInt((long) i * 8, element.a);
-                    memory.setInt((long) i * 8 + 4, element.b);
-                }
-                rulePointers.add(memory);
-            }
+			for (int ruleIndex = 0; ruleIndex < rules.size(); ruleIndex++) {
+				List<Pair<Integer, Integer>> rule = rules.get(ruleIndex);
+				if (rule == null || rule.isEmpty()) {
+					throw new IllegalArgumentException("no rule for symbol '" + id2Symbol.get(ruleIndex) + "' found");
+				}
+				Memory memory = new Memory((long) rule.size() * 8);
+				for (int i = 0; i < rule.size(); i++) {
+					Pair<Integer, Integer> element = rule.get(i);
+					memory.setInt((long) i * 8, element.a);
+					memory.setInt((long) i * 8 + 4, element.b);
+				}
+				rulePointers.add(memory);
+			}
 
             Pointer memory = new Memory((long) Native.POINTER_SIZE * rulePointers.size());
             for (int i = 0; i < rulePointers.size(); i++) {
@@ -122,7 +124,7 @@ public class LlamaGrammar implements AutoCloseable {
             }
 
             NativeSize nRules = new NativeSize(rulePointers.size());
-            NativeSize startRuleIndex = new NativeSize(symbolIds.get("root"));
+            NativeSize startRuleIndex = new NativeSize(symbol2Id.get("root"));
 
             return LlamaLibrary.llama_grammar_init(memory, nRules, startRuleIndex);
         }
@@ -198,11 +200,12 @@ public class LlamaGrammar implements AutoCloseable {
 
         private int getSymbolId(byte[] src, int pos, int len) {
             String str = new String(src, pos, len, StandardCharsets.UTF_8);
-            if (!symbolIds.containsKey(str)) {
-                int nextId = symbolIds.size();
-                symbolIds.put(str, nextId);
+            if (!symbol2Id.containsKey(str)) {
+                int nextId = symbol2Id.size();
+                symbol2Id.put(str, nextId);
+                id2Symbol.put(nextId, str);
             }
-            return symbolIds.get(str);
+            return symbol2Id.get(str);
         }
 
         private int parseAlternates(byte[] src, int startPos, String ruleName, int ruleId, boolean isNested) {
@@ -383,8 +386,8 @@ public class LlamaGrammar implements AutoCloseable {
         }
 
         private int generateSymbolId(String baseName) {
-            int nextId = symbolIds.size();
-            symbolIds.put(baseName + "_" + nextId, nextId);
+            int nextId = symbol2Id.size();
+            symbol2Id.put(baseName + "_" + nextId, nextId);
             return nextId;
         }
 
@@ -393,25 +396,21 @@ public class LlamaGrammar implements AutoCloseable {
             if (string != null) {
                 return string;
             }
-            Map<Integer, String> symbolIdNames = new HashMap<>();
-            for (Map.Entry<String, Integer> entry : symbolIds.entrySet()) {
-                symbolIdNames.put(entry.getValue(), entry.getKey());
-            }
             StringBuilder grammarBuilder = new StringBuilder();
             for (int i = 0, end = rules.size(); i < end; i++) {
                 grammarBuilder.append(i).append(": ");
                 List<Pair<Integer, Integer>> rule = rules.get(i);
-                appendRule(grammarBuilder, symbolIdNames, i, rule);
+                appendRule(grammarBuilder, i, rule);
             }
             string = grammarBuilder.toString();
             return string;
         }
 
-        private void appendRule(StringBuilder builder, Map<Integer, String> symbolIdNames, int ruleId, List<Pair<Integer, Integer>> rule) {
+        private void appendRule(StringBuilder builder, int ruleId, List<Pair<Integer, Integer>> rule) {
             if (rule.isEmpty() || rule.get(rule.size() - 1).a != LLAMA_GRETYPE_END) {
                 throw new RuntimeException("Malformed rule, does not end with LLAMA_GRETYPE_END: " + ruleId);
             }
-            builder.append(symbolIdNames.get(ruleId)).append(" ::= ");
+            builder.append(id2Symbol.get(ruleId)).append(" ::= ");
             for (int i = 0, end = rule.size() - 1; i < end; i++) {
                 Pair<Integer, Integer> elem = rule.get(i);
                 switch (elem.a) {
@@ -421,7 +420,7 @@ public class LlamaGrammar implements AutoCloseable {
                         builder.append("| ");
                         break;
                     case LLAMA_GRETYPE_RULE_REF:
-                        builder.append(symbolIdNames.get(elem.b)).append(" ");
+                        builder.append(id2Symbol.get(elem.b)).append(" ");
                         break;
                     case LLAMA_GRETYPE_CHAR:
                         builder.append("[");
