@@ -1,4 +1,4 @@
-![llama.cpp b1147](https://img.shields.io/badge/llama.cpp-%23b1147-informational)
+![llama.cpp b1170](https://img.shields.io/badge/llama.cpp-%23b1170-informational)
 
 # Java Bindings for [llama.cpp](https://github.com/ggerganov/llama.cpp)
 
@@ -15,7 +15,7 @@ Access this library via Maven:
 <dependency>
     <groupId>de.kherud</groupId>
     <artifactId>llama</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
@@ -61,7 +61,7 @@ Also have a look at the [examples](src/test/java/examples).
 
 ### Installing the llama.cpp library
 
-Make sure the the `llama.cpp` shared library is appropriately installed for your platform:
+Make sure the `llama.cpp` shared library is appropriately installed for your platform:
 
 - `libllama.so` (linux)
 - `libllama.dylib` (macos)
