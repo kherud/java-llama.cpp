@@ -51,6 +51,8 @@ public final class Parameters {
 	public final float mirostatEta; // learning rate
 	public final int mirostatM; // ??
 	public final FloatBuffer mirostatMu; // ??
+	public final boolean beamSearch;
+	public final int nBeams;
 	public final String cfgNegativePrompt;       // string to help guidance
 	public final float cfgScale;   // How strong is guidance
 	@Nullable
@@ -114,6 +116,8 @@ public final class Parameters {
 			float mirostatEta,
 			int mirostatM,
 			float mirostatMu,
+			boolean beamSearch,
+			int nBeams,
 			String cfgNegativePrompt,
 			float cfgScale,
 			@Nullable String pathPromptCache,
@@ -165,6 +169,8 @@ public final class Parameters {
 		this.mirostatEta = mirostatEta;
 		this.mirostatM = mirostatM;
 		this.mirostatMu = FloatBuffer.wrap(new float[]{mirostatMu});
+		this.beamSearch = beamSearch;
+		this.nBeams = nBeams;
 		this.cfgNegativePrompt = cfgNegativePrompt;
 		this.cfgScale = cfgScale;
 		this.pathPromptCache = pathPromptCache;
@@ -225,6 +231,8 @@ public final class Parameters {
 		private float mirostatEta = 0.10f; // learning rate
 		private int mirostatM = 100; // ??
 		private float mirostatMu = 2f * mirostatTau; // ??
+		private boolean beamSearch = false;
+		private int nBeams = 2;
 
 		// Classifier-Free Guidance
 		// https://arxiv.org/abs/2306.17806
@@ -293,6 +301,8 @@ public final class Parameters {
 					mirostatEta,
 					mirostatM,
 					mirostatMu,
+					beamSearch,
+					nBeams,
 					cfgNegativePrompt,
 					cfgScale,
 					pathPromptCache,
@@ -426,6 +436,16 @@ public final class Parameters {
 
 		public Builder setMirostatMu(float mirostatMu) {
 			this.mirostatMu = mirostatMu;
+			return this;
+		}
+
+		public Builder setBeamSearch(boolean beamSearch) {
+			this.beamSearch = beamSearch;
+			return this;
+		}
+
+		public Builder setNBeams(int nBeams) {
+			this.nBeams = nBeams;
 			return this;
 		}
 
@@ -591,9 +611,7 @@ public final class Parameters {
 			if (progressCallback == null) {
 				ctxParams.setProgress_callback(null);
 			} else {
-				ctxParams.setProgress_callback((progress, ctx) -> {
-					progressCallback.accept(progress);
-				});
+				ctxParams.setProgress_callback((progress, ctx) -> progressCallback.accept(progress));
 			}
 			return this;
 		}

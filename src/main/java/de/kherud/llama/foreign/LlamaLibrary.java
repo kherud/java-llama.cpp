@@ -102,7 +102,7 @@ public class LlamaLibrary implements Library {
 	public static native int llama_model_n_vocab(LlamaLibrary.llama_model model);
 	public static native int llama_model_n_ctx(LlamaLibrary.llama_model model);
 	public static native int llama_model_n_embd(LlamaLibrary.llama_model model);
-	public static native int llama_model_desc(LlamaLibrary.llama_model model, String buf, NativeSize buf_size);
+	public static native int llama_model_desc(LlamaLibrary.llama_model model, byte[] buf, NativeSize buf_size);
 	public static native long llama_model_size(LlamaLibrary.llama_model model);
 	public static native long llama_model_n_params(LlamaLibrary.llama_model model);
 	public static native int llama_model_quantize(String fname_inp, String fname_out, llama_model_quantize_params params);
@@ -116,7 +116,7 @@ public class LlamaLibrary implements Library {
 	public static native byte llama_load_session_file(LlamaLibrary.llama_context ctx, String path_session, IntBuffer tokens_out, NativeSize n_token_capacity, NativeSizeByReference n_token_count_out);
 	public static native byte llama_save_session_file(LlamaLibrary.llama_context ctx, String path_session, IntBuffer tokens, NativeSize n_token_count);
 	public static native int llama_eval(LlamaLibrary.llama_context ctx, IntBuffer tokens, int n_tokens, int n_past, int n_threads);
-	public static native int llama_eval_embd(LlamaLibrary.llama_context ctx, float embd[], int n_tokens, int n_past, int n_threads);
+	public static native int llama_eval_embd(LlamaLibrary.llama_context ctx, FloatBuffer embd, int n_tokens, int n_past, int n_threads);
 	public static native int llama_eval_export(LlamaLibrary.llama_context ctx, String fname);
 	public static native FloatByReference llama_get_logits(LlamaLibrary.llama_context ctx);
 	public static native FloatByReference llama_get_embeddings(LlamaLibrary.llama_context ctx);

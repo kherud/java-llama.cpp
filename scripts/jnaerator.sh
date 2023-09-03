@@ -14,6 +14,8 @@ jnaerator \
 	 -preferJavac \
 	 -mode Directory \
 	 -runtime JNA \
+	 -noPrimitiveArrays \
+	 -forceStringSignatures \
 	 -f \
 	 llama.h
 # remove erroneous method signatures

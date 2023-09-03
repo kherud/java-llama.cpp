@@ -3,6 +3,7 @@ package de.kherud.llama;
 import com.sun.jna.Pointer;
 import de.kherud.llama.foreign.LlamaLibrary;
 import de.kherud.llama.foreign.NativeSize;
+import de.kherud.llama.foreign.llama_timings;
 import de.kherud.llama.foreign.llama_token_data;
 import de.kherud.llama.foreign.llama_token_data_array;
 import org.jetbrains.annotations.NotNull;
@@ -13,7 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 /**
  * This class is a wrapper around the llama.cpp functionality.
@@ -258,6 +258,49 @@ public class LlamaModel implements AutoCloseable {
         return VocabularyType.fromCode(code);
     }
 
+    /**
+     * Returns the memory size of this model in bytes
+     *
+     * @return amount of bytes allocated
+     */
+    public long getMemorySize() {
+        return LlamaLibrary.llama_model_size(model);
+    }
+
+    /**
+     * Returns the amount of parameters this model has
+     *
+     * @return amount of parameters
+     */
+    public long getAmountParameters() {
+        return LlamaLibrary.llama_model_n_params(model);
+    }
+
+    /**
+     * Get performance information about this model
+     *
+     * @return the inference timings
+     */
+    public llama_timings getTimings() {
+        return LlamaLibrary.llama_get_timings(ctx);
+    }
+
+    /**
+     * Deallocates the native memory used by this model
+     */
+    @Override
+    public void close() {
+        LlamaLibrary.llama_free_model(model);
+        LlamaLibrary.llama_free(ctx);
+    }
+
+    @Override
+    public String toString() {
+        byte[] buffer = new byte[512];
+        int size = LlamaLibrary.llama_model_desc(model, buffer, new NativeSize(buffer.length));
+        return new String(buffer, 0, Math.min(size, buffer.length), StandardCharsets.UTF_8);
+    }
+
 
     /**
      * Internally tokenizes a prompt and returns its tokens without any padding.
@@ -273,12 +316,6 @@ public class LlamaModel implements AutoCloseable {
             throw new RuntimeException("tokenization failed due to unknown reasons");
         }
         return tokenBuffer.slice(0, nTokens);
-    }
-
-    @Override
-    public void close() {
-        LlamaLibrary.llama_free_model(model);
-        LlamaLibrary.llama_free(ctx);
     }
 
     private void evaluate() {
@@ -522,7 +559,7 @@ public class LlamaModel implements AutoCloseable {
             this.probability = probability;
             // directly convert it to text to do it only once
             int size = LlamaLibrary.llama_token_to_piece(ctx, token, tokenPieceBuffer, tokenPieceBuffer.length);
-            text = new String(tokenPieceBuffer, 0, size, StandardCharsets.UTF_8);
+            text = new String(tokenPieceBuffer, 0, Math.min(size, tokenPieceBuffer.length), StandardCharsets.UTF_8);
         }
 
         @Override
@@ -538,6 +575,15 @@ public class LlamaModel implements AutoCloseable {
         public TokenType getType() {
             int code = LlamaLibrary.llama_token_get_type(ctx, token);
             return TokenType.fromCode(code);
+        }
+
+        /**
+         * Returns the score of this token
+         *
+         * @return the float score
+         */
+        public float getScore() {
+            return LlamaLibrary.llama_token_get_score(ctx, token);
         }
     }
 }

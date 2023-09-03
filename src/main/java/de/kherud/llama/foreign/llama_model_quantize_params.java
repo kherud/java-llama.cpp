@@ -44,27 +44,36 @@ public class llama_model_quantize_params extends Structure {
 	public void setQuantize_output_tensor(byte quantize_output_tensor) {
 		this.quantize_output_tensor = quantize_output_tensor;
 	}
+	/** only copy tensors - ftype, allow_requantize and quantize_output_tensor are ignored */
+	public byte only_copy;
+	public byte getOnly_copy() {
+		return only_copy;
+	}
+	public void setOnly_copy(byte only_copy) {
+		this.only_copy = only_copy;
+	}
 	public llama_model_quantize_params() {
 		super();
 	}
 	@Override
 	protected List<String> getFieldOrder() {
-		return Arrays.asList("nthread", "ftype", "allow_requantize", "quantize_output_tensor");
+		return Arrays.asList("nthread", "ftype", "allow_requantize", "quantize_output_tensor", "only_copy");
 	}
-	public llama_model_quantize_params(int nthread, int ftype, byte allow_requantize, byte quantize_output_tensor) {
+	public llama_model_quantize_params(int nthread, int ftype, byte allow_requantize, byte quantize_output_tensor, byte only_copy) {
 		super();
 		this.nthread = nthread;
 		this.ftype = ftype;
 		this.allow_requantize = allow_requantize;
 		this.quantize_output_tensor = quantize_output_tensor;
+		this.only_copy = only_copy;
 	}
 	public llama_model_quantize_params(Pointer peer) {
 		super(peer);
 	}
 	public static class ByReference extends llama_model_quantize_params implements Structure.ByReference {
-		
+
 	};
 	public static class ByValue extends llama_model_quantize_params implements Structure.ByValue {
-		
+
 	};
 }
