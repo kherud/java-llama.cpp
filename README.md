@@ -1,4 +1,4 @@
-![llama.cpp b1170](https://img.shields.io/badge/llama.cpp-%23b1170-informational)
+![llama.cpp b1170](https://img.shields.io/badge/llama.cpp-%23b1204-informational)
 
 # Java Bindings for [llama.cpp](https://github.com/ggerganov/llama.cpp)
 

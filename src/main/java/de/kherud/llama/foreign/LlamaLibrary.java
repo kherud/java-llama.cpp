@@ -97,10 +97,12 @@ public class LlamaLibrary implements Library {
 	public static native byte llama_mlock_supported();
 	public static native int llama_n_vocab(LlamaLibrary.llama_context ctx);
 	public static native int llama_n_ctx(LlamaLibrary.llama_context ctx);
+	public static native int llama_n_ctx_train(LlamaLibrary.llama_context ctx);
 	public static native int llama_n_embd(LlamaLibrary.llama_context ctx);
 	public static native int llama_vocab_type(LlamaLibrary.llama_context ctx);
 	public static native int llama_model_n_vocab(LlamaLibrary.llama_model model);
 	public static native int llama_model_n_ctx(LlamaLibrary.llama_model model);
+	public static native int llama_model_n_ctx_train(LlamaLibrary.llama_model model);
 	public static native int llama_model_n_embd(LlamaLibrary.llama_model model);
 	public static native int llama_model_desc(LlamaLibrary.llama_model model, byte[] buf, NativeSize buf_size);
 	public static native long llama_model_size(LlamaLibrary.llama_model model);
@@ -132,6 +134,7 @@ public class LlamaLibrary implements Library {
 	public static native int llama_token_to_piece_with_model(LlamaLibrary.llama_model model, int token, byte[] buf, int length);
 	public static native LlamaLibrary.llama_grammar llama_grammar_init(Pointer rules, NativeSize n_rules, NativeSize start_rule_index);
 	public static native void llama_grammar_free(LlamaLibrary.llama_grammar grammar);
+	public static native LlamaLibrary.llama_grammar llama_grammar_copy(LlamaLibrary.llama_grammar grammar);
 	public static native void llama_sample_repetition_penalty(LlamaLibrary.llama_context ctx, llama_token_data_array candidates, IntBuffer last_tokens, NativeSize last_tokens_size, float penalty);
 	public static native void llama_sample_frequency_and_presence_penalties(LlamaLibrary.llama_context ctx, llama_token_data_array candidates, IntBuffer last_tokens, NativeSize last_tokens_size, float alpha_frequency, float alpha_presence);
 	public static native void llama_sample_classifier_free_guidance(LlamaLibrary.llama_context ctx, llama_token_data_array candidates, LlamaLibrary.llama_context guidance_ctx, float scale);
