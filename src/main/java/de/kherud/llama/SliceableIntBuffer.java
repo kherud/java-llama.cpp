@@ -11,26 +11,26 @@ import java.nio.IntBuffer;
  * Does not implement Buffer because the {@link java.nio.Buffer#slice(int, int)}
  * method is specifically blocked from being implemented or used on older jdk versions.
  */
-public class SliceableIntBuffer {
-	public final IntBuffer delegate;
+class SliceableIntBuffer {
+	final IntBuffer delegate;
 
 	private final int offset;
 
 	private final int capacity;
 
-	public SliceableIntBuffer(IntBuffer delegate) {
+	SliceableIntBuffer(IntBuffer delegate) {
 		this.delegate = delegate;
 		this.capacity = delegate.capacity();
 		this.offset = 0;
 	}
 
-	public SliceableIntBuffer(IntBuffer delegate, int offset, int capacity) {
+	SliceableIntBuffer(IntBuffer delegate, int offset, int capacity) {
 		this.delegate = delegate;
 		this.offset = offset;
 		this.capacity = capacity;
 	}
 
-	public SliceableIntBuffer slice(int offset, int length) {
+	SliceableIntBuffer slice(int offset, int length) {
 		// Where the magic happens
 		// Wrapping is equivalent to the slice operation so long
 		// as you keep track of your offsets and capacities.
@@ -48,20 +48,20 @@ public class SliceableIntBuffer {
 
 	}
 
-	public int capacity() {
+	int capacity() {
 		return capacity;
 	}
 
-	public SliceableIntBuffer put(int index, int i) {
+	SliceableIntBuffer put(int index, int i) {
 		delegate.put(offset + index, i);
 		return this;
 	}
 
-	public int get(int index) {
+	int get(int index) {
 		return delegate.get(offset + index);
 	}
 
-	public void clear() {
+	void clear() {
 		// Clear set the limit and position
 		// to 0 and capacity respectively,
 		// but that's not what the buffer was initially
@@ -72,6 +72,5 @@ public class SliceableIntBuffer {
 		delegate.limit(offset + capacity);
 		delegate.position(offset);
 	}
-
 
 }
