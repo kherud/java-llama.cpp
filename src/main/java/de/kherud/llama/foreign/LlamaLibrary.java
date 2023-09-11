@@ -130,8 +130,8 @@ public class LlamaLibrary implements Library {
 	public static native int llama_token_nl(LlamaLibrary.llama_context ctx);
 	public static native int llama_tokenize(LlamaLibrary.llama_context ctx, String text, IntBuffer tokens, int n_max_tokens, byte add_bos);
 	public static native int llama_tokenize_with_model(LlamaLibrary.llama_model model, String text, IntBuffer tokens, int n_max_tokens, byte add_bos);
-	public static native int llama_token_to_piece(LlamaLibrary.llama_context ctx, int token, byte[] buf, int length);
-	public static native int llama_token_to_piece_with_model(LlamaLibrary.llama_model model, int token, byte[] buf, int length);
+	public static native int llama_token_to_piece(LlamaLibrary.llama_context ctx, int token, ByteBuffer buf, int length);
+	public static native int llama_token_to_piece_with_model(LlamaLibrary.llama_model model, int token, ByteBuffer buf, int length);
 	public static native LlamaLibrary.llama_grammar llama_grammar_init(Pointer rules, NativeSize n_rules, NativeSize start_rule_index);
 	public static native void llama_grammar_free(LlamaLibrary.llama_grammar grammar);
 	public static native LlamaLibrary.llama_grammar llama_grammar_copy(LlamaLibrary.llama_grammar grammar);

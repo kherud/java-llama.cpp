@@ -9,6 +9,7 @@ import de.kherud.llama.foreign.llama_token_data_array;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
@@ -46,7 +47,7 @@ public class LlamaModel implements AutoCloseable {
     private final Pointer logitsPointer; // pointer to retrieve the logits of the llm
     private final SliceableIntBuffer contextBuffer; // used to hold all tokens of a conversation
     private final SliceableIntBuffer tokenBuffer; // used for tokenization
-    private final byte[] tokenPieceBuffer; // used to decode tokens to string
+    private SliceableByteBuffer tokenPieceBuffer; // used to decode tokens to string (might be resized if out of capacity)
     private final llama_token_data.ByReference[] candidateData; // candidates used for sampling
     private final llama_token_data_array candidates; // array holding the candidates
     private final int nVocab;
@@ -55,6 +56,7 @@ public class LlamaModel implements AutoCloseable {
     private final int tokenNl;
     private int nPast = 0; // how many evaluated tokens are currently in the context buffer
     private int nContext = 0; // how many tokens currently are in the context buffer
+    private int nBuffered = 0;
 
     /**
      * Load a <b>gguf</b> llama.cpp model from a given file path with default {@link Parameters}.
@@ -90,7 +92,7 @@ public class LlamaModel implements AutoCloseable {
         // setup some cached variables used throughout lifecycle
         contextBuffer = new SliceableIntBuffer(IntBuffer.allocate(params.ctx.n_ctx));
         tokenBuffer = new SliceableIntBuffer(IntBuffer.allocate(params.ctx.n_ctx));
-        tokenPieceBuffer = new byte[64];
+        tokenPieceBuffer = new SliceableByteBuffer(ByteBuffer.allocate(64));
         nVocab = getVocabularySize();
 
         logitsPointer = LlamaLibrary.llama_get_logits(ctx).getPointer();
@@ -480,8 +482,34 @@ public class LlamaModel implements AutoCloseable {
     }
 
     private String decodeToken(int token) {
-        int size = LlamaLibrary.llama_token_to_piece(ctx, token, tokenPieceBuffer, tokenPieceBuffer.length);
-        return new String(tokenPieceBuffer, 0, size, StandardCharsets.UTF_8);
+        int bufferSize = tokenPieceBuffer.capacity() - nBuffered;
+        SliceableByteBuffer slice = tokenPieceBuffer.slice(nBuffered, bufferSize);
+        int pieceSize = LlamaLibrary.llama_token_to_piece(ctx, token, slice.delegate, bufferSize);
+
+        // while the buffer is too small for the decoded tokens, resize the buffer and retry de-tokenization
+        while (pieceSize < 0 || pieceSize > bufferSize) {
+            // create the buffer double the size
+            ByteBuffer newBuffer = ByteBuffer.allocate(tokenPieceBuffer.capacity() * 2);
+            // copy the old content
+            for (int i = 0; i < nBuffered; i++) {
+                 newBuffer.put(i, tokenPieceBuffer.get(i));
+            }
+            tokenPieceBuffer = new SliceableByteBuffer(newBuffer);
+            bufferSize = tokenPieceBuffer.capacity() - nBuffered;
+            slice = tokenPieceBuffer.slice(nBuffered, bufferSize);
+            pieceSize = LlamaLibrary.llama_token_to_piece(ctx, token, slice.delegate, bufferSize);
+        }
+
+        // after successful de-tokenization, check if the piece can be directly returned or is an utf-8 codepoint a
+        // needs to be buffered
+        if ((tokenPieceBuffer.get(nBuffered) & 0x80) == 0) {
+            int nTotal = nBuffered + Math.min(pieceSize, tokenPieceBuffer.capacity());
+            nBuffered = 0;
+            return new String(tokenPieceBuffer.delegate.array(), 0, nTotal, StandardCharsets.UTF_8);
+        } else {
+            nBuffered += pieceSize;
+            return "";
+        }
     }
 
     private void log(LogLevel level, String message) {
@@ -554,12 +582,12 @@ public class LlamaModel implements AutoCloseable {
         public final float probability;
         public final String text;
 
+
         private Output(int token, float probability) {
             this.token = token;
             this.probability = probability;
             // directly convert it to text to do it only once
-            int size = LlamaLibrary.llama_token_to_piece(ctx, token, tokenPieceBuffer, tokenPieceBuffer.length);
-            text = new String(tokenPieceBuffer, 0, Math.min(size, tokenPieceBuffer.length), StandardCharsets.UTF_8);
+            this.text = decodeToken(token);
         }
 
         @Override

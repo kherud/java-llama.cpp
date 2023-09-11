@@ -1,44 +1,43 @@
 package de.kherud.llama;
 
-import java.nio.IntBuffer;
-
+import java.nio.ByteBuffer;
 
 /**
- * Container that allows slicing an {@link IntBuffer}
+ * Container that allows slicing an {@link ByteBuffer}
  * with arbitrary slicing lengths on Java versions older than 13.
- * Does not extend IntBuffer because the super constructor
+ * Does not extend ByteBuffer because the super constructor
  * requires memory segment proxies, and we can't access the delegate's.
  * Does not implement Buffer because the {@link java.nio.Buffer#slice(int, int)}
  * method is specifically blocked from being implemented or used on older jdk versions.
- * Unfortunately this can't be generified with {@link SliceableByteBuffer}, since there is no shared interface.
+ * Unfortunately this can't be generified with {@link SliceableIntBuffer}, since there is no shared interface.
  */
-class SliceableIntBuffer {
-	final IntBuffer delegate;
+class SliceableByteBuffer {
+	final ByteBuffer delegate;
 
 	private final int offset;
 
 	private final int capacity;
 
-	SliceableIntBuffer(IntBuffer delegate) {
+	SliceableByteBuffer(ByteBuffer delegate) {
 		this.delegate = delegate;
 		this.capacity = delegate.capacity();
 		this.offset = 0;
 	}
 
-	SliceableIntBuffer(IntBuffer delegate, int offset, int capacity) {
+	SliceableByteBuffer(ByteBuffer delegate, int offset, int capacity) {
 		this.delegate = delegate;
 		this.offset = offset;
 		this.capacity = capacity;
 	}
 
-	SliceableIntBuffer slice(int offset, int length) {
+	SliceableByteBuffer slice(int offset, int length) {
 		// Where the magic happens
 		// Wrapping is equivalent to the slice operation so long
 		// as you keep track of your offsets and capacities.
 		// So, we use this container class to track those offsets and translate
 		// them to the correct frame of reference.
-		return new SliceableIntBuffer(
-				IntBuffer.wrap(
+		return new SliceableByteBuffer(
+				ByteBuffer.wrap(
 						this.delegate.array(),
 						this.offset + offset,
 						length
@@ -53,12 +52,12 @@ class SliceableIntBuffer {
 		return capacity;
 	}
 
-	SliceableIntBuffer put(int index, int i) {
-		delegate.put(offset + index, i);
+	SliceableByteBuffer put(int index, byte b) {
+		delegate.put(offset + index, b);
 		return this;
 	}
 
-	int get(int index) {
+	byte get(int index) {
 		return delegate.get(offset + index);
 	}
 
