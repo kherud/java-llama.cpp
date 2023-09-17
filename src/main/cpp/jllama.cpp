@@ -59,10 +59,10 @@ static jfieldID f_beam_search = 0;
 static jfieldID f_n_beams = 0;
 static jfieldID f_grammar = 0;
 static jfieldID f_antiprompt = 0;
-static jfieldID f_model_seed = 0;
+static jfieldID f_infer_seed = 0;
 // model parameters
 static jfieldID f_n_threads = 0;
-static jfieldID f_infer_seed = 0;
+static jfieldID f_model_seed = 0;
 static jfieldID f_n_ctx = 0;
 static jfieldID f_n_batch = 0;
 static jfieldID f_n_gpu_layers = 0;
@@ -170,10 +170,10 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
     f_n_beams = env->GetFieldID(c_infer_params, "nBeams", "I");
     f_grammar = env->GetFieldID(c_infer_params, "grammar", "Ljava/lang/String;");
     f_antiprompt = env->GetFieldID(c_infer_params, "antiprompt", "[Ljava/lang/String;");
-    f_model_seed = env->GetFieldID(c_infer_params, "seed", "I");
+    f_infer_seed = env->GetFieldID(c_infer_params, "seed", "I");
 
     f_n_threads = env->GetFieldID(c_model_params, "nThreads", "I");
-    f_infer_seed = env->GetFieldID(c_model_params, "seed", "I");
+    f_model_seed = env->GetFieldID(c_model_params, "seed", "I");
     f_n_ctx = env->GetFieldID(c_model_params, "nCtx", "I");
     f_n_batch = env->GetFieldID(c_model_params, "nBatch", "I");
     f_n_gpu_layers = env->GetFieldID(c_model_params, "nGpuLayers", "I");
@@ -192,7 +192,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
     f_lora_adapter = env->GetFieldID(c_model_params, "loraAdapter", "Ljava/lang/String;");
     f_lora_base = env->GetFieldID(c_model_params, "loraBase", "Ljava/lang/String;");
     f_hellaswag = env->GetFieldID(c_model_params, "hellaswag", "Z");
-    f_hellaswag_tasks = env->GetFieldID(c_model_params, "hellaswagTasks", "I");
+    f_hellaswag_tasks = env->GetFieldID(c_model_params, "hellaswagTasks", "S");
     f_memory_f16 = env->GetFieldID(c_model_params, "memoryF16", "Z");
     f_mem_test = env->GetFieldID(c_model_params, "memTest", "Z");
     f_numa = env->GetFieldID(c_model_params, "numa", "Z");
@@ -201,10 +201,10 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
     if (!(f_model_pointer && f_iter_has_next && f_iter_n_generated && f_iter_token_index)) {
         goto error;
     }
-    if (!(f_n_predict && f_n_keep && f_n_probs && f_logit_bias && f_top_k && f_top_p && f_tfs_z && f_typical_p && f_temperature && f_repeat_penalty && f_repeat_last_n && f_frequency_penalty && f_presence_penalty && f_penalize_nl && f_ignore_eos && f_mirostat && f_mirostat_tau && f_mirostat_eta && f_beam_search && f_n_beams && f_grammar && f_antiprompt && f_model_seed)) {
+    if (!(f_n_predict && f_n_keep && f_n_probs && f_logit_bias && f_top_k && f_top_p && f_tfs_z && f_typical_p && f_temperature && f_repeat_penalty && f_repeat_last_n && f_frequency_penalty && f_presence_penalty && f_penalize_nl && f_ignore_eos && f_mirostat && f_mirostat_tau && f_mirostat_eta && f_beam_search && f_n_beams && f_grammar && f_antiprompt && f_infer_seed)) {
         goto error;
     }
-    if (!(f_n_threads && f_infer_seed && f_n_ctx && f_n_batch && f_n_gpu_layers && f_main_gpu && f_tensor_split && f_rope_freq_base && f_rope_freq_scale && f_low_vram && f_mul_mat_q && f_f16_kv && f_logits_all && f_vocab_only && f_use_mmap && f_use_mlock && f_embedding && f_lora_adapter && f_lora_base && f_hellaswag && f_hellaswag_tasks && f_memory_f16 && f_mem_test && f_numa && f_verbose_prompt)) {
+    if (!(f_n_threads && f_model_seed && f_n_ctx && f_n_batch && f_n_gpu_layers && f_main_gpu && f_tensor_split && f_rope_freq_base && f_rope_freq_scale && f_low_vram && f_mul_mat_q && f_f16_kv && f_logits_all && f_vocab_only && f_use_mmap && f_use_mlock && f_embedding && f_lora_adapter && f_lora_base && f_hellaswag && f_hellaswag_tasks && f_memory_f16 && f_mem_test && f_numa && f_verbose_prompt)) {
         goto error;
     }
 
@@ -289,6 +289,84 @@ static gpt_params parse_model_params(JNIEnv* env, jobject jparams, jstring java_
 
     params.model = parse_jstring(env, java_file_path);
 
+    params.seed = env->GetIntField(jparams, f_model_seed);
+    params.n_threads = env->GetIntField(jparams, f_n_threads);
+    params.n_ctx = env->GetIntField(jparams, f_n_ctx);
+    params.n_batch = env->GetIntField(jparams, f_n_batch);
+    params.n_gpu_layers = env->GetIntField(jparams, f_n_gpu_layers);
+    params.main_gpu = env->GetIntField(jparams, f_main_gpu);
+	params.rope_freq_base = env->GetFloatField(jparams, f_rope_freq_base);
+	params.rope_freq_scale = env->GetFloatField(jparams, f_rope_freq_scale);
+	params.lora_adapter = env->GetIntField(jparams, f_lora_adapter);
+    params.lora_base = env->GetIntField(jparams, f_lora_base);
+	params.hellaswag = env->GetBooleanField(jparams, f_hellaswag);
+    params.hellaswag_tasks = env->GetShortField(jparams, f_hellaswag_tasks);
+	params.low_vram = env->GetBooleanField(jparams, f_low_vram);
+    params.mul_mat_q = env->GetBooleanField(jparams, f_mul_mat_q);
+    params.memory_f16 = env->GetBooleanField(jparams, f_memory_f16);
+    params.embedding = env->GetBooleanField(jparams, f_embedding);
+    params.escape = env->GetIntField(jparams, f_n_predict);
+    params.use_mmap = env->GetBooleanField(jparams, f_use_mmap);
+    params.use_mlock = env->GetBooleanField(jparams, f_use_mlock);
+    params.numa = env->GetBooleanField(jparams, f_numa);
+    params.verbose_prompt = env->GetBooleanField(jparams, f_verbose_prompt);
+
+	jstring j_lora_adapter = (jstring) env->GetObjectField(jparams, f_lora_adapter);
+	if (j_lora_adapter != nullptr) {
+		params.lora_adapter = parse_jstring(env, j_lora_adapter);
+		env->DeleteLocalRef(j_lora_adapter);
+	}
+	jstring j_lora_base = (jstring) env->GetObjectField(jparams, f_lora_base);
+	if (j_lora_base != nullptr) {
+		params.lora_base = parse_jstring(env, j_lora_base);
+		env->DeleteLocalRef(j_lora_base);
+	}
+
+	jfloatArray j_tensor_split = (jfloatArray) env->GetObjectField(jparams, f_tensor_split);
+	if (j_tensor_split != nullptr) {
+#ifndef GGML_USE_CUBLAS
+		LOG_WARNING("llama.cpp was compiled without cuBLAS. It is not possible to set a tensor split.\n", {});
+#endif
+		jsize array_length = env->GetArrayLength(j_tensor_split);
+		GGML_ASSERT(array_length <= LLAMA_MAX_DEVICES);
+		float* tensor_split = new float[array_length];
+		env->GetFloatArrayRegion(j_tensor_split, 0, array_length, tensor_split);
+		for (size_t i_device = 0; i_device < LLAMA_MAX_DEVICES; ++i_device) {
+			if (i_device < array_length) {
+				params.tensor_split[i_device] = tensor_split[i_device];
+			} else {
+				params.tensor_split[i_device] = 0.0f;
+			}
+		}
+		delete[] tensor_split;
+	}
+
+#ifndef LLAMA_SUPPORTS_GPU_OFFLOAD
+		if (params.n_gpu_layers > 0) {
+			LOG_WARNING("Not compiled with GPU offload support, --n-gpu-layers option will be ignored. "
+						"See main README.md for information on enabling GPU BLAS support",
+						{{"n_gpu_layers", params.n_gpu_layers}});
+		}
+#endif
+
+#ifndef GGML_USE_CUBLAS
+	if (params.low_vram) {
+		LOG_WARNING("warning: llama.cpp was compiled without cuBLAS. It is not possible to set lower vram usage.\n", {});
+	}
+	if (!params.mul_mat_q) {
+		LOG_WARNING("warning: llama.cpp was compiled without cuBLAS. Disabling mul_mat_q kernels has no effect.\n", {});
+	}
+	if (params.main_gpu != 0) {
+		LOG_WARNING("llama.cpp was compiled without cuBLAS. It is not possible to set a main GPU.", {});
+	}
+#endif
+
+	// todo: these have to be set in llama_context_params
+	//  f_logits_all
+	//  f_vocab_only
+	//  f_memory_f16
+	//	f_f16_kv
+
     return params;
 }
 
@@ -310,15 +388,13 @@ static void parse_inference_params(JNIEnv* env, llama_server_context *llama, jst
     llama->params.mirostat = env->GetIntField(params, f_mirostat);
     llama->params.mirostat_tau = env->GetFloatField(params, f_mirostat_tau);
     llama->params.mirostat_eta = env->GetFloatField(params, f_mirostat_eta);
-    llama->params.seed = env->GetIntField(params, f_model_seed);
+    llama->params.seed = env->GetIntField(params, f_infer_seed);
 
     jstring j_grammar = (jstring) env->GetObjectField(params, f_grammar);
-    if (j_grammar == nullptr) {
-        llama->params.grammar = "";
-    } else {
-        llama->params.grammar = parse_jstring(env, j_grammar);
-        env->DeleteLocalRef(j_grammar);
-    }
+	if (j_grammar != nullptr) {
+		llama->params.grammar = parse_jstring(env, j_grammar);
+		env->DeleteLocalRef(j_grammar);
+	}
 
     llama->params.logit_bias.clear();
     jboolean ignore_eos = env->GetBooleanField(params, f_ignore_eos);

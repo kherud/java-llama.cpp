@@ -5,7 +5,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 
-public class LlamaModel {
+public class LlamaModel implements AutoCloseable {
 
 	private static final ModelParameters defaultModelParams = new ModelParameters.Builder().build();
 	private static final InferenceParameters defaultInferenceParams = new InferenceParameters.Builder().build();
@@ -54,10 +54,16 @@ public class LlamaModel {
 		return () -> new LlamaIterator(prompt, parameters);
 	}
 
+	@Override
+	public void close() {
+		delete();
+	}
+
 	private native void loadModel(String filePath, ModelParameters parameters) throws LlamaException;
 	private native void setupInference(String prompt, InferenceParameters parameters);
 	private native String getFull(String prompt, InferenceParameters parameters);
 	private native String getNext(LlamaIterator iterator);
+	private native void delete();
 
 	// fields are modified by native code and thus should not be final
 	@SuppressWarnings("FieldMayBeFinal")

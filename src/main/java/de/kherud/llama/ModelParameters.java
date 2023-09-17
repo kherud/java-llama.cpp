@@ -32,7 +32,7 @@ public class ModelParameters {
 	@Nullable
 	public final String loraBase;  // base model path for the lora adapter
 	public final boolean hellaswag; // compute HellaSwag score over random tasks from datafile supplied in prompt
-	public final int hellaswagTasks;   // number of tasks to use when computing the HellaSwag score
+	public final short hellaswagTasks;   // number of tasks to use when computing the HellaSwag score
 	public final boolean memoryF16;  // use f16 instead of f32 for memory kv
 	public final boolean memTest; // compute maximum memory usage
 	public final boolean numa; // attempt optimizations that help on some NUMA systems
@@ -62,7 +62,7 @@ public class ModelParameters {
 			@Nullable String loraAdapter,
 			@Nullable String loraBase,
 			boolean hellaswag,
-			int hellaswagTasks,
+			short hellaswagTasks,
 			boolean memoryF16,
 			boolean memTest,
 			boolean numa,
