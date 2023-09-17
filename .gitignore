@@ -30,7 +30,3 @@ replay_pid*
 llama.h
 llama.cpp
 main.cpp
-
-*.so
-*.dylib
-*.metal

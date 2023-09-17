@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 target/path/to/YourClass.class"
+    exit 1
+fi
+
+CLASS_NAME=$(basename "$1" .class)
+CLASS_PATH=$(dirname "$1")
+
+echo $CLASS_NAME
+echo $CLASS_PATH
+
+javap -s -p -cp "$CLASS_PATH" "$CLASS_NAME"
