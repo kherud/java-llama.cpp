@@ -30,3 +30,4 @@ replay_pid*
 llama.h
 llama.cpp
 main.cpp
+src/test/resources/*.gbnf
