@@ -313,7 +313,7 @@ public class LlamaModel implements AutoCloseable {
      * @throws RuntimeException if tokenization fails
      */
     private SliceableIntBuffer tokenize(String prompt, boolean addBos) {
-        int nTokens = LlamaLibrary.llama_tokenize(ctx, prompt, tokenBuffer.delegate, params.ctx.n_ctx, addBos ? (byte) 1 : 0);
+        int nTokens = LlamaLibrary.llama_tokenize(ctx, prompt, prompt.length(), tokenBuffer.delegate, params.ctx.n_ctx, addBos ? (byte) 1 : 0);
         if (nTokens < 0) {
             throw new RuntimeException("tokenization failed due to unknown reasons");
         }

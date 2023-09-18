@@ -7,6 +7,7 @@ import com.sun.jna.Pointer;
 import com.sun.jna.PointerType;
 import com.sun.jna.ptr.FloatByReference;
 import com.sun.jna.ptr.PointerByReference;
+import de.kherud.llama.foreign.llama_grammar_element.ByReference;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
@@ -128,10 +129,10 @@ public class LlamaLibrary implements Library {
 	public static native int llama_token_bos(LlamaLibrary.llama_context ctx);
 	public static native int llama_token_eos(LlamaLibrary.llama_context ctx);
 	public static native int llama_token_nl(LlamaLibrary.llama_context ctx);
-	public static native int llama_tokenize(LlamaLibrary.llama_context ctx, String text, IntBuffer tokens, int n_max_tokens, byte add_bos);
-	public static native int llama_tokenize_with_model(LlamaLibrary.llama_model model, String text, IntBuffer tokens, int n_max_tokens, byte add_bos);
+	public static native int llama_tokenize(LlamaLibrary.llama_context ctx, String text, int text_len, IntBuffer tokens, int n_max_tokens, byte add_bos);
+	public static native int llama_tokenize_with_model(LlamaLibrary.llama_model model, String text, int text_len, IntBuffer tokens, int n_max_tokens, byte add_bos);
 	public static native int llama_token_to_piece(LlamaLibrary.llama_context ctx, int token, ByteBuffer buf, int length);
-	public static native int llama_token_to_piece_with_model(LlamaLibrary.llama_model model, int token, ByteBuffer buf, int length);
+	public static native int llama_token_to_piece_with_model(LlamaLibrary.llama_model model, int token, String buf, int length);
 	public static native LlamaLibrary.llama_grammar llama_grammar_init(Pointer rules, NativeSize n_rules, NativeSize start_rule_index);
 	public static native void llama_grammar_free(LlamaLibrary.llama_grammar grammar);
 	public static native LlamaLibrary.llama_grammar llama_grammar_copy(LlamaLibrary.llama_grammar grammar);
@@ -163,6 +164,15 @@ public class LlamaLibrary implements Library {
 			super(address);
 		}
 		public llama_grammar() {
+			super();
+		}
+	};
+	/** Pointer to unknown (opaque) type */
+	public static class FILE extends PointerType {
+		public FILE(Pointer address) {
+			super(address);
+		}
+		public FILE() {
 			super();
 		}
 	};
