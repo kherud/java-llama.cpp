@@ -55,9 +55,14 @@ class LlamaLoader {
 			cleanup();
 		}
 		if ("Mac".equals(OSInfo.getOSName())) {
-			// todo copy metal file
+			String nativeDirName = getNativeResourcePath();
+			String tempFolder = getTempDir().getAbsolutePath();
+			System.out.println(nativeDirName);
+			Path metalFilePath = extractFile(nativeDirName, "ggml-metal.metal", tempFolder, false);
+			if (metalFilePath == null) {
+				System.err.println("'ggml-metal.metal' not found");
+			}
 		}
-		loadNativeLibrary("llama");
 		loadNativeLibrary("jllama");
 		extracted = true;
 	}
@@ -164,12 +169,17 @@ class LlamaLoader {
 	}
 
 	@Nullable
-	private static Path extractFile(String sourceDirectory, String fileName, String targetDirectory) {
+	private static Path extractFile(String sourceDirectory, String fileName, String targetDirectory, boolean addUuid) {
 		String nativeLibraryFilePath = sourceDirectory + "/" + fileName;
 		// Include architecture name in temporary filename in order to avoid conflicts
 		// when multiple JVMs with different architectures running at the same time
-		String uuid = UUID.randomUUID().toString();
-		String extractedLibFileName = uuid + "-" + fileName;
+		String extractedLibFileName;
+		if (addUuid) {
+			String uuid = UUID.randomUUID().toString();
+			extractedLibFileName = uuid + "-" + fileName;
+		} else {
+			extractedLibFileName = fileName;
+		}
 
 		Path extractedFilePath = Paths.get(targetDirectory, extractedLibFileName);
 
@@ -215,7 +225,7 @@ class LlamaLoader {
 	 * @return whether the library was successfully loaded
 	 */
 	private static boolean extractAndLoadLibraryFile(String libFolderForCurrentOS, String libraryFileName, String targetFolder) {
-		Path path = extractFile(libFolderForCurrentOS, libraryFileName, targetFolder);
+		Path path = extractFile(libFolderForCurrentOS, libraryFileName, targetFolder, true);
 		if (path == null) {
 			return false;
 		}

@@ -5,7 +5,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Parameters used for initializing a {@link LlamaModel}.
  */
-public class ModelParameters {
+public final class ModelParameters {
 
 	public final int nThreads;
 
@@ -101,24 +101,24 @@ public class ModelParameters {
 	public static class Builder {
 
 		private int nThreads = Runtime.getRuntime().availableProcessors();
-		public int seed;
-		public int nCtx; // text context
-		public int nBatch; // prompt processing batch size
-		public int nGpuLayers; // number of layers to store in VRAM
-		public int mainGpu; // the GPU that is used for scratch and small tensors
-		public float[] tensorSplit; // how to split layers across multiple GPUs (size: LLAMA_MAX_DEVICES)
-		public float ropeFreqBase; // RoPE base frequency
-		public float ropeFreqScale; // RoPE frequency scaling factor
+		public int seed = -1;
+		public int nCtx = 512; // text context
+		public int nBatch = 512; // prompt processing batch size
+		public int nGpuLayers = -1; // number of layers to store in VRAM
+		public int mainGpu = 0; // the GPU that is used for scratch and small tensors
+		public float[] tensorSplit = null; // how to split layers across multiple GPUs (size: LLAMA_MAX_DEVICES)
+		public float ropeFreqBase = 10000.0f; // RoPE base frequency
+		public float ropeFreqScale = 1.0f; // RoPE frequency scaling factor
 		//	public llama_progress_callback progress_callback;
 		//	public Pointer progress_callback_user_data;
-		public boolean lowVram; // if true, reduce VRAM usage at the cost of performance
-		public boolean mulMatQ; // if true, use experimental mul_mat_q kernels
+		public boolean lowVram = false; // if true, reduce VRAM usage at the cost of performance
+		public boolean mulMatQ = true; // if true, use experimental mul_mat_q kernels
 		public boolean f16Kv; // use fp16 for KV cache
 		public boolean logitsAll; // the llama_eval() call computes all logits, not just the last one
-		public boolean vocabOnly; // only load the vocabulary, no weights
-		public boolean useMmap; // use mmap if possible
-		public boolean useMlock; // force system to keep model in RAM
-		public boolean embedding; // embedding mode only
+		public boolean vocabOnly = false; // only load the vocabulary, no weights
+		public boolean useMmap = true; // use mmap if possible
+		public boolean useMlock = false; // force system to keep model in RAM
+		public boolean embedding = false; // embedding mode only
 		private String loraAdapter = null;  // lora adapter path
 		private String loraBase = null;  // base model path for the lora adapter
 

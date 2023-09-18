@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
  * Parameters used throughout inference of a {@link LlamaModel}, e.g., {@link LlamaModel#generate(String)} and
  * {@link LlamaModel#complete(String)}.
  */
-public class InferenceParameters {
+public final class InferenceParameters {
 
 	public final int nPredict;   // new tokens to predict
 	public final int nKeep;    // number of tokens to keep from initial prompt
@@ -263,6 +263,8 @@ public class InferenceParameters {
 			return this;
 		}
 
+		// default charset usage for Java backwards compatibility
+		@SuppressWarnings("ImplicitDefaultCharsetUsage")
 		public Builder setGrammar(@NotNull File file) throws IOException {
 			StringBuilder grammarBuilder = new StringBuilder();
 			try (BufferedReader br = new BufferedReader(new FileReader(file))) {

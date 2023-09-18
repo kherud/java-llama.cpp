@@ -73,7 +73,7 @@
 				<configuration>
 					<compilerArgs>
 						<arg>-h</arg>
-						<arg>target/llama</arg>
+						<arg>src/main/cpp</arg>
 					</compilerArgs>
 				</configuration>
 			</plugin>

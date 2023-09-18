@@ -27,7 +27,4 @@ target
 hs_err_pid*
 replay_pid*
 
-llama.h
-llama.cpp
-main.cpp
 src/test/resources/*.gbnf
