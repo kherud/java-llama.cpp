@@ -57,7 +57,7 @@ jobs:
         if: ${{ matrix.target.name == 'Windows' }}
         shell: cmd
         run: |
-          cd scripts && ./build.bat ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.name }} -DOS_ARCH=${{ matrix.target.arch }}
+          cd scripts && .\build.bat ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.name }} -DOS_ARCH=${{ matrix.target.arch }}
       - name: CMake (Unix)
         if: ${{ matrix.target.name != 'Windows' }}
         shell: bash
