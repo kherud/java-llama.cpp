@@ -1,57 +1,82 @@
-name: Maven Central Publish
+name: Build shared libraries and publish to Maven Central
 on:
   workflow_dispatch:
   release:
     types: [created]
 jobs:
   build-linux-x86-64:
+    name: Build Linux x86-64
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/download-artifact@v3
-      - name: Docker Setup Buildx
-        uses: docker/setup-buildx-action@v1.6.0
+      - name: Checkout llama.cpp
+        uses: actions/checkout@v4
         with:
-          install: true
-      - name: Setup build directory
+          repository: ggerganov/llama.cpp
+      - name: CMake
+        shell: bash
         run: |
-          mkdir -p dist
-      - name: Build native library
-        run: |
-          docker build -f dockerfile . -t llamacpp_binary:x86_64 --load
-          docker run --platform=amd64 -v $(pwd)/dist:/out llamacpp_binary:x86_64 bash -c "cp src/main/resources/linux-x86-64/*.so /out/; cp src/main/resources/linux-amd64/*.so /out/libllama-amd64.so"
-      - name: Artifact debian x86_64
+          cd llama.cpp
+          mkdir -p build && cd build
+          cmake .. -DBUILD_SHARED_LIBS=ON -DLLAMA_BUILD_TESTS=OFF || exit 1
+          cmake --build . --config Release || exit 1
+      - name: Upload linux-x86-64
         uses: actions/upload-artifact@v3
         with:
-          name: debian-binary-amd64
-          path: dist/*.so
+          name: linux-x86-64
+          path: llama.cpp/build/libllama.so
+  build-linux-arm64:
+    name: Build Linux arm64
+    runs-on: ubuntu-latest
+    container:
+      image: arm64v8/ubuntu:latest
+      options: --platform linux/arm64
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y build-essential cmake
+      - name: Checkout llama.cpp
+        uses: actions/checkout@v4
+        with:
+          repository: ggerganov/llama.cpp
+      - name: CMake
+        shell: bash
+        run: |
+          cd llama.cpp
+          mkdir -p build && cd build
+          cmake .. -DBUILD_SHARED_LIBS=ON -DLLAMA_BUILD_TESTS=OFF || exit 1
+          cmake --build . --config Release || exit 1
+      - name: Upload linux-arm64
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-arm64
+          path: llama.cpp/build/libllama.so
+
 
   publish:
-    needs: [build-linux-x86-64]
+    needs: [build-linux-x86-64,build-linux-arm64]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Maven Central Repository
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'zulu'
-          server-id: ossrh
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
-          gpg-private-key: ${{ secrets.GPG_SIGNING_KEY }}
-          gpg-passphrase: MAVEN_GPG_PASSPHRASE
-      - uses: actions/download-artifact@v3
-      - name: Copy resources
-        run: |
-          # Copying twice cause potentially different search locations based on JNA version
-          mkdir -p ./src/main/resources/linux-x86-64/
-          mkdir -p ./src/main/resources/linux-amd64/
-          mv ./debian-binary-amd64/libllama.so ./src/main/resources/linux-x86-64/libllama.so
-          mv ./debian-binary-amd64/libllama-amd64.so ./src/main/resources/linux-amd64/libllama.so
-      - name: Publish package
-        run: mvn --batch-mode -P release deploy
-        env:
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      - name: Checkout java-llama.cpp
+        uses: actions/checkout@v4
+      - name: Download libraries
+        uses: actions/download-artifact@v3
+        with: # specifying no name downloads all artifacts to a directory of their name
+          path: java-llama.cpp/src/main/resources
+# temporarily disable the rest here to test
+#      - name: Set up Maven Central Repository
+#        uses: actions/setup-java@v3
+#        with:
+#          java-version: '17'
+#          distribution: 'zulu'
+#          server-id: ossrh
+#          server-username: MAVEN_USERNAME
+#          server-password: MAVEN_PASSWORD
+#          gpg-private-key: ${{ secrets.GPG_SIGNING_KEY }}
+#          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+#      - name: Publish package
+#        run: mvn --batch-mode -P release deploy
+#        env:
+#          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+#          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+#          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
