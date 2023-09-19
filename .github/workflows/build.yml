@@ -54,12 +54,12 @@ jobs:
           submodules: recursive
           ref: "jni"
       - name: CMake (Windows)
-        if: ${{ matrix.target.name == "Windows" }}
+        if: ${{ matrix.target.name == 'Windows' }}
         shell: cmd
         run: |
           cd scripts && ./build.bat ${{ matrix.target.cmake }}
       - name: CMake (Unix)
-        if: ${{ matrix.target.name != "Windows" }}
+        if: ${{ matrix.target.name != 'Windows' }}
         shell: bash
         run: |
           cd scripts && ./build.sh ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.name }} -DOS_ARCH=${{ matrix.target.arch }}
