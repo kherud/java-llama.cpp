@@ -19,7 +19,7 @@ jobs:
       - name: Build native library
         run: |
           docker build -f dockerfile . -t llamacpp_binary:x86_64 --load
-          docker run --platform=amd64 -v $(pwd)/dist:/out llamacpp_binary:x86_64 bash -c "cp src/main/resources/linux-x86-64/*.so /out/"
+          docker run --platform=amd64 -v $(pwd)/dist:/out llamacpp_binary:x86_64 bash -c "cp src/main/resources/linux-x86-64/*.so /out/; cp src/main/resources/linux-amd64/*.so /out/libllama-amd64.so"
       - name: Artifact debian x86_64
         uses: actions/upload-artifact@v3
         with:
@@ -44,7 +44,11 @@ jobs:
       - uses: actions/download-artifact@v3
       - name: Copy resources
         run: |
-          mv ./debian-binary-amd64/*.so ./src/main/resources/linux-x86-64/libllama.so
+          # Copying twice cause potentially different search locations based on JNA version
+          mkdir -p ./src/main/resources/linux-x86-64/
+          mkdir -p ./src/main/resources/linux-amd64/
+          mv ./debian-binary-amd64/libllama.so ./src/main/resources/linux-x86-64/libllama.so
+          mv ./debian-binary-amd64/libllama-amd64.so ./src/main/resources/linux-amd64/libllama.so
       - name: Publish package
         run: mvn --batch-mode -P release deploy
         env:

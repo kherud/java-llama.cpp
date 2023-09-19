@@ -15,6 +15,9 @@ AARCH=$(dpkg --print-architecture)
 case $AARCH in
   amd64)
     cmake -DBUILD_SHARED_LIBS=ON -DLLAMA_BUILD_TESTS=OFF ..
+    # Copy it to linux-amd64 in case different JNA versions check different locations
+    mkdir -p ../../src/main/resources/linux-amd64
+    cp libllama.so ../../src/main/resources/linux-amd64/
     ;;
   arm64)
     cmake -DCMAKE_TOOLCHAIN_FILE=$SCRIPT_DIR/aarch64-linux-gnu-toolchain.cmake -DBUILD_SHARED_LIBS=ON ..
@@ -28,6 +31,7 @@ esac
 
 cmake --build . --config Release
 cd ../..
-mv -f llama.cpp/build/libllama.so src/main/resources/$RESOURCES_DIR
+mkdir -p src/main/resources/$RESOURCES_DIR
+cp llama.cpp/build/libllama.so src/main/resources/$RESOURCES_DIR
 rm -rf llama.cpp
 cd scripts
