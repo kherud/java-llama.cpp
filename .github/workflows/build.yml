@@ -81,8 +81,6 @@ jobs:
         with:
           name: artifacts
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
-        run:
-          ls -l
 #      - name: Set up Maven Central Repository
 #        uses: actions/setup-java@v3
 #        with:
