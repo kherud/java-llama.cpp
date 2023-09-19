@@ -8,3 +8,5 @@ cd build
 cmake .. %*
 cmake --build . --config Release
 popd
+
+if errorlevel 1 exit /b %ERRORLEVEL%

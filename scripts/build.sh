@@ -3,6 +3,6 @@
 pushd ..
 mkdir -p build
 cd build
-cmake .. $@
-cmake --build . --config Release
+cmake .. $@ || popd && exit 1
+cmake --build . --config Release || popd && exit 1
 popd
