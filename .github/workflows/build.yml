@@ -5,8 +5,8 @@ on:
     types: [created]
 jobs:
   build:
-    name: Build ${{ matrix.os }}-${{ matrix.arch }}
-    runs-on: ${{ matrix.image }}
+    name: Build ${{ matrix.target.name }}-${{ matrix.target.arch }}
+    runs-on: ${{ matrix.target.image }}
     strategy:
       fail-fast: false
       matrix:
