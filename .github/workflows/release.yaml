@@ -22,7 +22,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: linux-x86-64
-          path: llama.cpp/build/libllama.so
+          path: build/libllama.so
   build-linux-arm64:
     name: Build Linux arm64
     runs-on: ubuntu-latest
@@ -48,7 +48,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: linux-arm64
-          path: llama.cpp/build/libllama.so
+          path: build/libllama.so
 
 
   publish:
