@@ -16,6 +16,7 @@ static jclass c_llama_model = 0;
 static jclass c_llama_iterator = 0;
 static jclass c_model_params = 0;
 static jclass c_infer_params = 0;
+static jclass c_standard_charsets = 0;
 static jclass c_string = 0;
 static jclass c_map = 0;
 static jclass c_set = 0;
@@ -97,11 +98,13 @@ static jfieldID f_mem_test = 0;
 static jfieldID f_numa = 0;
 static jfieldID f_verbose_prompt = 0;
 // log level
+static jfieldID f_utf_8 = 0;
 static jfieldID f_log_level_debug = 0;
 static jfieldID f_log_level_info = 0;
 static jfieldID f_log_level_warn = 0;
 static jfieldID f_log_level_error = 0;
 // objects
+static jobject o_utf_8 = 0;
 static jobject o_log_level_debug = 0;
 static jobject o_log_level_info = 0;
 static jobject o_log_level_warn = 0;
@@ -124,6 +127,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     c_llama_iterator = env->FindClass("de/kherud/llama/LlamaModel$LlamaIterator");
     c_infer_params = env->FindClass("de/kherud/llama/InferenceParameters");
     c_model_params = env->FindClass("de/kherud/llama/ModelParameters");
+    c_standard_charsets = env->FindClass("java/nio/charset/StandardCharsets");
     c_string = env->FindClass("java/lang/String");
     c_map = env->FindClass("java/util/Map");
     c_set = env->FindClass("java/util/Set");
@@ -136,7 +140,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     c_llama_error = env->FindClass("de/kherud/llama/LlamaException");
     c_error_oom = env->FindClass("java/lang/OutOfMemoryError");
 
-    if (!(c_llama_model && c_llama_iterator && c_infer_params && c_model_params && c_string && c_map && c_set && c_entry && c_iterator && c_integer && c_float && c_log_level && c_biconsumer && c_llama_error && c_error_oom))
+    if (!(c_llama_model && c_llama_iterator && c_infer_params && c_model_params && c_standard_charsets && c_string && c_map && c_set && c_entry && c_iterator && c_integer && c_float && c_log_level && c_biconsumer && c_llama_error && c_error_oom))
     {
         goto error;
     }
@@ -159,7 +163,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     c_error_oom = (jclass)env->NewWeakGlobalRef(c_error_oom);
 
     // find methods
-    m_get_bytes = env->GetMethodID(c_string, "getBytes", "(Ljava/lang/String;)[B");
+    m_get_bytes = env->GetMethodID(c_string, "getBytes", "(Ljava/nio/charset/Charset;)[B");
     m_entry_set = env->GetMethodID(c_map, "entrySet", "()Ljava/util/Set;");
     m_set_iterator = env->GetMethodID(c_set, "iterator", "()Ljava/util/Iterator;");
     m_iterator_has_next = env->GetMethodID(c_iterator, "hasNext", "()Z");
@@ -244,22 +248,24 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         goto error;
     }
 
+	f_utf_8 = env->GetStaticFieldID(c_standard_charsets, "UTF_8", "Ljava/nio/charset/Charset;");
 	f_log_level_debug = env->GetStaticFieldID(c_log_level, "DEBUG", "Lde/kherud/llama/LogLevel;");
 	f_log_level_info = env->GetStaticFieldID(c_log_level, "INFO", "Lde/kherud/llama/LogLevel;");
 	f_log_level_warn = env->GetStaticFieldID(c_log_level, "WARN", "Lde/kherud/llama/LogLevel;");
 	f_log_level_error = env->GetStaticFieldID(c_log_level, "ERROR", "Lde/kherud/llama/LogLevel;");
 
-	if (!(f_log_level_debug && f_log_level_info && f_log_level_warn && f_log_level_error))
+	if (!(f_utf_8 && f_log_level_debug && f_log_level_info && f_log_level_warn && f_log_level_error))
 	{
 		goto error;
 	}
 
+	o_utf_8 = env->GetStaticObjectField(c_standard_charsets, f_utf_8);
 	o_log_level_debug = env->GetStaticObjectField(c_log_level, f_log_level_debug);
     o_log_level_info = env->GetStaticObjectField(c_log_level, f_log_level_info);
     o_log_level_warn = env->GetStaticObjectField(c_log_level, f_log_level_warn);
     o_log_level_error = env->GetStaticObjectField(c_log_level, f_log_level_error);
 
-    if (!(o_log_level_debug && o_log_level_info && o_log_level_warn && o_log_level_error))
+    if (!(o_utf_8 && o_log_level_debug && o_log_level_info && o_log_level_warn && o_log_level_error))
 	{
 		goto error;
 	}
@@ -324,15 +330,16 @@ static void jllama_log_callback(enum llama_log_level level, const char * text, v
 
 static std::string parse_jstring(JNIEnv *env, jstring java_string)
 {
-    const jbyteArray string_bytes = (jbyteArray)env->CallObjectMethod(java_string, m_get_bytes, env->NewStringUTF("UTF-8"));
+	const jbyteArray string_bytes = (jbyteArray)env->CallObjectMethod(java_string, m_get_bytes, o_utf_8);
 
     size_t length = (size_t)env->GetArrayLength(string_bytes);
     jbyte *byte_elements = env->GetByteArrayElements(string_bytes, nullptr);
 
     std::string string = std::string((char *)byte_elements, length);
-    env->ReleaseByteArrayElements(string_bytes, byte_elements, JNI_ABORT);
 
+    env->ReleaseByteArrayElements(string_bytes, byte_elements, JNI_ABORT);
     env->DeleteLocalRef(string_bytes);
+
     return string;
 }
 
@@ -1083,7 +1090,6 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     jllama_context *llama = new jllama_context;
     llama_backend_init(false);
 
-    std::cout << params.model << std::endl;
     if (!llama->loadModel(params))
     {
         env->ThrowNew(c_llama_error, "could not load model from given file path");

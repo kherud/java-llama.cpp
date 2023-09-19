@@ -63,6 +63,7 @@ class LlamaLoader {
 				System.err.println("'ggml-metal.metal' not found");
 			}
 		}
+		loadNativeLibrary("llama");
 		loadNativeLibrary("jllama");
 		extracted = true;
 	}
@@ -102,7 +103,7 @@ class LlamaLoader {
 
 		String nativeLibPath = System.getProperty("de.kherud.llama.lib.path");
 		if (nativeLibPath != null) {
-			Path path = Paths.get(nativeLibPath);
+			Path path = Paths.get(nativeLibPath, nativeLibName);
 			if (loadNativeLibrary(path)) {
 				return;
 			} else {
@@ -129,7 +130,7 @@ class LlamaLoader {
 			if (ldPath.isEmpty()) {
 				continue;
 			}
-			Path path = Paths.get(ldPath);
+			Path path = Paths.get(ldPath, nativeLibName);
 			if (loadNativeLibrary(path)) {
 				return;
 			} else {

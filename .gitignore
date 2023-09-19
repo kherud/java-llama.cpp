@@ -3,6 +3,7 @@ target
 build
 .DS_Store
 .directory
+.vscode
 
 # Compiled class file
 *.class
@@ -29,4 +30,9 @@ build
 hs_err_pid*
 replay_pid*
 
-src/test/resources/*.gbnf
+src/main/cpp/de_kherud_llama_*.h
+src/main/resources/**/*.so
+src/main/resources/**/*.dylib
+src/main/resources/**/*.dll
+src/main/resources/**/*.metal
+src/test/resources/**/*.gbnf

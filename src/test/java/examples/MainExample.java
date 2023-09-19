@@ -23,13 +23,13 @@ public class MainExample {
                 .setAntiPrompt(new String[]{"\n"})
                 .build();
 
-        String modelPath = "/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/gguf-model-q4_0.bin";
+        String modelPath = "/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/ggml-model-q4_0.gguf";
         String system = "This is a conversation between User and Llama, a friendly chatbot.\n" +
                 "Llama is helpful, kind, honest, good at writing, and never fails to answer any " +
                 "requests immediately and with precision.\n";
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
         try (LlamaModel model = new LlamaModel(modelPath, modelParams)) {
-            System.out.println(system);
+            System.out.print(system);
             String prompt = system;
             while (true) {
                 prompt += "\nUser: ";

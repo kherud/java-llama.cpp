@@ -16,59 +16,69 @@ Access this library via Maven:
 <dependency>
     <groupId>de.kherud</groupId>
     <artifactId>llama</artifactId>
-    <version>1.1.2</version>
+    <!-- Still in development, this is not yet available -->
+    <version>2.0.0</version>
 </dependency>
 ```
 
-You can then use this library. This is a short example: 
+Here is a short example:
 
 ```java
 public class Example {
 
     public static void main(String... args) throws IOException {
-        Parameters params = new Parameters.Builder()
-                .setNGpuLayers(43)
-                .setTemperature(0.7f)
-                .setPenalizeNl(true)
-                .setMirostat(Parameters.MiroStat.V2)
-                .setAntiPrompt(new String[]{"\n"})
-                .build();
+		LlamaModel.setLogger((level, message) -> System.out.print(message));
+		ModelParameters modelParams = new ModelParameters.Builder()
+				.setNGpuLayers(43)
+				.build();
+		InferenceParameters inferParams = new InferenceParameters.Builder()
+				.setTemperature(0.7f)
+				.setPenalizeNl(true)
+				.setMirostat(InferenceParameters.MiroStat.V2)
+				.setAntiPrompt(new String[]{"\n"})
+				.build();
 
-        String modelPath = "/path/to/gguf-model-q4_0.bin";
-        String system = "This is a conversation between User and Llama, a friendly chatbot.\n" +
-                "Llama is helpful, kind, honest, good at writing, and never fails to answer any " +
-                "requests immediately and with precision.\n";
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
-        try (LlamaModel model = new LlamaModel(modelPath, params)) {
-            String prompt = system;
-            while (true) {
-                prompt += "\nUser: ";
-                System.out.print(prompt);
-                String input = reader.readLine();
-                prompt += input;
-                System.out.print("Llama: ");
-                prompt += "\nLlama: ";
-                for (LlamaModel.Output output : model.generate(prompt)) {
-                    System.out.print(output);
-                }
-                prompt = "";
-            }
-        }
+		String modelPath = "/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/ggml-model-q4_0.gguf";
+		String system = "This is a conversation between User and Llama, a friendly chatbot.\n" +
+				"Llama is helpful, kind, honest, good at writing, and never fails to answer any " +
+				"requests immediately and with precision.\n";
+		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
+		try (LlamaModel model = new LlamaModel(modelPath, modelParams)) {
+			System.out.print(system);
+			String prompt = system;
+			while (true) {
+				prompt += "\nUser: ";
+				System.out.print("\nUser: ");
+				String input = reader.readLine();
+				prompt += input;
+				System.out.print("Llama: ");
+				prompt += "\nLlama: ";
+				for (String output : model.generate(prompt, inferParams)) {
+					System.out.print(output);
+					prompt += output;
+				}
+			}
+		}
     }
 }
 ```
 
 Also have a look at the [examples](src/test/java/examples).
 
-### Installing the llama.cpp library
+### Custom llama.cpp Setup (GPU acceleration)
 
-Make sure the `llama.cpp` shared library is appropriately installed for your platform:
+This repository provides default support for CPU based inference. You can compile `llama.cpp` any way you want however.
+In order to use your self-compiled library, set either of the [JVM options](https://www.jetbrains.com/help/idea/tuning-the-ide.html#configure-jvm-options):
 
-- `libllama.so` (linux)
-- `libllama.dylib` (macos)
-- `llama.dll` (windows)
+- `de.kherud.llama.lib.path`, for example `-Dde.kherud.llama.lib.path=/directory/containing/lib`
+- `java.library.path`, for example `-Djava.library.path=/directory/containing/lib`
 
-Refer to the official [readme](https://github.com/ggerganov/llama.cpp#build) for details.
+This repository uses [`System#mapLibraryName`](https://docs.oracle.com/javase%2F7%2Fdocs%2Fapi%2F%2F/java/lang/System.html) to determine the name of the shared library for you platform.
+If for any reason your library has a different name, you can set it with
+
+- `de.kherud.llama.lib.name`, for example `-Dde.kherud.llama.lib.name=myname.so`
+
+For compiling `llama.cpp`, refer to the official [readme](https://github.com/ggerganov/llama.cpp#build) for details.
 The library can be built with the `llama.cpp` project:
 
 ```shell
@@ -83,14 +93,7 @@ Look for the shared library in `build`.
 > [!IMPORTANT]
 > If you are running MacOS with Metal, you have to put the file `ggml-metal.metal` from `build/bin` in the same directory as the shared library.
 
-Depending on your platform, either:
-
-- Move the file then to the correct directory, e.g., `/usr/local/lib` for most linux distributions. 
-If you're not sure where to put it, just run the code. Java will throw an error explaining where it looks.
-- Set the JVM option `-Djna.library.path="/path/to/library/"` (IDEs like IntelliJ make this easy)
-
 ## Documentation
-
 
 ### Inference
 
