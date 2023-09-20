@@ -63,7 +63,14 @@ jobs:
         shell: bash
         run: |
           cd scripts && ./build.sh ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.name }} -DOS_ARCH=${{ matrix.target.arch }}
-      - name: Upload Artifact
+      - name: Upload Unix Artifact
+        if: ${{ matrix.target.name == 'Windows' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifacts
+          path: ${{ github.workspace }}\src\main\resources\de\kherud\llama\
+      - name: Upload Windows Artifact
+        if: ${{ matrix.target.name != 'Windows' }}
         uses: actions/upload-artifact@v3
         with:
           name: artifacts
