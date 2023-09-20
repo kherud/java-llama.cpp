@@ -214,7 +214,6 @@ public final class ModelParameters {
 		/**
 		 * Set a callback that will be used to report progress loading the model with a float value of 0-1.
 		 *
-		 * @param progressCallback the function to call ony any progress
 		 * @return this builder object
 		 */
 //		public Builder setProgressCallback(@Nullable Consumer<Float> progressCallback) {

@@ -1,4 +1,4 @@
-name: Build JNI bindings
+name: Build JNI bindings and publish to Maven Central
 on:
   workflow_dispatch:
   release:
