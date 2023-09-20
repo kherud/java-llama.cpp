@@ -17,12 +17,12 @@ jobs:
             image: ubuntu-latest,
             cmake: "-DCMAKE_CXX_FLAGS='-march=x86-64'"
           }
-          - {
-            name: Linux,
-            arch: aarch64,
-            image: ubuntu-latest,
-            cmake: "-DCMAKE_CXX_FLAGS='-march=armv8-a'"
-          }
+#          - {
+#            name: Linux,
+#            arch: aarch64,
+#            image: ubuntu-latest,
+#            cmake: "-DCMAKE_CXX_FLAGS='-march=armv8-a'"
+#          }
           - {
             name: Mac,
             arch: x86_64,
@@ -41,12 +41,12 @@ jobs:
             image: windows-latest,
             cmake: "-DCMAKE_GENERATOR_PLATFORM=x64"
           }
-          - {
-            name: Windows,
-            arch: aarch64,
-            image: windows-latest,
-            cmake: "-DCMAKE_GENERATOR_PLATFORM=ARM64"
-          }
+#          - {
+#            name: Windows,
+#            arch: aarch64,
+#            image: windows-latest,
+#            cmake: "-DCMAKE_GENERATOR_PLATFORM=ARM64"
+#          }
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
