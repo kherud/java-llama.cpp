@@ -60,8 +60,14 @@ add_library(jllama SHARED src/main/cpp/jllama.cpp)
 
 target_link_libraries(jllama PRIVATE common llama ${CMAKE_THREAD_LIBS_INIT})
 
-set_target_properties(jllama llama PROPERTIES
-  LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/src/main/resources/de/kherud/llama/${OS_NAME}/${OS_ARCH}"
-)
+if(OS_NAME STREQUAL "Windows")
+	set_target_properties(jllama llama PROPERTIES
+	  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/src/main/resources/de/kherud/llama/${OS_NAME}/${OS_ARCH}"
+	)
+else()
+	set_target_properties(jllama llama PROPERTIES
+	  LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/src/main/resources/de/kherud/llama/${OS_NAME}/${OS_ARCH}"
+	)
+endif()
 
 message(STATUS "Installing files to ${CMAKE_SOURCE_DIR}/src/main/resources/de/kherud/llama/${OS_NAME}/${OS_ARCH}")
