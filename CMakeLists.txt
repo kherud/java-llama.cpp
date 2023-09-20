@@ -63,6 +63,7 @@ target_link_libraries(jllama PRIVATE common llama ${CMAKE_THREAD_LIBS_INIT})
 if(OS_NAME STREQUAL "Windows")
 	set_target_properties(jllama llama PROPERTIES
 	  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/src/main/resources/de/kherud/llama/${OS_NAME}/${OS_ARCH}"
+	  PREFIX "../"
 	)
 else()
 	set_target_properties(jllama llama PROPERTIES
