@@ -28,7 +28,7 @@ JNIEXPORT jintArray JNICALL Java_de_kherud_llama_LlamaModel_encode
  * Method:    decode
  * Signature: ([I)Ljava/lang/String;
  */
-JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_decode
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_decodeBytes
   (JNIEnv *, jobject, jintArray);
 
 /*
@@ -58,17 +58,17 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_setupInference
 /*
  * Class:     de_kherud_llama_LlamaModel
  * Method:    getFull
- * Signature: (Ljava/lang/String;Lde/kherud/llama/InferenceParameters;)Ljava/lang/String;
+ * Signature: (Ljava/lang/String;Lde/kherud/llama/InferenceParameters;)[B
  */
-JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getFull
+JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getFull
   (JNIEnv *, jobject, jstring, jobject);
 
 /*
  * Class:     de_kherud_llama_LlamaModel
  * Method:    getNext
- * Signature: (Lde/kherud/llama/LlamaModel/LlamaIterator;)Ljava/lang/String;
+ * Signature: (Lde/kherud/llama/LlamaModel/LlamaIterator;)[B
  */
-JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getNext
+JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getNext
   (JNIEnv *, jobject, jobject);
 
 /*

@@ -1,14 +1,11 @@
 #include "llama.h"
 #include "jllama.h"
 #include "common.h"
-#include "build-info.h"
 #include "grammar-parser.h"
 
 #include <cstddef>
 #include <iostream>
 #include <string>
-#include <locale>
-#include <codecvt>
 #include <mutex>
 
 // classes
@@ -357,13 +354,15 @@ static float parse_jfloat(JNIEnv *env, jobject java_float)
     return env->CallFloatMethod(java_float, m_float_value);
 }
 
-static jstring parse_utf16_string(JNIEnv *env, std::string string)
+// Since Java expects utf16 but std::strings are utf8, we cant directly use `env->NewString` or `env-NewString`, but
+// we simply send the bytes directly and do the conversion in Java. Unfortunately, there isn't a nice/standardized way
+// to do this conversion in C++
+static jbyteArray parse_jbytes(JNIEnv *env, std::string string)
 {
-    // this only works correctly on platforms where wchar_t is 16 bits
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-    std::wstring wstring = converter.from_bytes(string);
-    std::u16string string_utf16(wstring.begin(), wstring.end());
-    return env->NewString((jchar *)string_utf16.data(), string_utf16.size());
+	jsize len = string.size();
+	jbyteArray bytes = env->NewByteArray(len);
+	env->SetByteArrayRegion(bytes, 0, len, (jbyte*)string.c_str());
+	return bytes;
 }
 
 // completion token output with probabilities
@@ -1129,7 +1128,7 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_setupInference(JNIEnv *en
     llama->beginCompletion();
 }
 
-JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getNext(JNIEnv *env, jobject obj, jobject iter)
+JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getNext(JNIEnv *env, jobject obj, jobject iter)
 {
     jlong llama_handle = env->GetLongField(obj, f_model_pointer);
     jllama_context *llama = reinterpret_cast<jllama_context *>(llama_handle);
@@ -1203,10 +1202,10 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getNext(JNIEnv *env, j
         env->SetLongField(iter, f_iter_has_next, false);
     }
 
-    return parse_utf16_string(env, to_send);
+	return parse_jbytes(env, to_send);
 }
 
-JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getFull(JNIEnv *env, jobject obj, jstring prompt, jobject params)
+JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getFull(JNIEnv *env, jobject obj, jstring prompt, jobject params)
 {
     Java_de_kherud_llama_LlamaModel_setupInference(env, obj, prompt, params);
 
@@ -1245,7 +1244,7 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getFull(JNIEnv *env, j
     //    llama->lock().release();
     //    llama->mutex.unlock();
 
-    return parse_utf16_string(env, llama->generated_text);
+	return parse_jbytes(env, llama->generated_text);
 }
 
 JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env, jobject obj, jstring java_prompt)
@@ -1308,7 +1307,7 @@ JNIEXPORT jintArray JNICALL Java_de_kherud_llama_LlamaModel_encode(JNIEnv *env, 
     return java_tokens;
 }
 
-JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_decode(JNIEnv *env, jobject obj, jintArray java_tokens)
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_decodeBytes(JNIEnv *env, jobject obj, jintArray java_tokens)
 {
     jlong llama_handle = env->GetLongField(obj, f_model_pointer);
     jllama_context *llama = reinterpret_cast<jllama_context *>(llama_handle);
@@ -1321,7 +1320,7 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_decode(JNIEnv *env, jo
 
     env->ReleaseIntArrayElements(java_tokens, elements, 0);
 
-    return parse_utf16_string(env, text);
+    return env->NewString((jchar *)text.data(), text.size());
 }
 
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_setLogger(JNIEnv * env, jclass clazz, jobject callback) {

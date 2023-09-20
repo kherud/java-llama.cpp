@@ -1,6 +1,7 @@
 package de.kherud.llama;
 
 import java.lang.annotation.Native;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.function.BiConsumer;
@@ -70,7 +71,8 @@ public class LlamaModel implements AutoCloseable {
 	 * @return an LLM response
 	 */
 	public String complete(String prompt, InferenceParameters parameters) {
-		return getFull(prompt, parameters);
+		byte[] bytes = getFull(prompt, parameters);
+		return new String(bytes, StandardCharsets.UTF_8);
 	}
 
 	/**
@@ -119,7 +121,10 @@ public class LlamaModel implements AutoCloseable {
 	 * @param tokens an array of tokens
 	 * @return the token ids decoded to a string
 	 */
-	public native String decode(int[] tokens);
+	public String decode(int[] tokens)  {
+		byte[] bytes = decodeBytes(tokens);
+		return new String(bytes, StandardCharsets.UTF_8);
+	}
 
 	/**
 	 * Sets a callback for both Java and C++ log messages. Can be set to {@code null} to disable logging.
@@ -135,8 +140,9 @@ public class LlamaModel implements AutoCloseable {
 
 	private native void loadModel(String filePath, ModelParameters parameters) throws LlamaException;
 	private native void setupInference(String prompt, InferenceParameters parameters);
-	private native String getFull(String prompt, InferenceParameters parameters);
-	private native String getNext(LlamaIterator iterator);
+	private native byte[] getFull(String prompt, InferenceParameters parameters);
+	private native byte[] getNext(LlamaIterator iterator);
+	private native byte[] decodeBytes(int[] tokens);
 	private native void delete();
 
 	// fields are modified by native code and thus should not be final
@@ -164,7 +170,8 @@ public class LlamaModel implements AutoCloseable {
 			if (!hasNext) {
 				throw new NoSuchElementException();
 			}
-			return getNext(this);
+			byte[] bytes = getNext(this);
+			return new String(bytes, StandardCharsets.UTF_8);
 		}
 	}
 
