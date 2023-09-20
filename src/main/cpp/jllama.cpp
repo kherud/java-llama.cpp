@@ -1331,7 +1331,10 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_setLogger(JNIEnv * env, j
 		env->DeleteGlobalRef(g_log_callback);
 	}
 
-	g_log_callback = env->NewGlobalRef(callback);
-
-	llama_log_set(jllama_log_callback, nullptr);
+	if (callback == nullptr) {
+		llama_log_set(nullptr, nullptr);
+	} else {
+		g_log_callback = env->NewGlobalRef(callback);
+		llama_log_set(jllama_log_callback, nullptr);
+	}
 }

@@ -6,6 +6,8 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.function.BiConsumer;
 
+import org.jetbrains.annotations.Nullable;
+
 /**
  * This class is a wrapper around the llama.cpp functionality.
  * Upon being created, it natively allocates memory for the model context.
@@ -131,7 +133,7 @@ public class LlamaModel implements AutoCloseable {
 	 *
 	 * @param callback a method to call for log messages
 	 */
-	public static native void setLogger(BiConsumer<LogLevel, String> callback);
+	public static native void setLogger(@Nullable BiConsumer<LogLevel, String> callback);
 
 	@Override
 	public void close() {
