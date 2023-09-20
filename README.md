@@ -1,5 +1,5 @@
 ![Java 11+](https://img.shields.io/badge/Java-11%2B-informational)
-![llama.cpp b1170](https://img.shields.io/badge/llama.cpp-%23b1204-informational)
+![llama.cpp b1261](https://img.shields.io/badge/llama.cpp-%23b1261-informational)
 
 # Java Bindings for [llama.cpp](https://github.com/ggerganov/llama.cpp)
 
@@ -7,6 +7,11 @@ The main goal of llama.cpp is to run the LLaMA model using 4-bit integer quantiz
 This repository provides Java bindings for the C++ library.
 
 **You are welcome to contribute**
+
+> [!NOTE]
+> Version 2.0 of this library just released and introduces some breaking changes. The underlying Java/C++ interfacing 
+> technology changed from JNA to JNI with a focus on performance. If you prefer to use the old JNA version, you can 
+> still access it as 1.x.x in the [jna branch](https://github.com/kherud/java-llama.cpp/tree/jna).
 
 ## Quick Start
 
@@ -16,7 +21,6 @@ Access this library via Maven:
 <dependency>
     <groupId>de.kherud</groupId>
     <artifactId>llama</artifactId>
-    <!-- Still in development, this is not yet available -->
     <version>2.0.0</version>
 </dependency>
 ```
