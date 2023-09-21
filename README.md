@@ -84,9 +84,28 @@ If any of these match your platform, you can include the Maven dependency and ge
 If none of the above listed platforms matches yours, currently you have to compile the library yourself (also if you 
 want GPU acceleration, see below). More support is planned soon.
 
-Run in the directory of this repository (java-llama.cpp):
+This requires:
+
+- Git
+- A C++11 conforming compiler
+- The [cmake](https://www.cmake.org/) build system
+- Java, Maven, and setting [JAVA_HOME](https://www.baeldung.com/java-home-on-windows-7-8-10-mac-os-x-linux)
+
+Make sure everything works by running
+
+```
+g++ -v  # depending on your compiler
+java -version
+mvn -v
+echo $JAVA_HOME # for inlux/macos
+echo %JAVA_HOME% # for windows
+```
+
+Then, run the following commands in the directory of this repository (java-llama.cpp):
 
 ```shell
+mvn compile
+git submodule update --init --recursive
 mkdir build
 cd build
 cmake .. -DBUILD_SHARED_LIBS=ON  # add any other arguments for your backend
