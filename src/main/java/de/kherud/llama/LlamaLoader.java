@@ -26,7 +26,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.jetbrains.annotations.Nullable;
@@ -172,17 +171,8 @@ class LlamaLoader {
 	@Nullable
 	private static Path extractFile(String sourceDirectory, String fileName, String targetDirectory, boolean addUuid) {
 		String nativeLibraryFilePath = sourceDirectory + "/" + fileName;
-		// Include architecture name in temporary filename in order to avoid conflicts
-		// when multiple JVMs with different architectures running at the same time
-		String extractedLibFileName;
-		if (addUuid) {
-			String uuid = UUID.randomUUID().toString();
-			extractedLibFileName = uuid + "-" + fileName;
-		} else {
-			extractedLibFileName = fileName;
-		}
 
-		Path extractedFilePath = Paths.get(targetDirectory, extractedLibFileName);
+		Path extractedFilePath = Paths.get(targetDirectory, fileName);
 
 		try {
 			// Extract a native library file into the target directory
