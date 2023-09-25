@@ -307,6 +307,8 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
 }
 
 static void jllama_log_callback(enum llama_log_level level, const char * text, void * user_data) {
+	if (g_log_callback == nullptr) return;
+
     JNIEnv* env;
     g_vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_2);
 
@@ -512,6 +514,7 @@ struct jllama_context
         std::tie(model, ctx) = llama_init_from_gpt_params(params);
         if (model == nullptr)
         {
+			jllama_log_callback(LLAMA_LOG_LEVEL_ERROR, "unable to load model", nullptr);
             // LOG_ERROR("unable to load model", {{"model", params_.model}});
             return false;
         }
@@ -536,6 +539,7 @@ struct jllama_context
             // will be empty (default) if there are parse errors
             if (parsed_grammar.rules.empty())
             {
+            	jllama_log_callback(LLAMA_LOG_LEVEL_ERROR, "grammar parse error", nullptr);
                 // LOG_ERROR("grammar parse error", {{"grammar", params.grammar}});
                 return false;
             }
@@ -545,6 +549,7 @@ struct jllama_context
                 auto it = params.logit_bias.find(llama_token_eos(ctx));
                 if (it != params.logit_bias.end() && it->second == -INFINITY)
                 {
+                	jllama_log_callback(LLAMA_LOG_LEVEL_WARN, "EOS token is disabled, which will cause most grammars to fail", nullptr);
                     // LOG_WARNING("EOS token is disabled, which will cause most grammars to fail", {});
                 }
             }
@@ -577,6 +582,7 @@ struct jllama_context
             new_tokens.insert(new_tokens.end(), prompt_tokens.begin() + params.n_keep + erased_blocks * n_left, prompt_tokens.end());
             std::copy(prompt_tokens.end() - params.n_ctx, prompt_tokens.end(), last_n_tokens.begin());
 
+//			jllama_log_callback(LLAMA_LOG_LEVEL_INFO, "input truncated");
             // LOG_VERBOSE("input truncated", {
             //                                    {"n_ctx", params.n_ctx},
             //                                    {"n_keep", params.n_keep},
@@ -651,6 +657,7 @@ struct jllama_context
             }
             if (llama_eval(ctx, &embd[n_past], n_eval, n_past, params.n_threads))
             {
+            	jllama_log_callback(LLAMA_LOG_LEVEL_ERROR, "failed to evaluate", nullptr);
                 // LOG_ERROR("failed to eval", {
                 //                                 {"n_eval", n_eval},
                 //                                 {"n_past", n_past},
@@ -897,6 +904,7 @@ struct jllama_context
         static const int n_embd = llama_n_embd(ctx);
         if (!params.embedding)
         {
+        	jllama_log_callback(LLAMA_LOG_LEVEL_WARN, "embedding disabled", nullptr);
             // LOG_WARNING("embedding disabled", {
             //                                       {"params.embedding", params.embedding},
             //                                   });
@@ -996,6 +1004,11 @@ static gpt_params parse_model_params(JNIEnv *env, jobject jparams, jstring java_
     //	//  f_memory_f16
     //	//	f_f16_kv
 
+    if (params.model_alias == "unknown")
+	{
+		params.model_alias = params.model;
+	}
+
     return params;
 }
 
@@ -1084,7 +1097,7 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getSystemInfo(JNIEnv *
 
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jobject obj, jstring file_path, jobject jparams)
 {
-    gpt_params params = parse_model_params(env, jparams, file_path);
+	gpt_params params = parse_model_params(env, jparams, file_path);
 
     jllama_context *llama = new jllama_context;
     llama_backend_init(false);
@@ -1095,13 +1108,13 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
         return;
     }
 
-    // LOG_INFO("build info", {{"build", BUILD_NUMBER},
-    //                             {"commit", BUILD_COMMIT}});
-    // LOG_INFO("system info", {
-    //                             {"n_threads", params.n_threads},
-    //                             {"total_threads", std::thread::hardware_concurrency()},
-    //                             {"system_info", llama_print_system_info()},
-    //                         });
+//     LOG_INFO("build info", {{"build", BUILD_NUMBER},
+//                                 {"commit", BUILD_COMMIT}});
+//     LOG_INFO("system info", {
+//                                 {"n_threads", params.n_threads},
+//                                 {"total_threads", std::thread::hardware_concurrency()},
+//                                 {"system_info", llama_print_system_info()},
+//                             });
 
     env->SetLongField(obj, f_model_pointer, reinterpret_cast<jlong>(llama));
 }
