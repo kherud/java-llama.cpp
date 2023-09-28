@@ -1,5 +1,5 @@
 ![Java 11+](https://img.shields.io/badge/Java-11%2B-informational)
-![llama.cpp b1269](https://img.shields.io/badge/llama.cpp-%23b1269-informational)
+![llama.cpp b1291](https://img.shields.io/badge/llama.cpp-%23b1291-informational)
 
 # Java Bindings for [llama.cpp](https://github.com/ggerganov/llama.cpp)
 
@@ -21,7 +21,7 @@ Access this library via Maven:
 <dependency>
     <groupId>de.kherud</groupId>
     <artifactId>llama</artifactId>
-    <version>2.0.1</version>
+    <version>2.0.2</version>
 </dependency>
 ```
 
