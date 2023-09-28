@@ -21,7 +21,7 @@ Access this library via Maven:
 <dependency>
     <groupId>de.kherud</groupId>
     <artifactId>llama</artifactId>
-    <version>2.0.2</version>
+    <version>2.0.1</version>
 </dependency>
 ```
 

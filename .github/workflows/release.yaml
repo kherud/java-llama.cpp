@@ -61,7 +61,7 @@ jobs:
           submodules: recursive
       - name: Set up QEMU
         if: ${{ matrix.target.name == 'Linux' }}
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
           platforms: ${{ matrix.target.docker-arch }}
       - name: CMake (Windows)
