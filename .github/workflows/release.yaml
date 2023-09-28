@@ -15,7 +15,7 @@ jobs:
             name: Linux,
             arch: x86_64,
             docker-arch: linux/amd64,
-            docker-image: eclipse-temurin:11,
+            docker-image: "eclipse-temurin:11",
             image: ubuntu-latest,
             cmake: "-DCMAKE_CXX_FLAGS='-march=x86-64'"
           }
@@ -25,7 +25,7 @@ jobs:
             # But then we need aarch64 for the CMake invocation. Maybe we can switch CMake to using arm64?
             name: Linux,
             docker-arch: linux/arm64,
-            docker-image: eclipse-temurin:11,
+            docker-image: "eclipse-temurin:11",
             arch: aarch64,
             image: ubuntu-latest,
             cmake: "-DCMAKE_CXX_FLAGS='-march=armv8-a'"
