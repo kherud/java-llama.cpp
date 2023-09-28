@@ -19,7 +19,6 @@ public final class ModelParameters {
 	public final float ropeFreqScale; // RoPE frequency scaling factor
 	//	public final llama_progress_callback progress_callback;
 //	public final Pointer progress_callback_user_data;
-	public final boolean lowVram; // if true, reduce VRAM usage at the cost of performance
 	public final boolean mulMatQ; // if true, use experimental mul_mat_q kernels
 	public final boolean f16Kv; // use fp16 for KV cache
 	public final boolean logitsAll; // the llama_eval() call computes all logits, not just the last one
@@ -51,7 +50,6 @@ public final class ModelParameters {
 			float[] tensorSplit,
 			float ropeFreqBase,
 			float ropeFreqScale,
-			boolean lowVram,
 			boolean mulMatQ,
 			boolean f16Kv,
 			boolean logitsAll,
@@ -76,7 +74,6 @@ public final class ModelParameters {
 		this.tensorSplit = tensorSplit;
 		this.ropeFreqBase = ropeFreqBase;
 		this.ropeFreqScale = ropeFreqScale;
-		this.lowVram = lowVram;
 		this.mulMatQ = mulMatQ;
 		this.f16Kv = f16Kv;
 		this.logitsAll = logitsAll;
@@ -107,11 +104,10 @@ public final class ModelParameters {
 		public int nGpuLayers = -1; // number of layers to store in VRAM
 		public int mainGpu = 0; // the GPU that is used for scratch and small tensors
 		public float[] tensorSplit = null; // how to split layers across multiple GPUs (size: LLAMA_MAX_DEVICES)
-		public float ropeFreqBase = 10000.0f; // RoPE base frequency
-		public float ropeFreqScale = 1.0f; // RoPE frequency scaling factor
+		public float ropeFreqBase = 0; // RoPE base frequency
+		public float ropeFreqScale = 0; // RoPE frequency scaling factor
 		//	public llama_progress_callback progress_callback;
 		//	public Pointer progress_callback_user_data;
-		public boolean lowVram = false; // if true, reduce VRAM usage at the cost of performance
 		public boolean mulMatQ = true; // if true, use experimental mul_mat_q kernels
 		public boolean f16Kv; // use fp16 for KV cache
 		public boolean logitsAll; // the llama_eval() call computes all logits, not just the last one
@@ -147,7 +143,6 @@ public final class ModelParameters {
 					tensorSplit,
 					ropeFreqBase,
 					ropeFreqScale,
-					lowVram,
 					mulMatQ,
 					f16Kv,
 					logitsAll,
@@ -276,11 +271,6 @@ public final class ModelParameters {
 //			ctxParams.setProgress_callback_user_data(progress_callback_user_data);
 //			return this;
 //		}
-
-		public Builder setLowVram(boolean lowVram) {
-			this.lowVram = lowVram;
-			return this;
-		}
 
 		public Builder setMulMatQ(boolean mulMatQ) {
 			this.mulMatQ = mulMatQ;

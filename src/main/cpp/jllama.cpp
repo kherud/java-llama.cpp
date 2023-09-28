@@ -78,7 +78,6 @@ static jfieldID f_main_gpu = 0;
 static jfieldID f_tensor_split = 0;
 static jfieldID f_rope_freq_base = 0;
 static jfieldID f_rope_freq_scale = 0;
-static jfieldID f_low_vram = 0;
 static jfieldID f_mul_mat_q = 0;
 static jfieldID f_f16_kv = 0;
 static jfieldID f_logits_all = 0;
@@ -107,7 +106,7 @@ static jobject o_log_level_info = 0;
 static jobject o_log_level_warn = 0;
 static jobject o_log_level_error = 0;
 
-static JavaVM* g_vm = nullptr;
+static JavaVM *g_vm = nullptr;
 static jobject g_log_callback = nullptr;
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
@@ -215,7 +214,6 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     f_tensor_split = env->GetFieldID(c_model_params, "tensorSplit", "[F");
     f_rope_freq_base = env->GetFieldID(c_model_params, "ropeFreqBase", "F");
     f_rope_freq_scale = env->GetFieldID(c_model_params, "ropeFreqScale", "F");
-    f_low_vram = env->GetFieldID(c_model_params, "lowVram", "Z");
     f_mul_mat_q = env->GetFieldID(c_model_params, "mulMatQ", "Z");
     f_f16_kv = env->GetFieldID(c_model_params, "f16Kv", "Z");
     f_logits_all = env->GetFieldID(c_model_params, "logitsAll", "Z");
@@ -240,32 +238,32 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     {
         goto error;
     }
-    if (!(f_n_threads && f_model_seed && f_n_ctx && f_n_batch && f_n_gpu_layers && f_main_gpu && f_tensor_split && f_rope_freq_base && f_rope_freq_scale && f_low_vram && f_mul_mat_q && f_f16_kv && f_logits_all && f_vocab_only && f_use_mmap && f_use_mlock && f_embedding && f_lora_adapter && f_lora_base && f_hellaswag && f_hellaswag_tasks && f_memory_f16 && f_mem_test && f_numa && f_verbose_prompt))
+    if (!(f_n_threads && f_model_seed && f_n_ctx && f_n_batch && f_n_gpu_layers && f_main_gpu && f_tensor_split && f_rope_freq_base && f_rope_freq_scale && f_mul_mat_q && f_f16_kv && f_logits_all && f_vocab_only && f_use_mmap && f_use_mlock && f_embedding && f_lora_adapter && f_lora_base && f_hellaswag && f_hellaswag_tasks && f_memory_f16 && f_mem_test && f_numa && f_verbose_prompt))
     {
         goto error;
     }
 
-	f_utf_8 = env->GetStaticFieldID(c_standard_charsets, "UTF_8", "Ljava/nio/charset/Charset;");
-	f_log_level_debug = env->GetStaticFieldID(c_log_level, "DEBUG", "Lde/kherud/llama/LogLevel;");
-	f_log_level_info = env->GetStaticFieldID(c_log_level, "INFO", "Lde/kherud/llama/LogLevel;");
-	f_log_level_warn = env->GetStaticFieldID(c_log_level, "WARN", "Lde/kherud/llama/LogLevel;");
-	f_log_level_error = env->GetStaticFieldID(c_log_level, "ERROR", "Lde/kherud/llama/LogLevel;");
+    f_utf_8 = env->GetStaticFieldID(c_standard_charsets, "UTF_8", "Ljava/nio/charset/Charset;");
+    f_log_level_debug = env->GetStaticFieldID(c_log_level, "DEBUG", "Lde/kherud/llama/LogLevel;");
+    f_log_level_info = env->GetStaticFieldID(c_log_level, "INFO", "Lde/kherud/llama/LogLevel;");
+    f_log_level_warn = env->GetStaticFieldID(c_log_level, "WARN", "Lde/kherud/llama/LogLevel;");
+    f_log_level_error = env->GetStaticFieldID(c_log_level, "ERROR", "Lde/kherud/llama/LogLevel;");
 
-	if (!(f_utf_8 && f_log_level_debug && f_log_level_info && f_log_level_warn && f_log_level_error))
-	{
-		goto error;
-	}
+    if (!(f_utf_8 && f_log_level_debug && f_log_level_info && f_log_level_warn && f_log_level_error))
+    {
+        goto error;
+    }
 
-	o_utf_8 = env->GetStaticObjectField(c_standard_charsets, f_utf_8);
-	o_log_level_debug = env->GetStaticObjectField(c_log_level, f_log_level_debug);
+    o_utf_8 = env->GetStaticObjectField(c_standard_charsets, f_utf_8);
+    o_log_level_debug = env->GetStaticObjectField(c_log_level, f_log_level_debug);
     o_log_level_info = env->GetStaticObjectField(c_log_level, f_log_level_info);
     o_log_level_warn = env->GetStaticObjectField(c_log_level, f_log_level_warn);
     o_log_level_error = env->GetStaticObjectField(c_log_level, f_log_level_error);
 
     if (!(o_utf_8 && o_log_level_debug && o_log_level_info && o_log_level_warn && o_log_level_error))
-	{
-		goto error;
-	}
+    {
+        goto error;
+    }
 
     if (env->ExceptionCheck())
     {
@@ -306,18 +304,29 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
     env->DeleteWeakGlobalRef(c_error_oom);
 }
 
-static void jllama_log_callback(enum llama_log_level level, const char * text, void * user_data) {
-	if (g_log_callback == nullptr) return;
+static void jllama_log_callback(enum ggml_log_level level, const char *text, void *user_data)
+{
+    if (g_log_callback == nullptr)
+        return;
 
-    JNIEnv* env;
-    g_vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_2);
+    JNIEnv *env;
+    g_vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_2);
 
     jobject java_log_level;
-    switch (level) {
-		case LLAMA_LOG_LEVEL_ERROR: java_log_level = o_log_level_error; break;
-        case LLAMA_LOG_LEVEL_WARN: java_log_level = o_log_level_warn; break;
-        case LLAMA_LOG_LEVEL_INFO: java_log_level = o_log_level_info; break;
-        default: java_log_level = o_log_level_debug; break;
+    switch (level)
+    {
+    case GGML_LOG_LEVEL_ERROR:
+        java_log_level = o_log_level_error;
+        break;
+    case GGML_LOG_LEVEL_WARN:
+        java_log_level = o_log_level_warn;
+        break;
+    case GGML_LOG_LEVEL_INFO:
+        java_log_level = o_log_level_info;
+        break;
+    default:
+        java_log_level = o_log_level_debug;
+        break;
     }
     jstring java_text = env->NewStringUTF(text);
 
@@ -329,7 +338,7 @@ static void jllama_log_callback(enum llama_log_level level, const char * text, v
 
 static std::string parse_jstring(JNIEnv *env, jstring java_string)
 {
-	const jbyteArray string_bytes = (jbyteArray)env->CallObjectMethod(java_string, m_get_bytes, o_utf_8);
+    const jbyteArray string_bytes = (jbyteArray)env->CallObjectMethod(java_string, m_get_bytes, o_utf_8);
 
     size_t length = (size_t)env->GetArrayLength(string_bytes);
     jbyte *byte_elements = env->GetByteArrayElements(string_bytes, nullptr);
@@ -361,10 +370,10 @@ static float parse_jfloat(JNIEnv *env, jobject java_float)
 // to do this conversion in C++
 static jbyteArray parse_jbytes(JNIEnv *env, std::string string)
 {
-	jsize len = string.size();
-	jbyteArray bytes = env->NewByteArray(len);
-	env->SetByteArrayRegion(bytes, 0, len, (jbyte*)string.c_str());
-	return bytes;
+    jsize len = string.size();
+    jbyteArray bytes = env->NewByteArray(len);
+    env->SetByteArrayRegion(bytes, 0, len, (jbyte *)string.c_str());
+    return bytes;
 }
 
 // completion token output with probabilities
@@ -451,6 +460,7 @@ struct jllama_context
     llama_model *model = nullptr;
     llama_context *ctx = nullptr;
     gpt_params params;
+    int n_ctx;
 
     grammar_parser::parse_state parsed_grammar;
     llama_grammar *grammar = nullptr;
@@ -490,7 +500,7 @@ struct jllama_context
         num_prompt_tokens = 0;
         num_tokens_predicted = 0;
         generated_text = "";
-        generated_text.reserve(params.n_ctx);
+        generated_text.reserve(n_ctx);
         generated_token_probs.clear();
         truncated = false;
         stopped_eos = false;
@@ -514,12 +524,13 @@ struct jllama_context
         std::tie(model, ctx) = llama_init_from_gpt_params(params);
         if (model == nullptr)
         {
-			jllama_log_callback(LLAMA_LOG_LEVEL_ERROR, "unable to load model", nullptr);
+            jllama_log_callback(GGML_LOG_LEVEL_ERROR, "unable to load model", nullptr);
             // LOG_ERROR("unable to load model", {{"model", params_.model}});
             return false;
         }
 
-        last_n_tokens.resize(params.n_ctx);
+        n_ctx = llama_n_ctx(ctx);
+        last_n_tokens.resize(n_ctx);
         std::fill(last_n_tokens.begin(), last_n_tokens.end(), 0);
         return true;
     }
@@ -539,7 +550,7 @@ struct jllama_context
             // will be empty (default) if there are parse errors
             if (parsed_grammar.rules.empty())
             {
-            	jllama_log_callback(LLAMA_LOG_LEVEL_ERROR, "grammar parse error", nullptr);
+                jllama_log_callback(GGML_LOG_LEVEL_ERROR, "grammar parse error", nullptr);
                 // LOG_ERROR("grammar parse error", {{"grammar", params.grammar}});
                 return false;
             }
@@ -549,7 +560,7 @@ struct jllama_context
                 auto it = params.logit_bias.find(llama_token_eos(ctx));
                 if (it != params.logit_bias.end() && it->second == -INFINITY)
                 {
-                	jllama_log_callback(LLAMA_LOG_LEVEL_WARN, "EOS token is disabled, which will cause most grammars to fail", nullptr);
+                    jllama_log_callback(GGML_LOG_LEVEL_WARN, "EOS token is disabled, which will cause most grammars to fail", nullptr);
                     // LOG_WARNING("EOS token is disabled, which will cause most grammars to fail", {});
                 }
             }
@@ -571,24 +582,23 @@ struct jllama_context
         {
             params.n_keep = (int)num_prompt_tokens;
         }
-        params.n_keep = std::min(params.n_ctx - 4, params.n_keep);
+        params.n_keep = std::min(n_ctx - 4, params.n_keep);
 
         // if input prompt is too big, truncate like normal
-        if (num_prompt_tokens >= (size_t)params.n_ctx)
+        if (num_prompt_tokens >= (size_t)n_ctx)
         {
-            const int n_left = (params.n_ctx - params.n_keep) / 2;
+            const int n_left = (n_ctx - params.n_keep) / 2;
             std::vector<llama_token> new_tokens(prompt_tokens.begin(), prompt_tokens.begin() + params.n_keep);
             const int erased_blocks = (num_prompt_tokens - params.n_keep - n_left - 1) / n_left;
             new_tokens.insert(new_tokens.end(), prompt_tokens.begin() + params.n_keep + erased_blocks * n_left, prompt_tokens.end());
-            std::copy(prompt_tokens.end() - params.n_ctx, prompt_tokens.end(), last_n_tokens.begin());
+            std::copy(prompt_tokens.end() - n_ctx, prompt_tokens.end(), last_n_tokens.begin());
 
-//			jllama_log_callback(LLAMA_LOG_LEVEL_INFO, "input truncated");
-            // LOG_VERBOSE("input truncated", {
-            //                                    {"n_ctx", params.n_ctx},
-            //                                    {"n_keep", params.n_keep},
-            //                                    {"n_left", n_left},
-            //                                    {"new_tokens", tokens_to_str(ctx, new_tokens.cbegin(), new_tokens.cend())},
-            //                                });
+            //            LOG_VERBOSE("input truncated", {
+            //                                               {"n_ctx", n_ctx},
+            //                                               {"n_keep", params.n_keep},
+            //                                               {"n_left", n_left},
+            //                                               {"new_tokens", tokens_to_str(ctx, new_tokens.cbegin(), new_tokens.cend())},
+            //                                           });
 
             truncated = true;
             prompt_tokens = new_tokens;
@@ -602,6 +612,10 @@ struct jllama_context
 
         // compare the evaluated prompt with the new prompt
         n_past = common_part(embd, prompt_tokens);
+
+        // since #3228 we now have to manually manage the KV cache
+        llama_kv_cache_seq_rm(ctx, 0, n_past, params.n_ctx);
+
         embd = prompt_tokens;
         if (n_past == num_prompt_tokens)
         {
@@ -609,11 +623,11 @@ struct jllama_context
             n_past--;
         }
 
-        // LOG_VERBOSE("prompt ingested", {
-        //                                    {"n_past", n_past},
-        //                                    {"cached", tokens_to_str(ctx, embd.cbegin(), embd.cbegin() + n_past)},
-        //                                    {"to_eval", tokens_to_str(ctx, embd.cbegin() + n_past, embd.cend())},
-        //                                });
+        //        LOG_VERBOSE("prompt ingested", {
+        //                                           {"n_past", n_past},
+        //                                           {"cached", tokens_to_str(ctx, embd.cbegin(), embd.cbegin() + n_past)},
+        //                                           {"to_eval", tokens_to_str(ctx, embd.cbegin() + n_past, embd.cend())},
+        //                                       });
 
         has_next_token = true;
     }
@@ -630,22 +644,30 @@ struct jllama_context
         completion_token_output result;
         result.tok = -1;
 
-        if (embd.size() >= (size_t)params.n_ctx)
+        if (embd.size() >= (size_t)n_ctx)
         {
-            // Reset context
-            const int n_left = (params.n_ctx - params.n_keep) / 2;
+            // Shift context
 
-            std::vector<llama_token> new_tokens(embd.begin(), embd.begin() + params.n_keep);
-            new_tokens.insert(new_tokens.end(), embd.end() - n_left, embd.end());
-            embd = new_tokens;
-            n_past = params.n_keep;
+            const int n_left = n_past - params.n_keep - 1;
+            const int n_discard = n_left / 2;
+
+            llama_kv_cache_seq_rm(ctx, 0, params.n_keep + 1, params.n_keep + n_discard + 1);
+            llama_kv_cache_seq_shift(ctx, 0, params.n_keep + 1 + n_discard, n_past, -n_discard);
+
+            for (size_t i = params.n_keep + 1 + n_discard; i < embd.size(); i++)
+            {
+                embd[i - n_discard] = embd[i];
+            }
+            embd.resize(embd.size() - n_discard);
+
+            n_past -= n_discard;
+
             truncated = true;
-            // LOG_VERBOSE("input truncated", {
-            //                                    {"n_ctx", params.n_ctx},
-            //                                    {"n_keep", params.n_keep},
-            //                                    {"n_left", n_left},
-            //                                    {"new_tokens", tokens_to_str(ctx, new_tokens.cbegin(), new_tokens.cend())},
-            //                                });
+//            LOG_VERBOSE("input truncated", {
+//                                               {"n_ctx", n_ctx},
+//                                               {"n_keep", params.n_keep},
+//                                               {"n_left", n_left},
+//                                           });
         }
 
         while (n_past < embd.size())
@@ -655,15 +677,14 @@ struct jllama_context
             {
                 n_eval = params.n_batch;
             }
-            if (llama_eval(ctx, &embd[n_past], n_eval, n_past, params.n_threads))
+
+            if (llama_decode(ctx, llama_batch_get_one(&embd[n_past], n_eval, n_past, 0)))
             {
-            	jllama_log_callback(LLAMA_LOG_LEVEL_ERROR, "failed to evaluate", nullptr);
-                // LOG_ERROR("failed to eval", {
-                //                                 {"n_eval", n_eval},
-                //                                 {"n_past", n_past},
-                //                                 {"n_threads", params.n_threads},
-                //                                 {"embd", tokens_to_str(ctx, embd.cbegin() + n_past, embd.cend())},
-                //                             });
+//                LOG_ERROR("failed to eval", {
+//                                                {"n_eval", n_eval},
+//                                                {"n_past", n_past},
+//                                                {"embd", tokens_to_str(ctx, embd.cbegin() + n_past, embd.cend())},
+//                                            });
                 has_next_token = false;
                 return result;
             }
@@ -679,11 +700,11 @@ struct jllama_context
 
         // out of user input, sample next token
         const float temp = params.temp;
-        const int32_t top_k = params.top_k <= 0 ? llama_n_vocab(ctx) : params.top_k;
+        const int32_t top_k = params.top_k <= 0 ? llama_n_vocab(model) : params.top_k;
         const float top_p = params.top_p;
         const float tfs_z = params.tfs_z;
         const float typical_p = params.typical_p;
-        const int32_t repeat_last_n = params.repeat_last_n < 0 ? params.n_ctx : params.repeat_last_n;
+        const int32_t repeat_last_n = params.repeat_last_n < 0 ? n_ctx : params.repeat_last_n;
         const float repeat_penalty = params.repeat_penalty;
         const float alpha_presence = params.presence_penalty;
         const float alpha_frequency = params.frequency_penalty;
@@ -695,7 +716,7 @@ struct jllama_context
 
         {
             auto *logits = llama_get_logits(ctx);
-            auto n_vocab = llama_n_vocab(ctx);
+            auto n_vocab = llama_n_vocab(model);
 
             // Apply params.logit_bias map
             for (const auto &it : params.logit_bias)
@@ -714,7 +735,7 @@ struct jllama_context
 
             // Apply penalties
             float nl_logit = logits[llama_token_nl(ctx)];
-            auto last_n_repeat = std::min(std::min((int)last_n_tokens.size(), repeat_last_n), params.n_ctx);
+            auto last_n_repeat = std::min(std::min((int)last_n_tokens.size(), repeat_last_n), n_ctx);
             llama_sample_repetition_penalty(ctx, &candidates_p,
                                             last_n_tokens.data() + last_n_tokens.size() - last_n_repeat,
                                             last_n_repeat, repeat_penalty);
@@ -746,13 +767,13 @@ struct jllama_context
                 {
                     static float mirostat_mu = 2.0f * mirostat_tau;
                     const int mirostat_m = 100;
-                    llama_sample_temperature(ctx, &candidates_p, temp);
+                    llama_sample_temp(ctx, &candidates_p, temp);
                     result.tok = llama_sample_token_mirostat(ctx, &candidates_p, mirostat_tau, mirostat_eta, mirostat_m, &mirostat_mu);
                 }
                 else if (mirostat == 2)
                 {
                     static float mirostat_mu = 2.0f * mirostat_tau;
-                    llama_sample_temperature(ctx, &candidates_p, temp);
+                    llama_sample_temp(ctx, &candidates_p, temp);
                     result.tok = llama_sample_token_mirostat_v2(ctx, &candidates_p, mirostat_tau, mirostat_eta, &mirostat_mu);
                 }
                 else
@@ -763,7 +784,7 @@ struct jllama_context
                     llama_sample_tail_free(ctx, &candidates_p, tfs_z, min_keep);
                     llama_sample_typical(ctx, &candidates_p, typical_p, min_keep);
                     llama_sample_top_p(ctx, &candidates_p, top_p, min_keep);
-                    llama_sample_temperature(ctx, &candidates_p, temp);
+                    llama_sample_temp(ctx, &candidates_p, temp);
                     result.tok = llama_sample_token(ctx, &candidates_p);
                 }
             }
@@ -793,7 +814,7 @@ struct jllama_context
             // stopping_word = llama_token_to_piece(ctx, embd.back());
             has_next_token = false;
             stopped_eos = true;
-            // LOG_VERBOSE("eos token found", {});
+//            LOG_VERBOSE("eos token found", {});
             return result;
         }
 
@@ -884,27 +905,27 @@ struct jllama_context
             stopped_limit = true;
         }
 
-        // LOG_VERBOSE("next token", {
-        //                               {"token", token_with_probs.tok},
-        //                               {"token_text", tokens_to_output_formatted_string(ctx, token_with_probs.tok)},
-        //                               {"has_next_token", has_next_token},
-        //                               {"n_remain", n_remain},
-        //                               {"num_tokens_predicted", num_tokens_predicted},
-        //                               {"stopped_eos", stopped_eos},
-        //                               {"stopped_word", stopped_word},
-        //                               {"stopped_limit", stopped_limit},
-        //                               {"stopping_word", stopping_word},
-        //                           });
+        //		LOG_VERBOSE("next token", {
+        //									  {"token", token_with_probs.tok},
+        //									  {"token_text", tokens_to_output_formatted_string(ctx, token_with_probs.tok)},
+        //									  {"has_next_token", has_next_token},
+        //									  {"n_remain", n_remain},
+        //									  {"num_tokens_predicted", num_tokens_predicted},
+        //									  {"stopped_eos", stopped_eos},
+        //									  {"stopped_word", stopped_word},
+        //									  {"stopped_limit", stopped_limit},
+        //									  {"stopping_word", stopping_word},
+        //								  });
 
         return token_with_probs;
     }
 
     std::vector<float> getEmbedding()
     {
-        static const int n_embd = llama_n_embd(ctx);
+        static const int n_embd = llama_n_embd(model);
         if (!params.embedding)
         {
-        	jllama_log_callback(LLAMA_LOG_LEVEL_WARN, "embedding disabled", nullptr);
+            jllama_log_callback(GGML_LOG_LEVEL_WARN, "embedding disabled", nullptr);
             // LOG_WARNING("embedding disabled", {
             //                                       {"params.embedding", params.embedding},
             //                                   });
@@ -931,7 +952,6 @@ static gpt_params parse_model_params(JNIEnv *env, jobject jparams, jstring java_
     params.rope_freq_scale = env->GetFloatField(jparams, f_rope_freq_scale);
     params.hellaswag = env->GetBooleanField(jparams, f_hellaswag);
     params.hellaswag_tasks = env->GetShortField(jparams, f_hellaswag_tasks);
-    params.low_vram = env->GetBooleanField(jparams, f_low_vram);
     params.mul_mat_q = env->GetBooleanField(jparams, f_mul_mat_q);
     params.memory_f16 = env->GetBooleanField(jparams, f_memory_f16);
     params.embedding = env->GetBooleanField(jparams, f_embedding);
@@ -941,42 +961,44 @@ static gpt_params parse_model_params(JNIEnv *env, jobject jparams, jstring java_
     params.numa = env->GetBooleanField(jparams, f_numa);
     params.verbose_prompt = env->GetBooleanField(jparams, f_verbose_prompt);
 
-     jstring j_lora_adapter = (jstring)env->GetObjectField(jparams, f_lora_adapter);
-     if (j_lora_adapter != nullptr)
-     {
-         params.lora_adapter = parse_jstring(env, j_lora_adapter);
-         env->DeleteLocalRef(j_lora_adapter);
-     }
-     jstring j_lora_base = (jstring)env->GetObjectField(jparams, f_lora_base);
-     if (j_lora_base != nullptr)
-     {
-         params.lora_base = parse_jstring(env, j_lora_base);
-         env->DeleteLocalRef(j_lora_base);
-     }
+//    jstring j_lora_adapter = (jstring)env->GetObjectField(jparams, f_lora_adapter);
+//    if (j_lora_adapter != nullptr)
+//    {
+//        params.lora_adapter = parse_jstring(env, j_lora_adapter);
+//        std::cout << params.lora_adapter << std::endl;
+//        env->DeleteLocalRef(j_lora_adapter);
+//    }
+//    jstring j_lora_base = (jstring)env->GetObjectField(jparams, f_lora_base);
+//    if (j_lora_base != nullptr)
+//    {
+//        params.lora_base = parse_jstring(env, j_lora_base);
+//        std::cout << params.lora_base << std::endl;
+//        env->DeleteLocalRef(j_lora_base);
+//    }
 
-//     jfloatArray j_tensor_split = (jfloatArray)env->GetObjectField(jparams, f_tensor_split);
-//     if (j_tensor_split != nullptr)
-//     {
-// #ifndef GGML_USE_CUBLAS
-//         // LOG_WARNING("llama.cpp was compiled without cuBLAS. It is not possible to set a tensor split.\n", {});
-// #endif
-//         jsize array_length = env->GetArrayLength(j_tensor_split);
-//         GGML_ASSERT(array_length <= LLAMA_MAX_DEVICES);
-//         float *tensor_split = new float[array_length];
-//         env->GetFloatArrayRegion(j_tensor_split, 0, array_length, tensor_split);
-//         for (size_t i_device = 0; i_device < LLAMA_MAX_DEVICES; ++i_device)
-//         {
-//             if (i_device < array_length)
-//             {
-//                 params.tensor_split[i_device] = tensor_split[i_device];
-//             }
-//             else
-//             {
-//                 params.tensor_split[i_device] = 0.0f;
-//             }
-//         }
-//         delete[] tensor_split;
-//     }
+    //     jfloatArray j_tensor_split = (jfloatArray)env->GetObjectField(jparams, f_tensor_split);
+    //     if (j_tensor_split != nullptr)
+    //     {
+    // #ifndef GGML_USE_CUBLAS
+    //         // LOG_WARNING("llama.cpp was compiled without cuBLAS. It is not possible to set a tensor split.\n", {});
+    // #endif
+    //         jsize array_length = env->GetArrayLength(j_tensor_split);
+    //         GGML_ASSERT(array_length <= LLAMA_MAX_DEVICES);
+    //         float *tensor_split = new float[array_length];
+    //         env->GetFloatArrayRegion(j_tensor_split, 0, array_length, tensor_split);
+    //         for (size_t i_device = 0; i_device < LLAMA_MAX_DEVICES; ++i_device)
+    //         {
+    //             if (i_device < array_length)
+    //             {
+    //                 params.tensor_split[i_device] = tensor_split[i_device];
+    //             }
+    //             else
+    //             {
+    //                 params.tensor_split[i_device] = 0.0f;
+    //             }
+    //         }
+    //         delete[] tensor_split;
+    //     }
     //
     // #ifndef LLAMA_SUPPORTS_GPU_OFFLOAD
     //		if (params.n_gpu_layers > 0) {
@@ -1005,9 +1027,9 @@ static gpt_params parse_model_params(JNIEnv *env, jobject jparams, jstring java_
     //	//	f_f16_kv
 
     if (params.model_alias == "unknown")
-	{
-		params.model_alias = params.model;
-	}
+    {
+        params.model_alias = params.model;
+    }
 
     return params;
 }
@@ -1050,7 +1072,7 @@ static void parse_inference_params(JNIEnv *env, jllama_context *llama, jstring p
     jobject logit_bias = env->GetObjectField(params, f_logit_bias);
     if (logit_bias != nullptr)
     {
-        const int n_vocab = llama_n_vocab(llama->ctx);
+        const int n_vocab = llama_n_vocab(llama->model);
         jobject entry_set = env->CallObjectMethod(logit_bias, m_entry_set);
         jobject iterator = env->CallObjectMethod(entry_set, m_set_iterator);
         while (env->CallBooleanMethod(iterator, m_iterator_has_next))
@@ -1097,7 +1119,7 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getSystemInfo(JNIEnv *
 
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jobject obj, jstring file_path, jobject jparams)
 {
-	gpt_params params = parse_model_params(env, jparams, file_path);
+    gpt_params params = parse_model_params(env, jparams, file_path);
 
     jllama_context *llama = new jllama_context;
     llama_backend_init(false);
@@ -1108,13 +1130,13 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
         return;
     }
 
-//     LOG_INFO("build info", {{"build", BUILD_NUMBER},
-//                                 {"commit", BUILD_COMMIT}});
-//     LOG_INFO("system info", {
-//                                 {"n_threads", params.n_threads},
-//                                 {"total_threads", std::thread::hardware_concurrency()},
-//                                 {"system_info", llama_print_system_info()},
-//                             });
+    //     LOG_INFO("build info", {{"build", BUILD_NUMBER},
+    //                                 {"commit", BUILD_COMMIT}});
+    //     LOG_INFO("system info", {
+    //                                 {"n_threads", params.n_threads},
+    //                                 {"total_threads", std::thread::hardware_concurrency()},
+    //                                 {"system_info", llama_print_system_info()},
+    //                             });
 
     env->SetLongField(obj, f_model_pointer, reinterpret_cast<jlong>(llama));
 }
@@ -1215,7 +1237,7 @@ JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getNext(JNIEnv *env
         env->SetLongField(iter, f_iter_has_next, false);
     }
 
-	return parse_jbytes(env, to_send);
+    return parse_jbytes(env, to_send);
 }
 
 JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getFull(JNIEnv *env, jobject obj, jstring prompt, jobject params)
@@ -1257,7 +1279,7 @@ JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getFull(JNIEnv *env
     //    llama->lock().release();
     //    llama->mutex.unlock();
 
-	return parse_jbytes(env, llama->generated_text);
+    return parse_jbytes(env, llama->generated_text);
 }
 
 JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env, jobject obj, jstring java_prompt)
@@ -1274,7 +1296,7 @@ JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env,
     llama->beginCompletion();
     llama->doCompletion();
 
-    static const int n_embd = llama_n_embd(llama->ctx);
+    static const int n_embd = llama_n_embd(llama->model);
     //    if (!llama->params.embedding)
     //    {
     //        // LOG_WARNING("embedding disabled", {
@@ -1336,18 +1358,22 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_decodeBytes(JNIEnv *en
     return env->NewString((jchar *)text.data(), text.size());
 }
 
-JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_setLogger(JNIEnv * env, jclass clazz, jobject callback) {
-	env->GetJavaVM(&g_vm);
+JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_setLogger(JNIEnv *env, jclass clazz, jobject callback)
+{
+    env->GetJavaVM(&g_vm);
 
-	if (g_log_callback != nullptr)
-	{
-		env->DeleteGlobalRef(g_log_callback);
-	}
+    if (g_log_callback != nullptr)
+    {
+        env->DeleteGlobalRef(g_log_callback);
+    }
 
-	if (callback == nullptr) {
-		llama_log_set(nullptr, nullptr);
-	} else {
-		g_log_callback = env->NewGlobalRef(callback);
-		llama_log_set(jllama_log_callback, nullptr);
-	}
+    if (callback == nullptr)
+    {
+        llama_log_set(nullptr, nullptr);
+    }
+    else
+    {
+        g_log_callback = env->NewGlobalRef(callback);
+        llama_log_set(jllama_log_callback, nullptr);
+    }
 }

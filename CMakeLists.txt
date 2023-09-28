@@ -28,7 +28,7 @@ endforeach()
 
 # find which OS we build for if not set (make sure to run mvn compile first)
 if(NOT DEFINED OS_NAME)
-    execute_process(
+	execute_process(
       COMMAND ${JAVA_EXECUTABLE} -cp ${CMAKE_SOURCE_DIR}/target/classes de.kherud.llama.OSInfo --os
       OUTPUT_VARIABLE OS_NAME
       OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -44,21 +44,21 @@ if(NOT DEFINED OS_ARCH)
     )
 endif()
 
-include_directories(
+add_library(jllama SHARED src/main/cpp/jllama.cpp)
+
+target_include_directories(jllama PRIVATE
     ${JNI_INCLUDE_DIR}
     ${JNI_MD_INCLUDE_DIRS}
     src/main/cpp
-    src/main/cpp/llama.cpp
-    src/main/cpp/llama.cpp/common
 )
 
 add_subdirectory(
     src/main/cpp/llama.cpp
 )
 
-add_library(jllama SHARED src/main/cpp/jllama.cpp)
+target_link_libraries(jllama PRIVATE common llama)
 
-target_link_libraries(jllama PRIVATE common llama ${CMAKE_THREAD_LIBS_INIT})
+target_compile_features(jllama PRIVATE cxx_std_11)
 
 if(OS_NAME STREQUAL "Windows")
 	set_target_properties(jllama llama PROPERTIES
