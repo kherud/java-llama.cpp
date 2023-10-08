@@ -81,7 +81,7 @@ jobs:
             -v $(pwd):/${{ github.workspace }} \
             -w ${{ github.workspace }} \
             --platform linux/arm64 \
-            ${{ matrix.target.docker-image }} \
+            eclipse-temurin:11 \
             sh -c "apt-get update && apt-get install -y cmake openjdk-11-jdk git build-essential && cd scripts && ./build.sh -DCMAKE_CXX_FLAGS='-march=armv8-a' -DOS_NAME=Linux -DOS_ARCH=aarch64"
             # The above apt-get commands can be moved to a Dockerfile, but then
             # the image needs to be built for the docker-arch architecture,
