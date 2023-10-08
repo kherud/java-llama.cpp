@@ -442,8 +442,25 @@ static std::string tokens_to_str(llama_context *ctx, Iter begin, Iter end)
     return ret;
 }
 
+// format incomplete utf-8 multibyte character for output
+static std::string tokens_to_output_formatted_string(const llama_context *ctx, const llama_token token)
+{
+    std::string out = token == -1 ? "" : llama_token_to_piece(ctx, token);
+    // if the size is 1 and first bit is 1, meaning it's a partial character
+    //   (size > 1 meaning it's already a known token)
+    if (out.size() == 1 && (out[0] & 0x80) == 0x80)
+    {
+        std::stringstream ss;
+        ss << std::hex << (out[0] & 0xff);
+        std::string res(ss.str());
+        out = "byte: \\x" + res;
+    }
+    return out;
+}
+
 struct jllama_context
 {
+    bool stream = false;
     bool has_next_token = false;
     std::string generated_text;
     std::vector<completion_token_output> generated_token_probs;
@@ -511,8 +528,7 @@ struct jllama_context
         n_remain = 0;
         n_past = 0;
 
-        if (grammar != nullptr)
-        {
+        if (grammar != nullptr) {
             llama_grammar_free(grammar);
             grammar = nullptr;
         }
@@ -524,11 +540,9 @@ struct jllama_context
         std::tie(model, ctx) = llama_init_from_gpt_params(params);
         if (model == nullptr)
         {
-            jllama_log_callback(GGML_LOG_LEVEL_ERROR, "unable to load model", nullptr);
-            // LOG_ERROR("unable to load model", {{"model", params_.model}});
+        	std::cerr << "unable to load model " << params.model << std::endl;
             return false;
         }
-
         n_ctx = llama_n_ctx(ctx);
         last_n_tokens.resize(n_ctx);
         std::fill(last_n_tokens.begin(), last_n_tokens.end(), 0);
@@ -537,31 +551,24 @@ struct jllama_context
 
     std::vector<llama_token> tokenize(std::string prompt, bool add_bos) const
     {
-        // If `add_bos` is true, we only add BOS, when json_prompt is a string,
-        // or the first element of the json_prompt array is a string.
         return ::llama_tokenize(ctx, prompt, add_bos);
     }
 
     bool loadGrammar()
     {
-        if (!params.grammar.empty())
-        {
+        if (!params.grammar.empty()) {
             parsed_grammar = grammar_parser::parse(params.grammar.c_str());
             // will be empty (default) if there are parse errors
-            if (parsed_grammar.rules.empty())
-            {
-                jllama_log_callback(GGML_LOG_LEVEL_ERROR, "grammar parse error", nullptr);
-                // LOG_ERROR("grammar parse error", {{"grammar", params.grammar}});
+            if (parsed_grammar.rules.empty()) {
+            	std::cerr << "grammar parse error " << params.grammar << std::endl;
                 return false;
             }
             grammar_parser::print_grammar(stderr, parsed_grammar);
 
             {
                 auto it = params.logit_bias.find(llama_token_eos(ctx));
-                if (it != params.logit_bias.end() && it->second == -INFINITY)
-                {
-                    jllama_log_callback(GGML_LOG_LEVEL_WARN, "EOS token is disabled, which will cause most grammars to fail", nullptr);
-                    // LOG_WARNING("EOS token is disabled, which will cause most grammars to fail", {});
+                if (it != params.logit_bias.end() && it->second == -INFINITY) {
+                	std::cerr << "EOS token is disabled, which will cause most grammars to fail" << std::endl;
                 }
             }
 
@@ -572,9 +579,60 @@ struct jllama_context
         return true;
     }
 
+    void loadInfill()
+    {
+        auto prefix_tokens = tokenize(params.input_prefix, true);  // always add BOS
+        auto suffix_tokens = tokenize(params.input_suffix, true);  // always add BOS
+        prefix_tokens.insert(prefix_tokens.begin(), llama_token_prefix(ctx));
+        prefix_tokens.insert(prefix_tokens.end(), llama_token_suffix(ctx));
+        prefix_tokens.insert(prefix_tokens.end(), suffix_tokens.begin(), suffix_tokens.end());
+        prefix_tokens.push_back(llama_token_middle(ctx));
+        auto prompt_tokens = prefix_tokens;
+
+        num_prompt_tokens = prompt_tokens.size();
+
+        if (params.n_keep < 0)
+        {
+            params.n_keep = (int)num_prompt_tokens;
+        }
+        params.n_keep = std::min(params.n_ctx - 4, params.n_keep);
+
+        // if input prompt is too big, truncate like normal
+        if (num_prompt_tokens >= (size_t)params.n_ctx)
+        {
+            printf("Input prompt is too big, truncating. Can only take %d tokens but got %zu\n", params.n_ctx, num_prompt_tokens);
+            // todo we probably want to cut from both sides
+            const int n_left = (params.n_ctx - params.n_keep) / 2;
+            std::vector<llama_token> new_tokens(prompt_tokens.begin(), prompt_tokens.begin() + params.n_keep);
+            const int erased_blocks = (num_prompt_tokens - params.n_keep - n_left - 1) / n_left;
+            new_tokens.insert(new_tokens.end(), prompt_tokens.begin() + params.n_keep + erased_blocks * n_left, prompt_tokens.end());
+            std::copy(prompt_tokens.end() - params.n_ctx, prompt_tokens.end(), last_n_tokens.begin());
+
+            truncated = true;
+            prompt_tokens = new_tokens;
+        }
+        else
+        {
+            const size_t ps = num_prompt_tokens;
+            std::fill(last_n_tokens.begin(), last_n_tokens.end() - ps, 0);
+            std::copy(prompt_tokens.begin(), prompt_tokens.end(), last_n_tokens.end() - ps);
+        }
+
+        // compare the evaluated prompt with the new prompt
+        n_past = common_part(embd, prompt_tokens);
+        embd = prompt_tokens;
+        if (n_past == num_prompt_tokens)
+        {
+            // we have to evaluate at least 1 token to generate logits.
+            printf("we have to evaluate at least 1 token to generate logits\n");
+            n_past--;
+        }
+
+        has_next_token = true;
+    }
     void loadPrompt()
     {
-        auto prompt_tokens = tokenize(prompt, true); // always add BOS
+        auto prompt_tokens = tokenize(prompt, true);  // always add BOS
 
         num_prompt_tokens = prompt_tokens.size();
 
@@ -593,13 +651,6 @@ struct jllama_context
             new_tokens.insert(new_tokens.end(), prompt_tokens.begin() + params.n_keep + erased_blocks * n_left, prompt_tokens.end());
             std::copy(prompt_tokens.end() - n_ctx, prompt_tokens.end(), last_n_tokens.begin());
 
-            //            LOG_VERBOSE("input truncated", {
-            //                                               {"n_ctx", n_ctx},
-            //                                               {"n_keep", params.n_keep},
-            //                                               {"n_left", n_left},
-            //                                               {"new_tokens", tokens_to_str(ctx, new_tokens.cbegin(), new_tokens.cend())},
-            //                                           });
-
             truncated = true;
             prompt_tokens = new_tokens;
         }
@@ -614,7 +665,7 @@ struct jllama_context
         n_past = common_part(embd, prompt_tokens);
 
         // since #3228 we now have to manually manage the KV cache
-        llama_kv_cache_seq_rm(ctx, 0, n_past, params.n_ctx);
+        llama_kv_cache_seq_rm(ctx, 0, n_past, -1);
 
         embd = prompt_tokens;
         if (n_past == num_prompt_tokens)
@@ -622,12 +673,6 @@ struct jllama_context
             // we have to evaluate at least 1 token to generate logits.
             n_past--;
         }
-
-        //        LOG_VERBOSE("prompt ingested", {
-        //                                           {"n_past", n_past},
-        //                                           {"cached", tokens_to_str(ctx, embd.cbegin(), embd.cbegin() + n_past)},
-        //                                           {"to_eval", tokens_to_str(ctx, embd.cbegin() + n_past, embd.cend())},
-        //                                       });
 
         has_next_token = true;
     }
@@ -648,10 +693,10 @@ struct jllama_context
         {
             // Shift context
 
-            const int n_left = n_past - params.n_keep - 1;
-            const int n_discard = n_left / 2;
+            const int n_left    = n_past - params.n_keep - 1;
+            const int n_discard = n_left/2;
 
-            llama_kv_cache_seq_rm(ctx, 0, params.n_keep + 1, params.n_keep + n_discard + 1);
+            llama_kv_cache_seq_rm   (ctx, 0, params.n_keep + 1            , params.n_keep + n_discard + 1);
             llama_kv_cache_seq_shift(ctx, 0, params.n_keep + 1 + n_discard, n_past, -n_discard);
 
             for (size_t i = params.n_keep + 1 + n_discard; i < embd.size(); i++)
@@ -663,16 +708,13 @@ struct jllama_context
             n_past -= n_discard;
 
             truncated = true;
-//            LOG_VERBOSE("input truncated", {
-//                                               {"n_ctx", n_ctx},
-//                                               {"n_keep", params.n_keep},
-//                                               {"n_left", n_left},
-//                                           });
         }
 
+        bool tg = true;
         while (n_past < embd.size())
         {
             int n_eval = (int)embd.size() - n_past;
+            tg = n_eval == 1;
             if (n_eval > params.n_batch)
             {
                 n_eval = params.n_batch;
@@ -680,11 +722,11 @@ struct jllama_context
 
             if (llama_decode(ctx, llama_batch_get_one(&embd[n_past], n_eval, n_past, 0)))
             {
-//                LOG_ERROR("failed to eval", {
-//                                                {"n_eval", n_eval},
-//                                                {"n_past", n_past},
-//                                                {"embd", tokens_to_str(ctx, embd.cbegin() + n_past, embd.cend())},
-//                                            });
+            	std::cerr
+            		<< "failed to eval n_eval=" << n_eval
+            		<< " n_past=" << n_past
+            		<< " embd=" << tokens_to_str(ctx, embd.cbegin() + n_past, embd.cend())
+            		<< std::endl;
                 has_next_token = false;
                 return result;
             }
@@ -698,100 +740,20 @@ struct jllama_context
             return result;
         }
 
-        // out of user input, sample next token
-        const float temp = params.temp;
-        const int32_t top_k = params.top_k <= 0 ? llama_n_vocab(model) : params.top_k;
-        const float top_p = params.top_p;
-        const float tfs_z = params.tfs_z;
-        const float typical_p = params.typical_p;
-        const int32_t repeat_last_n = params.repeat_last_n < 0 ? n_ctx : params.repeat_last_n;
-        const float repeat_penalty = params.repeat_penalty;
-        const float alpha_presence = params.presence_penalty;
-        const float alpha_frequency = params.frequency_penalty;
-        const int mirostat = params.mirostat;
-        const float mirostat_tau = params.mirostat_tau;
-        const float mirostat_eta = params.mirostat_eta;
-        const bool penalize_nl = params.penalize_nl;
-        const int32_t n_probs = params.n_probs;
-
         {
-            auto *logits = llama_get_logits(ctx);
-            auto n_vocab = llama_n_vocab(model);
-
-            // Apply params.logit_bias map
-            for (const auto &it : params.logit_bias)
-            {
-                logits[it.first] += it.second;
-            }
-
+            // out of user input, sample next token
             std::vector<llama_token_data> candidates;
-            candidates.reserve(n_vocab);
-            for (llama_token token_id = 0; token_id < n_vocab; token_id++)
-            {
-                candidates.emplace_back(llama_token_data{token_id, logits[token_id], 0.0f});
-            }
+            candidates.reserve(llama_n_vocab(model));
 
-            llama_token_data_array candidates_p = {candidates.data(), candidates.size(), false};
+            result.tok = llama_sample_token(ctx, NULL, grammar, params, last_n_tokens, candidates);
 
-            // Apply penalties
-            float nl_logit = logits[llama_token_nl(ctx)];
-            auto last_n_repeat = std::min(std::min((int)last_n_tokens.size(), repeat_last_n), n_ctx);
-            llama_sample_repetition_penalty(ctx, &candidates_p,
-                                            last_n_tokens.data() + last_n_tokens.size() - last_n_repeat,
-                                            last_n_repeat, repeat_penalty);
-            llama_sample_frequency_and_presence_penalties(ctx, &candidates_p,
-                                                          last_n_tokens.data() + last_n_tokens.size() - last_n_repeat,
-                                                          last_n_repeat, alpha_frequency, alpha_presence);
-            if (!penalize_nl)
-            {
-                logits[llama_token_nl(ctx)] = nl_logit;
-            }
+            llama_token_data_array candidates_p = { candidates.data(), candidates.size(), false };
 
-            if (grammar != nullptr)
+            const int32_t n_probs = params.n_probs;
+            if (params.temp <= 0 && n_probs > 0)
             {
-                llama_sample_grammar(ctx, &candidates_p, grammar);
-            }
-
-            if (temp <= 0)
-            {
-                // Greedy sampling
-                result.tok = llama_sample_token_greedy(ctx, &candidates_p);
-                if (n_probs > 0)
-                {
-                    llama_sample_softmax(ctx, &candidates_p);
-                }
-            }
-            else
-            {
-                if (mirostat == 1)
-                {
-                    static float mirostat_mu = 2.0f * mirostat_tau;
-                    const int mirostat_m = 100;
-                    llama_sample_temp(ctx, &candidates_p, temp);
-                    result.tok = llama_sample_token_mirostat(ctx, &candidates_p, mirostat_tau, mirostat_eta, mirostat_m, &mirostat_mu);
-                }
-                else if (mirostat == 2)
-                {
-                    static float mirostat_mu = 2.0f * mirostat_tau;
-                    llama_sample_temp(ctx, &candidates_p, temp);
-                    result.tok = llama_sample_token_mirostat_v2(ctx, &candidates_p, mirostat_tau, mirostat_eta, &mirostat_mu);
-                }
-                else
-                {
-                    // Temperature sampling
-                    size_t min_keep = std::max(1, n_probs);
-                    llama_sample_top_k(ctx, &candidates_p, top_k, min_keep);
-                    llama_sample_tail_free(ctx, &candidates_p, tfs_z, min_keep);
-                    llama_sample_typical(ctx, &candidates_p, typical_p, min_keep);
-                    llama_sample_top_p(ctx, &candidates_p, top_p, min_keep);
-                    llama_sample_temp(ctx, &candidates_p, temp);
-                    result.tok = llama_sample_token(ctx, &candidates_p);
-                }
-            }
-
-            if (grammar != nullptr)
-            {
-                llama_grammar_accept_token(ctx, grammar, result.tok);
+                // For llama_sample_token_greedy we need to sort candidates
+                llama_sample_softmax(ctx, &candidates_p);
             }
 
             for (size_t i = 0; i < std::min(candidates_p.size, (size_t)n_probs); ++i)
@@ -801,7 +763,9 @@ struct jllama_context
 
             last_n_tokens.erase(last_n_tokens.begin());
             last_n_tokens.push_back(result.tok);
-            num_tokens_predicted++;
+            if (tg) {
+                num_tokens_predicted++;
+            }
         }
 
         // add it to the context
@@ -814,7 +778,6 @@ struct jllama_context
             // stopping_word = llama_token_to_piece(ctx, embd.back());
             has_next_token = false;
             stopped_eos = true;
-//            LOG_VERBOSE("eos token found", {});
             return result;
         }
 
@@ -905,18 +868,6 @@ struct jllama_context
             stopped_limit = true;
         }
 
-        //		LOG_VERBOSE("next token", {
-        //									  {"token", token_with_probs.tok},
-        //									  {"token_text", tokens_to_output_formatted_string(ctx, token_with_probs.tok)},
-        //									  {"has_next_token", has_next_token},
-        //									  {"n_remain", n_remain},
-        //									  {"num_tokens_predicted", num_tokens_predicted},
-        //									  {"stopped_eos", stopped_eos},
-        //									  {"stopped_word", stopped_word},
-        //									  {"stopped_limit", stopped_limit},
-        //									  {"stopping_word", stopping_word},
-        //								  });
-
         return token_with_probs;
     }
 
@@ -925,10 +876,7 @@ struct jllama_context
         static const int n_embd = llama_n_embd(model);
         if (!params.embedding)
         {
-            jllama_log_callback(GGML_LOG_LEVEL_WARN, "embedding disabled", nullptr);
-            // LOG_WARNING("embedding disabled", {
-            //                                       {"params.embedding", params.embedding},
-            //                                   });
+        	std::cerr << "embedding disabled" << std::endl;
             return std::vector<float>(n_embd, 0.0f);
         }
         const float *data = llama_get_embeddings(ctx);

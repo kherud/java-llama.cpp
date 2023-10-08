@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 3.12)
 
 project(jllama CXX)
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED true)
+# todo: Is there a better way to build the library than copy & pasting the build argument cmake definition of llama.cpp?
+include(build-args.cmake)
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_SHARED_LIBS ON)
 
