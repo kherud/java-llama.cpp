@@ -57,7 +57,7 @@ add_subdirectory(
     src/main/cpp/llama.cpp
 )
 
-target_link_libraries(jllama PRIVATE common llama)
+target_link_libraries(jllama PRIVATE common llama ${LLAMA_EXTRA_LIBS})
 
 target_compile_features(jllama PRIVATE cxx_std_11)
 
