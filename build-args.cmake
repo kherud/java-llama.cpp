@@ -439,7 +439,6 @@ if (NOT MSVC)
 endif()
 
 
-message(STATUS "CMAKE_SYSTEM_PROCESSOR = ${CMAKE_SYSTEM_PROCESSOR}")
 if ((${CMAKE_SYSTEM_PROCESSOR} MATCHES "arm") OR (${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64") OR ("${CMAKE_GENERATOR_PLATFORM_LWR}" MATCHES "arm64"))
     message(STATUS "ARM detected")
     if (MSVC)
@@ -492,7 +491,7 @@ elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(x86_64|i686|AMD64)$" OR "${CMAKE_GE
             add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/arch:AVX>)
         endif()
     else()
-        if (LLAMA_NATIVE)
+        if (LLAMA_NATIVE AND NOT (APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
             add_compile_options(-march=native)
         endif()
         if (LLAMA_F16C)
