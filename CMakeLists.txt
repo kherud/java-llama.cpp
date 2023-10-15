@@ -71,4 +71,9 @@ else()
 	)
 endif()
 
+if (LLAMA_METAL)
+    # copy ggml-metal.metal to bin directory
+    configure_file(src/main/cpp/llama.cpp/ggml-metal.metal ${CMAKE_SOURCE_DIR}/src/main/resources/de/kherud/llama/${OS_NAME}/${OS_ARCH}/ggml-metal.metal COPYONLY)
+endif()
+
 message(STATUS "Installing files to ${CMAKE_SOURCE_DIR}/src/main/resources/de/kherud/llama/${OS_NAME}/${OS_ARCH}")
