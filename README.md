@@ -182,6 +182,10 @@ try (LlamaModel model = new LlamaModel("/path/to/gguf-model")) {
 > freed when the model is no longer needed. This isn't strictly required, but avoids memory leaks if you use different
 > models throughout the lifecycle of your application.
 
+#### Infilling
+
+You can simply pass `prefix` and `suffix` to `generate()` or `complete()`.
+
 ### Model/Inference Configuration
 
 There are two sets of parameters you can configure, `ModelParameters` and `InferenceParameters`. Both provide builder 
