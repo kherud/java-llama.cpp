@@ -38,6 +38,9 @@ public class MainExample {
                 prompt += input;
                 System.out.print("Llama: ");
                 prompt += "\nLlama: ";
+//                String answer = model.complete(prompt, inferParams);
+//                System.out.print(answer);
+//                prompt += answer;
                 for (String output : model.generate(prompt, inferParams)) {
                     System.out.print(output);
                     prompt += output;

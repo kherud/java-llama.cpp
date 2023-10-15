@@ -1,14 +1,3 @@
-cmake_minimum_required(VERSION 3.13)  # for add_link_options
-
-if (NOT XCODE AND NOT MSVC AND NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
-    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
-endif()
-
-#
-# Option list
-#
-
 if (APPLE)
     set(LLAMA_METAL_DEFAULT ON)
 else()
@@ -359,8 +348,7 @@ endif()
 if (LLAMA_ALL_WARNINGS)
     if (NOT MSVC)
         set(warning_flags -Wall -Wextra -Wpedantic -Wcast-qual -Wno-unused-function)
-        set(c_flags -Wshadow -Wstrict-prototypes -Wpointer-arith -Wmissing-prototypes -Werror=implicit-int
-            -Werror=implicit-function-declaration)
+        set(c_flags -Wshadow -Wstrict-prototypes -Wpointer-arith -Wmissing-prototypes -Werror=implicit-int -Werror=implicit-function-declaration)
         set(cxx_flags -Wmissing-declarations -Wmissing-noreturn)
         set(host_cxx_flags "")
 
@@ -392,7 +380,8 @@ if (LLAMA_ALL_WARNINGS)
     set(c_flags   ${c_flags}   ${warning_flags})
     set(cxx_flags ${cxx_flags} ${warning_flags})
     add_compile_options("$<$<COMPILE_LANGUAGE:C>:${c_flags}>"
-                        "$<$<COMPILE_LANGUAGE:CXX>:${cxx_flags} ${host_cxx_flags}>")
+                        "$<$<COMPILE_LANGUAGE:CXX>:${cxx_flags}>"
+                        "$<$<COMPILE_LANGUAGE:CXX>:${host_cxx_flags}>")
 
 endif()
 

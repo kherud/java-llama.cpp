@@ -25,14 +25,6 @@ JNIEXPORT jintArray JNICALL Java_de_kherud_llama_LlamaModel_encode
 
 /*
  * Class:     de_kherud_llama_LlamaModel
- * Method:    decode
- * Signature: ([I)Ljava/lang/String;
- */
-JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_decodeBytes
-  (JNIEnv *, jobject, jintArray);
-
-/*
- * Class:     de_kherud_llama_LlamaModel
  * Method:    setLogger
  * Signature: (Ljava/util/function/BiConsumer;)V
  */
@@ -49,19 +41,35 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel
 
 /*
  * Class:     de_kherud_llama_LlamaModel
- * Method:    setupInference
+ * Method:    newAnswerIterator
  * Signature: (Ljava/lang/String;Lde/kherud/llama/InferenceParameters;)V
  */
-JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_setupInference
+JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_newAnswerIterator
   (JNIEnv *, jobject, jstring, jobject);
 
 /*
  * Class:     de_kherud_llama_LlamaModel
- * Method:    getFull
+ * Method:    newInfillIterator
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Lde/kherud/llama/InferenceParameters;)V
+ */
+JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_newInfillIterator
+  (JNIEnv *, jobject, jstring, jstring, jobject);
+
+/*
+ * Class:     de_kherud_llama_LlamaModel
+ * Method:    getAnswer
  * Signature: (Ljava/lang/String;Lde/kherud/llama/InferenceParameters;)[B
  */
-JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getFull
+JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getAnswer
   (JNIEnv *, jobject, jstring, jobject);
+
+/*
+ * Class:     de_kherud_llama_LlamaModel
+ * Method:    getInfill
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Lde/kherud/llama/InferenceParameters;)[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getInfill
+  (JNIEnv *, jobject, jstring, jstring, jobject);
 
 /*
  * Class:     de_kherud_llama_LlamaModel
@@ -70,6 +78,14 @@ JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getFull
  */
 JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getNext
   (JNIEnv *, jobject, jobject);
+
+/*
+ * Class:     de_kherud_llama_LlamaModel
+ * Method:    decodeBytes
+ * Signature: ([I)[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_decodeBytes
+  (JNIEnv *, jobject, jintArray);
 
 /*
  * Class:     de_kherud_llama_LlamaModel

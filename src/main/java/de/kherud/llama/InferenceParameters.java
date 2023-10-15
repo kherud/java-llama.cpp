@@ -281,7 +281,7 @@ public final class InferenceParameters {
 			return this;
 		}
 
-		public Builder setAntiPrompt(@NotNull String[] antiPrompt) {
+		public Builder setAntiPrompt(@NotNull String... antiPrompt) {
 			this.antiPrompt = antiPrompt;
 			return this;
 		}

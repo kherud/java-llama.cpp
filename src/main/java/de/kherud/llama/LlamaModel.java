@@ -73,7 +73,32 @@ public class LlamaModel implements AutoCloseable {
 	 * @return an LLM response
 	 */
 	public String complete(String prompt, InferenceParameters parameters) {
-		byte[] bytes = getFull(prompt, parameters);
+		byte[] bytes = getAnswer(prompt, parameters);
+		return new String(bytes, StandardCharsets.UTF_8);
+	}
+
+	/**
+	 * Infill a whole answer with default parameters. Note, that the prompt isn't preprocessed in any
+	 * way. Nothing like "User: ", "###Instruction", etc. is added.
+	 *
+	 * @param prefix the prefix prompt of the completion to infill
+	 * @param suffix the suffix prompt of the completion to infill
+	 * @return an LLM response
+	 */
+	public String complete(String prefix, String suffix) {
+		return complete(prefix, suffix, defaultInferenceParams);
+	}
+
+	/**
+	 * Infill a whole answer with custom parameters. Note, that the prompt isn't preprocessed in any
+	 * way. Nothing like "User: ", "###Instruction", etc. is added.
+	 *
+	 * @param prefix the prefix prompt of the completion to infill
+	 * @param suffix the suffix prompt of the completion to infill
+	 * @return an LLM response
+	 */
+	public String complete(String prefix, String suffix, InferenceParameters parameters) {
+		byte[] bytes = getInfill(prefix, suffix, parameters);
 		return new String(bytes, StandardCharsets.UTF_8);
 	}
 
@@ -97,6 +122,30 @@ public class LlamaModel implements AutoCloseable {
 	 */
 	public Iterable<String> generate(String prompt, InferenceParameters parameters) {
 		return () -> new LlamaIterator(prompt, parameters);
+	}
+
+	/**
+	 * Infill and stream outputs with default inference parameters. Note, that the prompt isn't preprocessed in any
+	 * way, nothing like "User: ", "###Instruction", etc. is added.
+	 *
+	 * @param prefix the prefix prompt of the completion to infill
+	 * @param suffix the suffix prompt of the completion to infill
+	 * @return iterable LLM outputs
+	 */
+	public Iterable<String> generate(String prefix, String suffix) {
+		return generate(prefix, suffix, defaultInferenceParams);
+	}
+
+	/**
+	 * Infill and stream outputs with custom inference parameters. Note, that the prompt isn't preprocessed in any
+	 * way, nothing like "User: ", "###Instruction", etc. is added.
+	 *
+	 * @param prefix the prefix prompt of the completion to infill
+	 * @param suffix the suffix prompt of the completion to infill
+	 * @return iterable LLM outputs
+	 */
+	public Iterable<String> generate(String prefix, String suffix, InferenceParameters parameters) {
+		return () -> new LlamaIterator(prefix, suffix, parameters);
 	}
 
 	/**
@@ -140,9 +189,12 @@ public class LlamaModel implements AutoCloseable {
 		delete();
 	}
 
+	// don't overload native methods since the C++ function names get nasty
 	private native void loadModel(String filePath, ModelParameters parameters) throws LlamaException;
-	private native void setupInference(String prompt, InferenceParameters parameters);
-	private native byte[] getFull(String prompt, InferenceParameters parameters);
+	private native void newAnswerIterator(String prompt, InferenceParameters parameters);
+	private native void newInfillIterator(String prefix, String suffix, InferenceParameters parameters);
+	private native byte[] getAnswer(String prompt, InferenceParameters parameters);
+	private native byte[] getInfill(String prefix, String suffix, InferenceParameters parameters);
 	private native byte[] getNext(LlamaIterator iterator);
 	private native byte[] decodeBytes(int[] tokens);
 	private native void delete();
@@ -159,7 +211,11 @@ public class LlamaModel implements AutoCloseable {
 		private long tokenIndex = 0;
 
 		private LlamaIterator(String prompt, InferenceParameters parameters) {
-			setupInference(prompt, parameters);
+			newAnswerIterator(prompt, parameters);
+		}
+
+		private LlamaIterator(String prefix, String suffix, InferenceParameters parameters) {
+			newInfillIterator(prefix, suffix, parameters);
 		}
 
 		@Override
