@@ -21,13 +21,13 @@ jobs:
             name: Mac,
             arch: x86_64,
             image: macos-latest,
-            cmake: "-DCMAKE_OSX_ARCHITECTURES=x86_64"
+            cmake: "-DCMAKE_OSX_ARCHITECTURES=x86_64 -DLLAMA_NATIVE=OFF"
           }
           - {
             name: Mac,
             arch: aarch64,
             image: macos-latest,
-            cmake: "-DCMAKE_OSX_ARCHITECTURES=arm64"
+            cmake: "-DCMAKE_OSX_ARCHITECTURES=arm64 -DLLAMA_NATIVE=OFF"
           }
           - {
             name: Windows,

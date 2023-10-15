@@ -1,6 +1,5 @@
 if (APPLE)
     set(LLAMA_METAL_DEFAULT ON)
-    set(LLAMA_NATIVE OFF)
 else()
     set(LLAMA_METAL_DEFAULT OFF)
 endif()
