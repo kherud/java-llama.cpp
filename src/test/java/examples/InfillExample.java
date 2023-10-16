@@ -17,7 +17,7 @@ public class InfillExample {
 		String modelPath = "/run/media/konstantin/Seagate/models/codellama-13b.q5_k_m.gguf";
 		try (LlamaModel model = new LlamaModel(modelPath, modelParams)) {
 			System.out.print(prefix);
-			for (String output : model.generate(prefix, suffix)) {
+			for (LlamaModel.Output output : model.generate(prefix, suffix)) {
 				System.out.print(output);
 			}
 			System.out.print(suffix);

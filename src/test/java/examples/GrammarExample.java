@@ -1,5 +1,7 @@
 package examples;
 
+import java.util.HashMap;
+
 import de.kherud.llama.InferenceParameters;
 import de.kherud.llama.LlamaModel;
 
@@ -14,9 +16,10 @@ public class GrammarExample {
 				.build();
 
 		String filePath = "/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/gguf-model-q4_0.bin";
-		LlamaModel model = new LlamaModel(filePath);
-		for (String output : model.generate("", params)) {
-			System.out.print(output);
+		try (LlamaModel model = new LlamaModel(filePath)) {
+			for (LlamaModel.Output output : model.generate("", params)) {
+				System.out.print(output);
+			}
 		}
 	}
 

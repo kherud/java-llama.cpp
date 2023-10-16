@@ -57,6 +57,14 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_newInfillIterator
 
 /*
  * Class:     de_kherud_llama_LlamaModel
+ * Method:    getNext
+ * Signature: (Lde/kherud/llama/LlamaModel/LlamaIterator;)Lde/kherud/llama/LlamaModel/Output;
+ */
+JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_getNext
+  (JNIEnv *, jobject, jobject);
+
+/*
+ * Class:     de_kherud_llama_LlamaModel
  * Method:    getAnswer
  * Signature: (Ljava/lang/String;Lde/kherud/llama/InferenceParameters;)[B
  */
@@ -70,14 +78,6 @@ JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getAnswer
  */
 JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getInfill
   (JNIEnv *, jobject, jstring, jstring, jobject);
-
-/*
- * Class:     de_kherud_llama_LlamaModel
- * Method:    getNext
- * Signature: (Lde/kherud/llama/LlamaModel/LlamaIterator;)[B
- */
-JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getNext
-  (JNIEnv *, jobject, jobject);
 
 /*
  * Class:     de_kherud_llama_LlamaModel

@@ -3,9 +3,11 @@ package de.kherud.llama;
 import java.lang.annotation.Native;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.function.BiConsumer;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -109,7 +111,7 @@ public class LlamaModel implements AutoCloseable {
 	 * @param prompt the LLM prompt
 	 * @return iterable LLM outputs
 	 */
-	public Iterable<String> generate(String prompt) {
+	public Iterable<Output> generate(String prompt) {
 		return generate(prompt, defaultInferenceParams);
 	}
 
@@ -120,7 +122,7 @@ public class LlamaModel implements AutoCloseable {
 	 * @param prompt the LLM prompt
 	 * @return iterable LLM outputs
 	 */
-	public Iterable<String> generate(String prompt, InferenceParameters parameters) {
+	public Iterable<Output> generate(String prompt, InferenceParameters parameters) {
 		return () -> new LlamaIterator(prompt, parameters);
 	}
 
@@ -132,7 +134,7 @@ public class LlamaModel implements AutoCloseable {
 	 * @param suffix the suffix prompt of the completion to infill
 	 * @return iterable LLM outputs
 	 */
-	public Iterable<String> generate(String prefix, String suffix) {
+	public Iterable<Output> generate(String prefix, String suffix) {
 		return generate(prefix, suffix, defaultInferenceParams);
 	}
 
@@ -144,7 +146,7 @@ public class LlamaModel implements AutoCloseable {
 	 * @param suffix the suffix prompt of the completion to infill
 	 * @return iterable LLM outputs
 	 */
-	public Iterable<String> generate(String prefix, String suffix, InferenceParameters parameters) {
+	public Iterable<Output> generate(String prefix, String suffix, InferenceParameters parameters) {
 		return () -> new LlamaIterator(prefix, suffix, parameters);
 	}
 
@@ -193,15 +195,42 @@ public class LlamaModel implements AutoCloseable {
 	private native void loadModel(String filePath, ModelParameters parameters) throws LlamaException;
 	private native void newAnswerIterator(String prompt, InferenceParameters parameters);
 	private native void newInfillIterator(String prefix, String suffix, InferenceParameters parameters);
+	private native Output getNext(LlamaIterator iterator);
 	private native byte[] getAnswer(String prompt, InferenceParameters parameters);
 	private native byte[] getInfill(String prefix, String suffix, InferenceParameters parameters);
-	private native byte[] getNext(LlamaIterator iterator);
 	private native byte[] decodeBytes(int[] tokens);
 	private native void delete();
 
+	/**
+	 * A generated output of the LLM. Note that you have to configure {@link InferenceParameters.Builder#setNPredict(int)}
+	 * in order for probabilities to be returned.
+	 * For multibyte outputs (unicode characters like emojis) only the last generated token and its probabilities
+	 * are returned.
+	 */
+	public static final class Output {
+
+		public final int token;
+		@NotNull
+		public final String text;
+		@NotNull
+		public final Map<Integer, Float> probabilities;
+
+		private Output(int token, byte[] generated, @NotNull Map<Integer, Float> probabilities) {
+			this.token = token;
+			this.text = new String(generated, StandardCharsets.UTF_8);
+			this.probabilities = probabilities;
+		}
+
+		@Override
+		public String toString() {
+			return text;
+		}
+
+	}
+
 	// fields are modified by native code and thus should not be final
 	@SuppressWarnings("FieldMayBeFinal")
-	private final class LlamaIterator implements Iterator<String> {
+	private final class LlamaIterator implements Iterator<Output> {
 
 		@Native
 		private boolean hasNext = true;
@@ -224,12 +253,11 @@ public class LlamaModel implements AutoCloseable {
 		}
 
 		@Override
-		public String next() {
+		public Output next() {
 			if (!hasNext) {
 				throw new NoSuchElementException();
 			}
-			byte[] bytes = getNext(this);
-			return new String(bytes, StandardCharsets.UTF_8);
+			return getNext(this);
 		}
 	}
 

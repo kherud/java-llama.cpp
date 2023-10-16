@@ -15,7 +15,9 @@ static jclass c_llama_iterator = 0;
 static jclass c_model_params = 0;
 static jclass c_infer_params = 0;
 static jclass c_standard_charsets = 0;
+static jclass c_output = 0;
 static jclass c_string = 0;
+static jclass c_hash_map = 0;
 static jclass c_map = 0;
 static jclass c_set = 0;
 static jclass c_entry = 0;
@@ -27,6 +29,12 @@ static jclass c_biconsumer = 0;
 static jclass c_llama_error = 0;
 static jclass c_error_oom = 0;
 
+// constructors
+static jmethodID cc_output = 0;
+static jmethodID cc_hash_map = 0;
+static jmethodID cc_integer = 0;
+static jmethodID cc_float = 0;
+
 // methods
 static jmethodID m_get_bytes = 0;
 static jmethodID m_entry_set = 0;
@@ -35,6 +43,7 @@ static jmethodID m_iterator_has_next = 0;
 static jmethodID m_iterator_next = 0;
 static jmethodID m_entry_key = 0;
 static jmethodID m_entry_value = 0;
+static jmethodID m_map_put = 0;
 static jmethodID m_int_value = 0;
 static jmethodID m_float_value = 0;
 static jmethodID m_biconsumer_accept = 0;
@@ -125,7 +134,9 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     c_infer_params = env->FindClass("de/kherud/llama/InferenceParameters");
     c_model_params = env->FindClass("de/kherud/llama/ModelParameters");
     c_standard_charsets = env->FindClass("java/nio/charset/StandardCharsets");
+    c_output = env->FindClass("de/kherud/llama/LlamaModel$Output");
     c_string = env->FindClass("java/lang/String");
+    c_hash_map = env->FindClass("java/util/HashMap");
     c_map = env->FindClass("java/util/Map");
     c_set = env->FindClass("java/util/Set");
     c_entry = env->FindClass("java/util/Map$Entry");
@@ -137,7 +148,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     c_llama_error = env->FindClass("de/kherud/llama/LlamaException");
     c_error_oom = env->FindClass("java/lang/OutOfMemoryError");
 
-    if (!(c_llama_model && c_llama_iterator && c_infer_params && c_model_params && c_standard_charsets && c_string && c_map && c_set && c_entry && c_iterator && c_integer && c_float && c_log_level && c_biconsumer && c_llama_error && c_error_oom))
+    if (!(c_llama_model && c_llama_iterator && c_infer_params && c_model_params && c_standard_charsets && c_output && c_string && c_hash_map && c_map && c_set && c_entry && c_iterator && c_integer && c_float && c_log_level && c_biconsumer && c_llama_error && c_error_oom))
     {
         goto error;
     }
@@ -147,7 +158,9 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     c_llama_iterator = (jclass)env->NewGlobalRef(c_llama_iterator);
     c_infer_params = (jclass)env->NewGlobalRef(c_infer_params);
     c_model_params = (jclass)env->NewGlobalRef(c_model_params);
+    c_output = (jclass)env->NewGlobalRef(c_output);
     c_string = (jclass)env->NewGlobalRef(c_string);
+    c_hash_map = (jclass)env->NewGlobalRef(c_hash_map);
     c_map = (jclass)env->NewGlobalRef(c_map);
     c_set = (jclass)env->NewGlobalRef(c_set);
     c_entry = (jclass)env->NewGlobalRef(c_entry);
@@ -159,6 +172,17 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     c_llama_error = (jclass)env->NewGlobalRef(c_llama_error);
     c_error_oom = (jclass)env->NewGlobalRef(c_error_oom);
 
+  	// find constructors
+    cc_output = env->GetMethodID(c_output, "<init>", "(I[BLjava/util/Map;)V");
+    cc_hash_map = env->GetMethodID(c_hash_map, "<init>", "()V");
+    cc_integer = env->GetMethodID(c_integer, "<init>", "(I)V");
+    cc_float = env->GetMethodID(c_float, "<init>", "(F)V");
+
+	if (!(cc_output && cc_hash_map && cc_integer && cc_float))
+	{
+		goto error;
+	}
+
     // find methods
 //    m_get_bytes = env->GetMethodID(c_string, "getBytes", "(Ljava/nio/charset/Charset;)[B");
     m_get_bytes = env->GetMethodID(c_string, "getBytes", "(Ljava/lang/String;)[B");
@@ -168,11 +192,12 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     m_iterator_next = env->GetMethodID(c_iterator, "next", "()Ljava/lang/Object;");
     m_entry_key = env->GetMethodID(c_entry, "getKey", "()Ljava/lang/Object;");
     m_entry_value = env->GetMethodID(c_entry, "getValue", "()Ljava/lang/Object;");
+    m_map_put = env->GetMethodID(c_map, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
     m_int_value = env->GetMethodID(c_integer, "intValue", "()I");
     m_float_value = env->GetMethodID(c_float, "floatValue", "()F");
     m_biconsumer_accept = env->GetMethodID(c_biconsumer, "accept", "(Ljava/lang/Object;Ljava/lang/Object;)V");
 
-    if (!(m_get_bytes && m_entry_set && m_set_iterator && m_iterator_has_next && m_iterator_next && m_entry_key && m_entry_value && m_int_value && m_float_value && m_biconsumer_accept))
+    if (!(m_get_bytes && m_entry_set && m_set_iterator && m_iterator_has_next && m_iterator_next && m_entry_key && m_entry_value && m_map_put && m_int_value && m_float_value && m_biconsumer_accept))
     {
         goto error;
     }
@@ -295,7 +320,9 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
     env->DeleteGlobalRef(c_llama_iterator);
     env->DeleteGlobalRef(c_infer_params);
     env->DeleteGlobalRef(c_model_params);
+    env->DeleteGlobalRef(c_output);
     env->DeleteGlobalRef(c_string);
+    env->DeleteGlobalRef(c_hash_map);
     env->DeleteGlobalRef(c_map);
     env->DeleteGlobalRef(c_set);
     env->DeleteGlobalRef(c_entry);
@@ -306,6 +333,7 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
     env->DeleteGlobalRef(c_biconsumer);
     env->DeleteGlobalRef(c_llama_error);
     env->DeleteGlobalRef(c_error_oom);
+
     env->DeleteGlobalRef(o_utf_8);
 }
 
@@ -1168,7 +1196,7 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_newInfillIterator(JNIEnv 
     llama->beginCompletion();
 }
 
-JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getNext(JNIEnv *env, jobject obj, jobject iter)
+JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_getNext(JNIEnv *env, jobject obj, jobject iter)
 {
     jlong llama_handle = env->GetLongField(obj, f_model_pointer);
     jllama_context *llama = reinterpret_cast<jllama_context *>(llama_handle);
@@ -1240,7 +1268,15 @@ JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getNext(JNIEnv *env
         // lock.release();
     }
 
-    return parse_jbytes(env, to_send);
+	jobject o_probabilities = env->NewObject(c_hash_map, cc_hash_map);
+	for (const auto& tp : token_with_probs.probs)
+    {
+    	jobject jtoken = env->NewObject(c_integer, cc_integer, tp.tok);
+    	jobject jprob = env->NewObject(c_float, cc_float, tp.prob);
+    	env->CallObjectMethod(o_probabilities, m_map_put, jtoken, jprob);
+    }
+	jbyteArray jbytes = parse_jbytes(env, to_send);
+	return env->NewObject(c_output, cc_output, token_with_probs.tok, jbytes, o_probabilities);
 }
 
 JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getAnswer(JNIEnv *env, jobject obj, jstring prompt, jobject params)

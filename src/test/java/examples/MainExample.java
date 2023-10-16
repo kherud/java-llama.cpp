@@ -19,8 +19,9 @@ public class MainExample {
         InferenceParameters inferParams = new InferenceParameters.Builder()
                 .setTemperature(0.7f)
                 .setPenalizeNl(true)
+//                .setNProbs(10)
                 .setMirostat(InferenceParameters.MiroStat.V2)
-                .setAntiPrompt(new String[]{"\n"})
+                .setAntiPrompt("\n")
                 .build();
 
         String modelPath = "/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/ggml-model-q4_0.gguf";
@@ -41,7 +42,7 @@ public class MainExample {
 //                String answer = model.complete(prompt, inferParams);
 //                System.out.print(answer);
 //                prompt += answer;
-                for (String output : model.generate(prompt, inferParams)) {
+                for (LlamaModel.Output output : model.generate(prompt, inferParams)) {
                     System.out.print(output);
                     prompt += output;
                 }

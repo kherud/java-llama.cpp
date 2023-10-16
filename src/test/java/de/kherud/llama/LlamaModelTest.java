@@ -41,7 +41,7 @@ public class LlamaModelTest {
 	@Test
 	public void testGenerateAnswerDefault() {
 		int generated = 0;
-		for (String ignored : model.generate(prefix)) {
+		for (LlamaModel.Output ignored : model.generate(prefix)) {
 			generated++;
 		}
 		Assert.assertTrue(generated > 0);
@@ -59,7 +59,7 @@ public class LlamaModelTest {
 				.build();
 
 		int generated = 0;
-		for (String ignored : model.generate(prefix, params)) {
+		for (LlamaModel.Output ignored : model.generate(prefix, params)) {
 			generated++;
 		}
 		Assert.assertTrue(generated > 0);
@@ -68,7 +68,7 @@ public class LlamaModelTest {
 	@Test
 	public void testGenerateInfillDefault() {
 		int generated = 0;
-		for (String ignored : model.generate(prefix, suffix)) {
+		for (LlamaModel.Output ignored : model.generate(prefix, suffix)) {
 			generated++;
 		}
 		Assert.assertTrue(generated > 0);
@@ -86,7 +86,7 @@ public class LlamaModelTest {
 				.build();
 
 		int generated = 0;
-		for (String ignored : model.generate(prefix, suffix, params)) {
+		for (LlamaModel.Output ignored : model.generate(prefix, suffix, params)) {
 			generated++;
 		}
 		Assert.assertTrue(generated > 0);
@@ -99,7 +99,7 @@ public class LlamaModelTest {
 				.setNPredict(42)
 				.build();
 		StringBuilder sb = new StringBuilder();
-		for (String output : model.generate("", params)) {
+		for (LlamaModel.Output output : model.generate("", params)) {
 			sb.append(output);
 		}
 		String output = sb.toString();
