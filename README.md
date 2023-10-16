@@ -32,15 +32,13 @@ public class Example {
 
 	public static void main(String... args) throws IOException {
         LlamaModel.setLogger((level, message) -> System.out.print(message));
-        ModelParameters modelParams = new ModelParameters.Builder()
-                .setNGpuLayers(43)
-                .build();
-        InferenceParameters inferParams = new InferenceParameters.Builder()
+        ModelParameters modelParams = new ModelParameters()
+                .setNGpuLayers(43);
+        InferenceParameters inferParams = new InferenceParameters()
                 .setTemperature(0.7f)
                 .setPenalizeNl(true)
                 .setMirostat(InferenceParameters.MiroStat.V2)
-                .setAntiPrompt(new String[]{"\n"})
-                .build();
+                .setAntiPrompt("\n");
 
         String modelPath = "/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/ggml-model-q4_0.gguf";
         String system = "This is a conversation between User and Llama, a friendly chatbot.\n" +
@@ -192,14 +190,12 @@ There are two sets of parameters you can configure, `ModelParameters` and `Infer
 classes to ease configuration. All non-specified options have sensible defaults.
 
 ```java
-ModelParameters modelParams = new ModelParameters.Builder()
+ModelParameters modelParams = new ModelParameters()
                             .setLoraAdapter("/path/to/lora/adapter")
-                            .setLoraBase("/path/to/lora/base")
-                            .build();
-InferenceParameters inferParams = new InferenceParameters.Builder()
+                            .setLoraBase("/path/to/lora/base");
+InferenceParameters inferParams = new InferenceParameters()
 		.setGrammar(new File("/path/to/grammar.gbnf"))
-        .setTemperature(0.8)
-		.build();
+        .setTemperature(0.8);
 LlamaModel model = new LlamaModel("/path/to/model.bin", modelParams);
 model.generate(prompt, inferParams)
 ```
@@ -217,7 +213,6 @@ LlamaModel.setLogger((level, message) -> {});
 // Similarly, a progress callback can be set (only the C++ side will call this).
 // I think this is only used to report progress loading the model with a value of 0-1.
 // It is thus state specific and can be done via the parameters.
-new ModelParameters.Builder()
-        .setProgressCallback(progress -> System.out.println("progress: " + progress))
-        .build();
+new ModelParameters()
+        .setProgressCallback(progress -> System.out.println("progress: " + progress));
 ```
