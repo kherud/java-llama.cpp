@@ -7,9 +7,8 @@ public class InfillExample {
 
 	public static void main(String... args) {
 		LlamaModel.setLogger((level, message) -> System.out.print(message));
-		ModelParameters modelParams = new ModelParameters.Builder()
-				.setNGpuLayers(43)
-				.build();
+		ModelParameters modelParams = new ModelParameters()
+				.setNGpuLayers(43);
 
 		String prefix = "def remove_non_ascii(s: str) -> str:\n    \"\"\" ";
 		String suffix = "\n    return result\n";

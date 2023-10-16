@@ -11,9 +11,7 @@ public class GrammarExample {
 		String grammar = "root  ::= (expr \"=\" term \"\\n\")+\n" +
 				"expr  ::= term ([-+*/] term)*\n" +
 				"term  ::= [0-9]";
-		InferenceParameters params = new InferenceParameters.Builder()
-				.setGrammar(grammar)
-				.build();
+		InferenceParameters params = new InferenceParameters().setGrammar(grammar);
 
 		String filePath = "/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/gguf-model-q4_0.bin";
 		try (LlamaModel model = new LlamaModel(filePath)) {

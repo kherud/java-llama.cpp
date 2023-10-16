@@ -21,10 +21,9 @@ public class LlamaModelTest {
 	@BeforeClass
 	public static void setup() {
 		LlamaModel.setLogger((level, msg) -> logOutput += msg);
-		ModelParameters params = new ModelParameters.Builder()
+		ModelParameters params = new ModelParameters()
 				.setNGpuLayers(43)
-				.setEmbedding(true)
-				.build();
+				.setEmbedding(true);
 		model = new LlamaModel("/run/media/konstantin/Seagate/models/codellama-13b.q5_k_m.gguf", params);
 	}
 
@@ -51,12 +50,11 @@ public class LlamaModelTest {
 	public void testGenerateAnswerCustom() {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters.Builder()
+		InferenceParameters params = new InferenceParameters()
 				.setTemperature(0.95f)
 				.setAntiPrompt("\"\"\"")
 				.setLogitBias(logitBias)
-				.setSeed(42)
-				.build();
+				.setSeed(42);
 
 		int generated = 0;
 		for (LlamaModel.Output ignored : model.generate(prefix, params)) {
@@ -78,12 +76,11 @@ public class LlamaModelTest {
 	public void testGenerateInfillCustom() {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters.Builder()
+		InferenceParameters params = new InferenceParameters()
 				.setTemperature(0.95f)
 				.setAntiPrompt("\"\"\"")
 				.setLogitBias(logitBias)
-				.setSeed(42)
-				.build();
+				.setSeed(42);
 
 		int generated = 0;
 		for (LlamaModel.Output ignored : model.generate(prefix, suffix, params)) {
@@ -94,10 +91,9 @@ public class LlamaModelTest {
 
 	@Test
 	public void testGenerateGrammar() {
-		InferenceParameters params = new InferenceParameters.Builder()
+		InferenceParameters params = new InferenceParameters()
 				.setGrammar("root ::= (\"a\" | \"b\")+")
-				.setNPredict(42)
-				.build();
+				.setNPredict(42);
 		StringBuilder sb = new StringBuilder();
 		for (LlamaModel.Output output : model.generate("", params)) {
 			sb.append(output);
@@ -118,12 +114,11 @@ public class LlamaModelTest {
 	public void testCompleteAnswerCustom() {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters.Builder()
+		InferenceParameters params = new InferenceParameters()
 				.setTemperature(0.95f)
 				.setAntiPrompt("\"\"\"")
 				.setLogitBias(logitBias)
-				.setSeed(42)
-				.build();
+				.setSeed(42);
 
 		String output = model.complete(prefix, params);
 		Assert.assertFalse(output.isEmpty());
@@ -139,12 +134,11 @@ public class LlamaModelTest {
 	public void testCompleteInfillCustom() {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters.Builder()
+		InferenceParameters params = new InferenceParameters()
 				.setTemperature(0.95f)
 				.setAntiPrompt("\"\"\"")
 				.setLogitBias(logitBias)
-				.setSeed(42)
-				.build();
+				.setSeed(42);
 
 		String output = model.complete(prefix, suffix, params);
 		Assert.assertFalse(output.isEmpty());
@@ -152,10 +146,9 @@ public class LlamaModelTest {
 
 	@Test
 	public void testCompleteGrammar() {
-		InferenceParameters params = new InferenceParameters.Builder()
+		InferenceParameters params = new InferenceParameters()
 				.setGrammar("root ::= (\"a\" | \"b\")+")
-				.setNPredict(42)
-				.build();
+				.setNPredict(42);
 		String output = model.complete("", params);
 		Assert.assertTrue(output.matches("[ab]+"));
 		Assert.assertEquals(42, model.encode(output).length);

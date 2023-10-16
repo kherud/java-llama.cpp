@@ -13,16 +13,14 @@ public class MainExample {
 
     public static void main(String... args) throws IOException {
         LlamaModel.setLogger((level, message) -> System.out.print(message));
-        ModelParameters modelParams = new ModelParameters.Builder()
-                .setNGpuLayers(43)
-                .build();
-        InferenceParameters inferParams = new InferenceParameters.Builder()
+        ModelParameters modelParams = new ModelParameters()
+                .setNGpuLayers(43);
+        InferenceParameters inferParams = new InferenceParameters()
                 .setTemperature(0.7f)
                 .setPenalizeNl(true)
 //                .setNProbs(10)
                 .setMirostat(InferenceParameters.MiroStat.V2)
-                .setAntiPrompt("\n")
-                .build();
+                .setAntiPrompt("\n");
 
         String modelPath = "/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/ggml-model-q4_0.gguf";
         String system = "This is a conversation between User and Llama, a friendly chatbot.\n" +

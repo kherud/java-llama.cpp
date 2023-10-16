@@ -19,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
  * <ul>
  *     <li>Streaming answers (and probabilities) via {@link #generate(String)}</li>
  *     <li>Creating whole responses to prompts via {@link #complete(String)}</li>
- *     <li>Creating embeddings via {@link #embed(String)} (make sure to configure {@link ModelParameters.Builder#setEmbedding(boolean)}</li>
+ *     <li>Creating embeddings via {@link #embed(String)} (make sure to configure {@link ModelParameters#setEmbedding(boolean)}</li>
  *     <li>Accessing the tokenizer via {@link #encode(String)} and {@link #decode(int[])}</li>
  * </ul>
  */
@@ -29,8 +29,8 @@ public class LlamaModel implements AutoCloseable {
 		LlamaLoader.initialize();
 	}
 
-	private static final ModelParameters defaultModelParams = new ModelParameters.Builder().build();
-	private static final InferenceParameters defaultInferenceParams = new InferenceParameters.Builder().build();
+	private static final ModelParameters defaultModelParams = new ModelParameters();
+	private static final InferenceParameters defaultInferenceParams = new InferenceParameters();
 
 	@Native
 	private long ctx;
@@ -156,7 +156,7 @@ public class LlamaModel implements AutoCloseable {
 	 *
 	 * @param prompt the string to embed
 	 * @return an embedding float array
-	 * @throws IllegalStateException if embedding mode was not activated (see {@link ModelParameters.Builder#setEmbedding(boolean)})
+	 * @throws IllegalStateException if embedding mode was not activated (see {@link ModelParameters#setEmbedding(boolean)})
 	 */
 	public native float[] embed(String prompt);
 
@@ -202,7 +202,7 @@ public class LlamaModel implements AutoCloseable {
 	private native void delete();
 
 	/**
-	 * A generated output of the LLM. Note that you have to configure {@link InferenceParameters.Builder#setNPredict(int)}
+	 * A generated output of the LLM. Note that you have to configure {@link InferenceParameters#setNPredict(int)}
 	 * in order for probabilities to be returned.
 	 * For multibyte outputs (unicode characters like emojis) only the last generated token and its probabilities
 	 * are returned.

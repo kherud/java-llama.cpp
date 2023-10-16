@@ -97,8 +97,6 @@ static jfieldID f_use_mlock = 0;
 static jfieldID f_embedding = 0;
 static jfieldID f_lora_adapter = 0;
 static jfieldID f_lora_base = 0;
-static jfieldID f_hellaswag = 0;
-static jfieldID f_hellaswag_tasks = 0;
 static jfieldID f_memory_f16 = 0;
 static jfieldID f_mem_test = 0;
 static jfieldID f_numa = 0;
@@ -221,7 +219,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     f_repeat_last_n = env->GetFieldID(c_infer_params, "repeatLastN", "I");
     f_frequency_penalty = env->GetFieldID(c_infer_params, "frequencyPenalty", "F");
     f_presence_penalty = env->GetFieldID(c_infer_params, "presencePenalty", "F");
-    f_penalize_nl = env->GetFieldID(c_infer_params, "penalizeNL", "Z");
+    f_penalize_nl = env->GetFieldID(c_infer_params, "penalizeNl", "Z");
     f_ignore_eos = env->GetFieldID(c_infer_params, "ignoreEos", "Z");
     f_mirostat = env->GetFieldID(c_infer_params, "mirostat", "I");
     f_mirostat_tau = env->GetFieldID(c_infer_params, "mirostatTau", "F");
@@ -229,7 +227,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     f_beam_search = env->GetFieldID(c_infer_params, "beamSearch", "Z");
     f_n_beams = env->GetFieldID(c_infer_params, "nBeams", "I");
     f_grammar = env->GetFieldID(c_infer_params, "grammar", "Ljava/lang/String;");
-    f_antiprompt = env->GetFieldID(c_infer_params, "antiprompt", "[Ljava/lang/String;");
+    f_antiprompt = env->GetFieldID(c_infer_params, "antiPrompt", "[Ljava/lang/String;");
     f_infer_seed = env->GetFieldID(c_infer_params, "seed", "I");
 
     f_n_threads = env->GetFieldID(c_model_params, "nThreads", "I");
@@ -250,8 +248,6 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     f_embedding = env->GetFieldID(c_model_params, "embedding", "Z");
     f_lora_adapter = env->GetFieldID(c_model_params, "loraAdapter", "Ljava/lang/String;");
     f_lora_base = env->GetFieldID(c_model_params, "loraBase", "Ljava/lang/String;");
-    f_hellaswag = env->GetFieldID(c_model_params, "hellaswag", "Z");
-    f_hellaswag_tasks = env->GetFieldID(c_model_params, "hellaswagTasks", "S");
     f_memory_f16 = env->GetFieldID(c_model_params, "memoryF16", "Z");
     f_mem_test = env->GetFieldID(c_model_params, "memTest", "Z");
     f_numa = env->GetFieldID(c_model_params, "numa", "Z");
@@ -265,7 +261,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     {
         goto error;
     }
-    if (!(f_n_threads && f_model_seed && f_n_ctx && f_n_batch && f_n_gpu_layers && f_main_gpu && f_tensor_split && f_rope_freq_base && f_rope_freq_scale && f_mul_mat_q && f_f16_kv && f_logits_all && f_vocab_only && f_use_mmap && f_use_mlock && f_embedding && f_lora_adapter && f_lora_base && f_hellaswag && f_hellaswag_tasks && f_memory_f16 && f_mem_test && f_numa && f_verbose_prompt))
+    if (!(f_n_threads && f_model_seed && f_n_ctx && f_n_batch && f_n_gpu_layers && f_main_gpu && f_tensor_split && f_rope_freq_base && f_rope_freq_scale && f_mul_mat_q && f_f16_kv && f_logits_all && f_vocab_only && f_use_mmap && f_use_mlock && f_embedding && f_lora_adapter && f_lora_base && f_memory_f16 && f_mem_test && f_numa && f_verbose_prompt))
     {
         goto error;
     }
@@ -956,8 +952,6 @@ static gpt_params parse_model_params(JNIEnv *env, jobject jparams, jstring java_
     params.main_gpu = env->GetIntField(jparams, f_main_gpu);
     params.rope_freq_base = env->GetFloatField(jparams, f_rope_freq_base);
     params.rope_freq_scale = env->GetFloatField(jparams, f_rope_freq_scale);
-    params.hellaswag = env->GetBooleanField(jparams, f_hellaswag);
-    params.hellaswag_tasks = env->GetShortField(jparams, f_hellaswag_tasks);
     params.mul_mat_q = env->GetBooleanField(jparams, f_mul_mat_q);
     params.memory_f16 = env->GetBooleanField(jparams, f_memory_f16);
     params.embedding = env->GetBooleanField(jparams, f_embedding);
