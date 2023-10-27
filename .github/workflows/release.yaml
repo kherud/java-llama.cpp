@@ -15,7 +15,7 @@ jobs:
             name: Linux,
             arch: x86_64,
             image: ubuntu-latest,
-            cmake: "-DCMAKE_CXX_FLAGS='-march=x86-64'"
+            cmake: "-DCMAKE_CXX_FLAGS='-march=x86-64' -DLLAMA_NATIVE=OFF"
           }
           - {
             name: Mac,
