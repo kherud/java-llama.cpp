@@ -6,7 +6,7 @@
 #include "llama.h"
 #include "jllama.h"
 #include "common.h"
-#include "build-info.h"
+#include "sampling.h"
 #include "grammar-parser.h"
 
 // classes
@@ -405,7 +405,7 @@ static jbyteArray parse_jbytes(JNIEnv *env, std::string string)
 {
     jsize len = string.size();
     jbyteArray bytes = env->NewByteArray(len);
-    env->SetByteArrayRegion(bytes, 0, len, (jbyte *)string.c_str());
+    env->SetByteArrayRegion(bytes, 0, len, reinterpret_cast<const jbyte *>(string.c_str()));
     return bytes;
 }
 
@@ -551,7 +551,7 @@ struct jllama_context
     void rewind()
     {
         params.antiprompt.clear();
-        params.grammar.clear();
+        params.sparams.grammar.clear();
         num_prompt_tokens = 0;
         num_tokens_predicted = 0;
         generated_text = "";
@@ -569,7 +569,7 @@ struct jllama_context
         if (grammar != nullptr) {
             llama_grammar_free(grammar);
             grammar = nullptr;
-            ctx_sampling = llama_sampling_context_init(params, NULL);
+            ctx_sampling = *llama_sampling_init(params.sparams);
         }
     }
 
@@ -594,8 +594,8 @@ struct jllama_context
 
     bool loadGrammar()
     {
-        if (!params.grammar.empty()) {
-            parsed_grammar = grammar_parser::parse(params.grammar.c_str());
+        if (!params.sparams.grammar.empty()) {
+            parsed_grammar = grammar_parser::parse(params.sparams.grammar.c_str());
             // will be empty (default) if there are parse errors
             if (parsed_grammar.rules.empty()) {
                 jllama_log_callback(GGML_LOG_LEVEL_ERROR, "grammar parse error");
@@ -604,8 +604,8 @@ struct jllama_context
             grammar_parser::print_grammar(stderr, parsed_grammar);
 
             {
-                auto it = params.sampling_params.logit_bias.find(llama_token_eos(ctx));
-                if (it != params.sampling_params.logit_bias.end() && it->second == -INFINITY) {
+                auto it = params.sparams.logit_bias.find(llama_token_eos(model));
+                if (it != params.sparams.logit_bias.end() && it->second == -INFINITY) {
                     jllama_log_callback(GGML_LOG_LEVEL_WARN, "EOS token is disabled, which will cause most grammars to fail");
                 }
             }
@@ -614,7 +614,7 @@ struct jllama_context
             grammar = llama_grammar_init(
                 grammar_rules.data(), grammar_rules.size(), parsed_grammar.symbol_ids.at("root"));
         }
-        ctx_sampling = llama_sampling_context_init(params, grammar);
+        ctx_sampling = *llama_sampling_init(params.sparams);
         return true;
     }
 
@@ -632,11 +632,11 @@ struct jllama_context
         if (suff_rm_leading_spc  && suffix_tokens[0] == space_token) {
             suffix_tokens.erase(suffix_tokens.begin());
         }
-        prefix_tokens.insert(prefix_tokens.begin(), llama_token_prefix(ctx));
-        prefix_tokens.insert(prefix_tokens.begin(), llama_token_bos(ctx)); // always add BOS
-        prefix_tokens.insert(prefix_tokens.end(), llama_token_suffix(ctx));
+        prefix_tokens.insert(prefix_tokens.begin(), llama_token_prefix(model));
+        prefix_tokens.insert(prefix_tokens.begin(), llama_token_bos(model)); // always add BOS
+        prefix_tokens.insert(prefix_tokens.end(), llama_token_suffix(model));
         prefix_tokens.insert(prefix_tokens.end(), suffix_tokens.begin(), suffix_tokens.end());
-        prefix_tokens.push_back(llama_token_middle(ctx));
+        prefix_tokens.push_back(llama_token_middle(model));
         auto prompt_tokens = prefix_tokens;
 
         num_prompt_tokens = prompt_tokens.size();
@@ -657,7 +657,7 @@ struct jllama_context
             new_tokens.insert(new_tokens.end(), prompt_tokens.begin() + params.n_keep + erased_blocks * n_left, prompt_tokens.end());
             std::copy(prompt_tokens.end() - params.n_ctx, prompt_tokens.end(), last_n_tokens.begin());
 
-            jllama_log_callback(GGML_LOG_LEVEL_INFO, "input truncated n_left=" + n_left);
+            jllama_log_callback(GGML_LOG_LEVEL_INFO, "input truncated n_left=" + std::to_string(n_left) );
 
             truncated = true;
             prompt_tokens = new_tokens;
@@ -706,7 +706,7 @@ struct jllama_context
             new_tokens.insert(new_tokens.end(), prompt_tokens.begin() + params.n_keep + erased_blocks * n_left, prompt_tokens.end());
             std::copy(prompt_tokens.end() - n_ctx, prompt_tokens.end(), last_n_tokens.begin());
 
-            jllama_log_callback(GGML_LOG_LEVEL_INFO, "input truncated n_left=" + n_left);
+            jllama_log_callback(GGML_LOG_LEVEL_INFO, "input truncated n_left=" + std::to_string(n_left));
 
             truncated = true;
             prompt_tokens = new_tokens;
@@ -765,7 +765,7 @@ struct jllama_context
             n_past -= n_discard;
 
             truncated = true;
-            jllama_log_callback(GGML_LOG_LEVEL_INFO, "input truncated n_left=" + n_left);
+            jllama_log_callback(GGML_LOG_LEVEL_INFO, "input truncated n_left=" + std::to_string(n_left) );
         }
 
         bool tg = true;
@@ -780,7 +780,7 @@ struct jllama_context
 
             if (llama_decode(ctx, llama_batch_get_one(&embd[n_past], n_eval, n_past, 0)))
             {
-                jllama_log_callback(GGML_LOG_LEVEL_ERROR, "failed to eval n_eval=" + n_eval);
+                jllama_log_callback(GGML_LOG_LEVEL_ERROR, "failed to eval n_eval=" + std::to_string(n_eval));
                 has_next_token = false;
                 return result;
             }
@@ -790,21 +790,18 @@ struct jllama_context
         if (params.n_predict == 0)
         {
             has_next_token = false;
-            result.tok = llama_token_eos(ctx);
+            result.tok = llama_token_eos(model);
             return result;
         }
 
         {
             // out of user input, sample next token
-            std::vector<llama_token_data> candidates;
-            candidates.reserve(llama_n_vocab(model));
+            result.tok = llama_sampling_sample(&ctx_sampling, ctx, NULL);
 
-            result.tok = llama_sampling_sample(ctx, NULL, ctx_sampling, last_n_tokens, candidates);
+            llama_token_data_array candidates_p = { ctx_sampling.cur.data(), ctx_sampling.cur.size(), false };
 
-            llama_token_data_array candidates_p = { candidates.data(), candidates.size(), false };
-
-            const int32_t n_probs = params.sampling_params.n_probs;
-            if (params.sampling_params.temp <= 0 && n_probs > 0)
+            const int32_t n_probs = params.sparams.n_probs;
+            if (params.sparams.temp <= 0 && n_probs > 0)
             {
                 // For llama_sample_token_greedy we need to sort candidates
                 llama_sample_softmax(ctx, &candidates_p);
@@ -815,8 +812,7 @@ struct jllama_context
                 result.probs.push_back({candidates_p.data[i].id, candidates_p.data[i].p});
             }
 
-            last_n_tokens.erase(last_n_tokens.begin());
-            last_n_tokens.push_back(result.tok);
+            llama_sampling_accept(&ctx_sampling, ctx, result.tok, true);
             if (tg) {
                 num_tokens_predicted++;
             }
@@ -827,7 +823,7 @@ struct jllama_context
         // decrement remaining sampling budget
         --n_remain;
 
-        if (!embd.empty() && embd.back() == llama_token_eos(ctx))
+        if (!embd.empty() && embd.back() == llama_token_eos(model))
         {
             // stopping_word = llama_token_to_piece(ctx, embd.back());
             has_next_token = false;
@@ -878,7 +874,7 @@ struct jllama_context
         const std::string token_text = token_with_probs.tok == -1 ? "" : llama_token_to_piece(ctx, token_with_probs.tok);
         generated_text += token_text;
 
-        if (params.sampling_params.n_probs > 0)
+        if (params.sparams.n_probs > 0)
         {
             generated_token_probs.push_back(token_with_probs);
         }
@@ -953,7 +949,6 @@ static gpt_params parse_model_params(JNIEnv *env, jobject jparams, jstring java_
     params.rope_freq_base = env->GetFloatField(jparams, f_rope_freq_base);
     params.rope_freq_scale = env->GetFloatField(jparams, f_rope_freq_scale);
     params.mul_mat_q = env->GetBooleanField(jparams, f_mul_mat_q);
-    params.memory_f16 = env->GetBooleanField(jparams, f_memory_f16);
     params.embedding = env->GetBooleanField(jparams, f_embedding);
     params.escape = env->GetIntField(jparams, f_n_predict);
     params.use_mmap = env->GetBooleanField(jparams, f_use_mmap);
@@ -1042,17 +1037,17 @@ static void setup_infer_params(JNIEnv *env, jllama_context *llama, jobject jpara
     params.n_predict = env->GetIntField(jparams, f_n_predict);
     params.n_keep = env->GetIntField(jparams, f_n_keep);
 
-    auto & sparams = params.sampling_params;
+    auto & sparams = params.sparams;
 
     sparams.top_k = env->GetIntField(jparams, f_top_k);
     sparams.top_p = env->GetFloatField(jparams, f_top_p);
     sparams.tfs_z = env->GetFloatField(jparams, f_tfs_z);
     sparams.typical_p = env->GetFloatField(jparams, f_typical_p);
     sparams.temp = env->GetFloatField(jparams, f_temperature);
-    sparams.repeat_penalty = env->GetFloatField(jparams, f_repeat_penalty);
-    sparams.repeat_last_n = env->GetIntField(jparams, f_repeat_last_n);
-    sparams.frequency_penalty = env->GetFloatField(jparams, f_frequency_penalty);
-    sparams.presence_penalty = env->GetFloatField(jparams, f_presence_penalty);
+    sparams.penalty_repeat = env->GetFloatField(jparams, f_repeat_penalty);
+    sparams.n_prev = env->GetIntField(jparams, f_repeat_last_n);
+    sparams.penalty_freq = env->GetFloatField(jparams, f_frequency_penalty);
+    sparams.penalty_present = env->GetFloatField(jparams, f_presence_penalty);
     sparams.penalize_nl = env->GetBooleanField(jparams, f_penalize_nl);
     sparams.mirostat = env->GetIntField(jparams, f_mirostat);
     sparams.mirostat_tau = env->GetFloatField(jparams, f_mirostat_tau);
@@ -1062,7 +1057,7 @@ static void setup_infer_params(JNIEnv *env, jllama_context *llama, jobject jpara
     jstring j_grammar = (jstring)env->GetObjectField(jparams, f_grammar);
     if (j_grammar != nullptr)
     {
-        params.grammar = parse_jstring(env, j_grammar);
+        sparams.grammar = parse_jstring(env, j_grammar);
         env->DeleteLocalRef(j_grammar);
         if (!llama->loadGrammar())
 		{
@@ -1074,7 +1069,7 @@ static void setup_infer_params(JNIEnv *env, jllama_context *llama, jobject jpara
     jboolean ignore_eos = env->GetBooleanField(jparams, f_ignore_eos);
     if (ignore_eos)
     {
-        sparams.logit_bias[llama_token_eos(llama->ctx)] = -INFINITY;
+        sparams.logit_bias[llama_token_eos(llama->model)] = -INFINITY;
     }
 
     jobject logit_bias = env->GetObjectField(jparams, f_logit_bias);
@@ -1115,7 +1110,7 @@ static void setup_infer_params(JNIEnv *env, jllama_context *llama, jobject jpara
         }
     }
 
-    llama->ctx_sampling = llama_sampling_context_init(params, llama->grammar);
+    llama->ctx_sampling = *llama_sampling_init(params.sparams);
 }
 
 static void setup_answering(JNIEnv *env, jllama_context *llama, jstring prompt, jobject params)
@@ -1239,7 +1234,7 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_getNext(JNIEnv *env, j
 
 		std::vector<completion_token_output> probs_output = {};
 
-		if (llama->params.sampling_params.n_probs > 0) {
+		if (llama->params.sparams.n_probs > 0) {
 			const std::vector<llama_token> to_send_toks = llama_tokenize(llama->ctx, to_send, false);
 			size_t probs_pos = std::min(sent_token_probs_index, llama->generated_token_probs.size());
 			size_t probs_stop_pos = std::min(sent_token_probs_index + to_send_toks.size(), llama->generated_token_probs.size());
