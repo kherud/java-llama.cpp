@@ -22,8 +22,7 @@ public class LlamaModelIT {
 		ModelParameters params = new ModelParameters()
 				.setNGpuLayers(43)
 				.setEmbedding(true);
-		model =
-				new LlamaModel(ModelResolver.getPathToITModel(), params);
+		model = new LlamaModel(ModelResolver.getPathToITModel(), params);
 	}
 
 	@AfterClass
