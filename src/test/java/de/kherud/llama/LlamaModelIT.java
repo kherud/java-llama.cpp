@@ -20,8 +20,8 @@ public class LlamaModelIT {
 	public static void setup() {
 		LlamaModel.setLogger((level, msg) -> logOutput += msg);
 		ModelParameters params = new ModelParameters()
-										.setNGpuLayers(43)
-										.setEmbedding(true);
+				.setNGpuLayers(43)
+				.setEmbedding(true);
 		model =
 				new LlamaModel(ModelResolver.getPathToITModel(), params);
 	}
