@@ -80,6 +80,15 @@
 					</compilerArgs>
 				</configuration>
 			</plugin>
+			<!-- This allows us to execute the examples from the command line -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>3.0.0</version>
+				<configuration>
+					<classpathScope>test</classpathScope>
+				</configuration>
+			</plugin>
 
 			<!-- Surefire plugin for unit tests -->
 			<plugin>

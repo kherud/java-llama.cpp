@@ -11,8 +11,6 @@ import org.junit.Test;
 
 public class LlamaModelIT {
 
-	public static final String MODEL_HOME_PROPERTY = "model.home";
-	public static final String MODEL_NAME_PROPERTY = "integration.test.model";
 	private static final String prefix = "def remove_non_ascii(s: str) -> str:\n    \"\"\" ";
 	private static final String suffix = "\n    return result\n";
 	private static String logOutput = "";
@@ -22,21 +20,9 @@ public class LlamaModelIT {
 	@BeforeClass
 	public static void setup() {
 		LlamaModel.setLogger((level, msg) -> logOutput += msg);
-		String modelHome = System.getProperty(MODEL_HOME_PROPERTY);
-		String modelName= System.getProperty(MODEL_NAME_PROPERTY);
-		if(modelHome == null) {
-			throw new RuntimeException("Please pass the system property \"" + MODEL_HOME_PROPERTY + "\" to the test. "
-					+ "This should represent the location on local disk where your models are located. "
-					+ "If you are running this via maven, please run with a -Dmodel.home=/path/to/model/dir. "
-					+ "Make sure that the directory that you pass exists.");
-		}
-		if(modelName == null) {
-			throw new RuntimeException("The system property \"" + MODEL_NAME_PROPERTY + "\" is not set.  If you are running this from an IDE, please set it.  If you are running this from Maven, this should be set automatically and there is something strange going on." );
-		}
-		String modelPath= Paths.get(modelHome, modelName).toString();
 		ModelParameters params = new ModelParameters().setNGpuLayers(43).setEmbedding(true);
 		model =
-				new LlamaModel(modelPath, params);
+				new LlamaModel(ModelResolver.getPathToITModel(), params);
 	}
 
 	@AfterClass
