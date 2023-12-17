@@ -14,7 +14,7 @@ public class GrammarExample {
 				"term  ::= [0-9]";
 		InferenceParameters params = new InferenceParameters().setGrammar(grammar);
 		String modelName = System.getProperty("model.name");
-		String modelPath = modelName == null?ModelResolver.getPathToITModel():ModelResolver.getPathToModel(modelName);
+		String modelPath = ModelResolver.getPathToModel(modelName);
 		try (LlamaModel model = new LlamaModel(modelPath)) {
 			for (LlamaModel.Output output : model.generate("", params)) {
 				System.out.print(output);

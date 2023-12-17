@@ -17,16 +17,19 @@ public class MainExample {
         ModelParameters modelParams = new ModelParameters()
                 .setNGpuLayers(43);
         InferenceParameters inferParams = new InferenceParameters()
-                .setTemperature(0.7f)
+                .setTemperature(0f)
                 .setPenalizeNl(true)
 //                .setNProbs(10)
                 .setMirostat(InferenceParameters.MiroStat.V2)
-                .setAntiPrompt("\n");
+                .setAntiPrompt("User:");
         String modelName = System.getProperty("model.name");
-        String modelPath = modelName == null? ModelResolver.getPathToITModel():ModelResolver.getPathToModel(modelName);
+        String modelPath = ModelResolver.getPathToModel(modelName);
         String system = "This is a conversation between User and Llama, a friendly chatbot.\n" +
                 "Llama is helpful, kind, honest, good at writing, and never fails to answer any " +
-                "requests immediately and with precision.\n";
+                "requests immediately and with precision.\n\n" +
+                "User: Hello Llama\n" +
+                "Llama: Hello.  How may I help you today?";
+                ;
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
         try (LlamaModel model = new LlamaModel(modelPath, modelParams)) {
             System.out.print(system);

@@ -14,7 +14,7 @@ public class InfillExample {
 		String prefix = "def remove_non_ascii(s: str) -> str:\n    \"\"\" ";
 		String suffix = "\n    return result\n";
 		String modelName = System.getProperty("model.name");
-		String modelPath = modelName == null? ModelResolver.getPathToITModel():ModelResolver.getPathToModel(modelName);
+		String modelPath = ModelResolver.getPathToModel(modelName);
 		try (LlamaModel model = new LlamaModel(modelPath, modelParams)) {
 			System.out.print(prefix);
 			for (LlamaModel.Output output : model.generate(prefix, suffix)) {
