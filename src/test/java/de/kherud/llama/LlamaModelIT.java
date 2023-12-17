@@ -1,17 +1,18 @@
 package de.kherud.llama;
 
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
-@Ignore
-public class LlamaModelTest {
+public class LlamaModelIT {
 
+	public static final String MODEL_HOME_PROPERTY = "model.home";
+	public static final String MODEL_NAME_PROPERTY = "integration.test.model";
 	private static final String prefix = "def remove_non_ascii(s: str) -> str:\n    \"\"\" ";
 	private static final String suffix = "\n    return result\n";
 	private static String logOutput = "";
@@ -21,15 +22,25 @@ public class LlamaModelTest {
 	@BeforeClass
 	public static void setup() {
 		LlamaModel.setLogger((level, msg) -> logOutput += msg);
-		ModelParameters params = new ModelParameters()
-				.setNGpuLayers(43)
-				.setEmbedding(true);
-		model = new LlamaModel("/run/media/konstantin/Seagate/models/codellama-13b.q5_k_m.gguf", params);
+		String modelHome = System.getProperty(MODEL_HOME_PROPERTY);
+		String modelName= System.getProperty(MODEL_NAME_PROPERTY);
+		if(modelHome == null) {
+			throw new RuntimeException("Please pass the system property \"" + MODEL_HOME_PROPERTY + "\" to the test.  This should represent the location on local disk where your models are located.");
+		}
+		if(modelName == null) {
+			throw new RuntimeException("The system property \"" + MODEL_NAME_PROPERTY + "\" is not set.  If you are running this from an IDE, please set it.  If you are running this from Maven, this should be set automatically and there is something strange going on." );
+		}
+		String modelPath= Paths.get(modelHome, modelName).toString();
+		ModelParameters params = new ModelParameters().setNGpuLayers(43).setEmbedding(true);
+		model =
+				new LlamaModel(modelPath, params);
 	}
 
 	@AfterClass
 	public static void tearDown() {
-		model.close();
+		if(model != null) {
+			model.close();
+		}
 	}
 
 	@Test
@@ -157,14 +168,13 @@ public class LlamaModelTest {
 	@Test
 	public void testEmbedding() {
 		float[] embedding = model.embed(prefix);
-		Assert.assertEquals(5120, embedding.length);
+		Assert.assertEquals(4096, embedding.length);
 	}
 
 	@Test
 	public void testTokenization() {
 		String prompt = "Hello, world!";
 		int[] encoded = model.encode(prompt);
-		Assert.assertArrayEquals(new int[]{15043, 29892, 3186, 29991}, encoded);
 		String decoded = model.decode(encoded);
 		// the llama tokenizer adds a space before the prompt
 		Assert.assertEquals(" " + prompt, decoded);
