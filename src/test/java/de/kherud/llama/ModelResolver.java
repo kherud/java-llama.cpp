@@ -2,6 +2,10 @@ package de.kherud.llama;
 
 import java.nio.file.Paths;
 
+
+/**
+ * An enum which enables us to resolve the model home from system parameters and full model paths.
+ */
 public enum ModelResolver {
   MODEL_HOME("model.home", "Please pass the system property \"%s\" to the test. "
       + "This should represent the location on local disk where your models are located. "
