@@ -1,6 +1,5 @@
 package de.kherud.llama;
 
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
