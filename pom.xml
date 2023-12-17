@@ -129,6 +129,11 @@
 
 								<!-- Fail the build if the property is not set -->
 								<fail message="The 'model.home' system property is not set." unless="isModelHomeSet"/>
+								<!-- Check if the directory exists -->
+								<available file="${model.home}" type="dir" property="model.home.exists"/>
+
+								<!-- Fail the build if the directory does not exist -->
+								<fail message="Model home directory does not exist: ${model.home}" unless="model.home.exists"/>
 
 								<!-- Define the file path using the system property -->
 								<property name="modelPath" value="${model.home}${file.separator}${integration.test.model}"/>

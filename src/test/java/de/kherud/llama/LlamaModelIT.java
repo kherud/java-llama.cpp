@@ -25,7 +25,10 @@ public class LlamaModelIT {
 		String modelHome = System.getProperty(MODEL_HOME_PROPERTY);
 		String modelName= System.getProperty(MODEL_NAME_PROPERTY);
 		if(modelHome == null) {
-			throw new RuntimeException("Please pass the system property \"" + MODEL_HOME_PROPERTY + "\" to the test.  This should represent the location on local disk where your models are located.");
+			throw new RuntimeException("Please pass the system property \"" + MODEL_HOME_PROPERTY + "\" to the test. "
+					+ "This should represent the location on local disk where your models are located. "
+					+ "If you are running this via maven, please run with a -Dmodel.home=/path/to/model/dir. "
+					+ "Make sure that the directory that you pass exists.");
 		}
 		if(modelName == null) {
 			throw new RuntimeException("The system property \"" + MODEL_NAME_PROPERTY + "\" is not set.  If you are running this from an IDE, please set it.  If you are running this from Maven, this should be set automatically and there is something strange going on." );

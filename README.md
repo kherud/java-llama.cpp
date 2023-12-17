@@ -95,7 +95,7 @@ Make sure everything works by running
 g++ -v  # depending on your compiler
 java -version
 mvn -v
-echo $JAVA_HOME # for inlux/macos
+echo $JAVA_HOME # for linux/macos
 echo %JAVA_HOME% # for windows
 ```
 
