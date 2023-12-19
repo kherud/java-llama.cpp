@@ -68,7 +68,6 @@ Then, run the following commands in the directory of this repository (java-llama
 
 ```shell
 mvn compile
-git submodule update --init --recursive
 mkdir build
 cd build
 cmake .. -DBUILD_SHARED_LIBS=ON  # add any other arguments for your backend
