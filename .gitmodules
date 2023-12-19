@@ -1,3 +1,0 @@
-[submodule "src/main/cpp/llama.cpp"]
-	path = src/main/cpp/llama.cpp
-	url = https://github.com/ggerganov/llama.cpp.git
