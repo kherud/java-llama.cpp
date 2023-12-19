@@ -8,11 +8,6 @@ This repository provides Java bindings for the C++ library.
 
 **You are welcome to contribute**
 
-> [!NOTE]
-> Version 2.0 of this library just released and introduces some breaking changes. The underlying Java/C++ interfacing 
-> technology changed from JNA to JNI with a focus on performance. If you prefer to use the old JNA version, you can 
-> still access it as 1.x.x in the [jna branch](https://github.com/kherud/java-llama.cpp/tree/jna).
-
 ## Quick Start
 
 Access this library via Maven:
