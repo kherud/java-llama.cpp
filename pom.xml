@@ -224,7 +224,15 @@
 						<artifactId>maven-failsafe-plugin</artifactId>
 						<version>${test.plugin.version}</version>
 						<configuration>
-							<skipTests>true</skipTests>
+							<skip>true</skip>
+						</configuration>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-antrun-plugin</artifactId>
+						<version>3.0.0</version>
+						<configuration>
+							<skip>true</skip>
 						</configuration>
 					</plugin>
 				</plugins>
