@@ -16,7 +16,7 @@ Access this library via Maven:
 <dependency>
     <groupId>de.kherud</groupId>
     <artifactId>llama</artifactId>
-    <version>2.2.1</version>
+    <version>2.3.0</version>
 </dependency>
 ```
 
@@ -36,9 +36,9 @@ mvn verify -Dmodel.home=/path/to/models
 
 We support CPU inference for the following platforms out of the box:
 
-- Linux x86-64
-- MacOS x86-64, arm64 (M1)
-- Windows x86-64
+- Linux x86-64, aarch64
+- MacOS x86-64, aarch64 (M1)
+- Windows x86-64, x64, arm (32 bit)
 
 If any of these match your platform, you can include the Maven dependency and get started.
 
@@ -70,7 +70,7 @@ Then, run the following commands in the directory of this repository (java-llama
 mvn compile
 mkdir build
 cd build
-cmake .. -DBUILD_SHARED_LIBS=ON  # add any other arguments for your backend
+cmake .. # add any other arguments for your backend
 cmake --build . --config Release
 ```
 
