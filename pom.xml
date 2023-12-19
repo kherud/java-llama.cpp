@@ -47,7 +47,8 @@
 		<jna.version>5.13.0</jna.version>
 		<junit.version>4.13.1</junit.version>
 		<test.plugin.version>3.2.3</test.plugin.version>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <model.home>${project.basedir}/models</model.home>
 		<integration.test.model>mistral-7b-instruct-v0.2.Q5_K_S.gguf</integration.test.model>
 		<integration.test.model.url>https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/${integration.test.model}</integration.test.model.url>
 	</properties>
@@ -109,7 +110,8 @@
 					<!-- Integration Tests need a model home variable -->
 					<systemPropertyVariables>
 						<propertyName>model.home</propertyName>
-						<integration.test.model>${integration.test.model}</integration.test.model>
+            <integration.test.model>${integration.test.model}</integration.test.model>
+            <model.home>${model.home}</model.home>
 					</systemPropertyVariables>
 				</configuration>
 				<executions>
