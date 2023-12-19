@@ -78,6 +78,8 @@
 						<arg>-h</arg>
 						<arg>src/main/cpp</arg>
 					</compilerArgs>
+					<source>11</source>
+					<target>11</target>
 				</configuration>
 			</plugin>
 			<!-- This allows us to execute the examples from the command line -->
