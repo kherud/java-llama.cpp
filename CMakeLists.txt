@@ -56,7 +56,7 @@ if(NOT DEFINED JNI_INCLUDE_DIRS)
     if(OS_NAME STREQUAL "Linux" OR OS_NAME STREQUAL "Mac")
         set(JNI_INCLUDE_DIRS .github/include/unix)
     elseif(OS_NAME STREQUAL "Windows")
-        set(JNI_INCLUDE_DIRS .github/include/win)
+        set(JNI_INCLUDE_DIRS .github/include/windows)
     # if we don't have provided headers, try to find them via Java
     else()
         find_package(Java REQUIRED)
