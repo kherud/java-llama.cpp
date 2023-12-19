@@ -49,7 +49,7 @@
 		<test.plugin.version>3.2.3</test.plugin.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<model.home>${project.basedir}/models</model.home>
-		<integration.test.model>mistral-7b-instruct-v0.2.Q5_K_S.gguf</integration.test.model>
+		<integration.test.model>mistral-7b-instruct-v0.2.Q2_K.gguf</integration.test.model>
 		<integration.test.model.url>https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/${integration.test.model}</integration.test.model.url>
 	</properties>
 

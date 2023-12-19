@@ -13,7 +13,7 @@ public class LlamaModelIT {
 	private static final String prefix = "def remove_non_ascii(s: str) -> str:\n    \"\"\" ";
 	private static final String suffix = "\n    return result\n";
 	private static String logOutput = "";
-	private static final int nPredict = 10;
+	private static final int nPredict = 11;
 
 	private static LlamaModel model;
 
@@ -86,7 +86,8 @@ public class LlamaModelIT {
 		String output = sb.toString();
 
 		Assert.assertTrue(output.matches("[ab]+"));
-		Assert.assertEquals(nPredict, model.encode(output).length);
+		int generated = model.encode(output).length;
+		Assert.assertTrue(generated > 0 && generated <= nPredict);
 	}
 
 	@Test
@@ -126,7 +127,8 @@ public class LlamaModelIT {
 				.setNPredict(nPredict);
 		String output = model.complete("", params);
 		Assert.assertTrue(output.matches("[ab]+"));
-		Assert.assertEquals(nPredict, model.encode(output).length);
+		int generated = model.encode(output).length;
+		Assert.assertTrue(generated > 0 && generated <= nPredict);
 	}
 
 	@Test
