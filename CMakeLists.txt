@@ -6,31 +6,22 @@ set(LLAMA_CPP_TAG b1645)
 
 # todo: Is there a better way to build the library than copy & pasting the build argument cmake definition of llama.cpp?
 include(build-args.cmake)
-
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_SHARED_LIBS ON)
 
-find_package(Java REQUIRED)
-find_program(JAVA_EXECUTABLE NAMES java)
-
-# find "jni.h" include directory
-find_path(JNI_INCLUDE_DIR NAMES jni.h HINTS ENV JAVA_HOME PATH_SUFFIXES include)
-if(NOT JNI_INCLUDE_DIR)
-    message(FATAL_ERROR "Could not find jni.h")
-endif()
-
-# find "jni_md.h" include directory if not set
-file(GLOB_RECURSE JNI_MD_PATHS RELATIVE "${JNI_INCLUDE_DIR}" "${JNI_INCLUDE_DIR}/**/jni_md.h")
-if(NOT JNI_MD_PATHS)
-    message(FATAL_ERROR "Could not find jni_md.h")
-endif()
-foreach(PATH IN LISTS JNI_MD_PATHS)
-    get_filename_component(DIR ${PATH} DIRECTORY)
-    list(APPEND JNI_MD_INCLUDE_DIRS "${JNI_INCLUDE_DIR}/${DIR}")
-endforeach()
+# checkout llama.cpp
+include(FetchContent)
+FetchContent_Declare(
+	llama.cpp
+	GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
+	GIT_TAG        ${LLAMA_CPP_TAG}
+)
+FetchContent_MakeAvailable(llama.cpp)
 
 # find which OS we build for if not set (make sure to run mvn compile first)
 if(NOT DEFINED OS_NAME)
+    find_package(Java REQUIRED)
+    find_program(JAVA_EXECUTABLE NAMES java)
 	execute_process(
       COMMAND ${JAVA_EXECUTABLE} -cp ${CMAKE_SOURCE_DIR}/target/classes de.kherud.llama.OSInfo --os
       OUTPUT_VARIABLE OS_NAME
@@ -43,6 +34,8 @@ endif()
 
 # find which architecture we build for if not set  (make sure to run mvn compile first)
 if(NOT DEFINED OS_ARCH)
+    find_package(Java REQUIRED)
+    find_program(JAVA_EXECUTABLE NAMES java)
     execute_process(
       COMMAND ${JAVA_EXECUTABLE} -cp ${CMAKE_SOURCE_DIR}/target/classes de.kherud.llama.OSInfo --arch
       OUTPUT_VARIABLE OS_ARCH
@@ -56,25 +49,35 @@ endif()
 set(JLLAMA_DIR ${CMAKE_SOURCE_DIR}/src/main/resources/de/kherud/llama/${OS_NAME}/${OS_ARCH})
 message(STATUS "Installing files to ${JLLAMA_DIR}")
 
-# checkout llama.cpp
-include(FetchContent)
-FetchContent_Declare(
-	llama.cpp
-	GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-	GIT_TAG        ${LLAMA_CPP_TAG}
-)
-FetchContent_MakeAvailable(llama.cpp)
-
 add_library(jllama SHARED src/main/cpp/jllama.cpp)
 
-target_include_directories(jllama PRIVATE
-    ${JNI_INCLUDE_DIR}
-    ${JNI_MD_INCLUDE_DIRS}
-    src/main/cpp
-)
+# include jni.h and jni_md.h
+if(NOT DEFINED JNI_INCLUDE_DIRS)
+    if(OS_NAME STREQUAL "Linux" OR OS_NAME STREQUAL "Mac")
+        set(JNI_INCLUDE_DIRS .github/include/unix)
+    elseif(OS_NAME STREQUAL "Windows")
+        set(JNI_INCLUDE_DIRS .github/include/win)
+    # if we don't have provided headers, try to find them via Java
+    else()
+        find_package(Java REQUIRED)
+        find_program(JAVA_EXECUTABLE NAMES java)
 
+        find_path(JNI_INCLUDE_DIRS NAMES jni.h HINTS ENV JAVA_HOME PATH_SUFFIXES include)
+
+        # find "jni_md.h" include directory if not set
+        file(GLOB_RECURSE JNI_MD_PATHS RELATIVE "${JNI_INCLUDE_DIRS}" "${JNI_INCLUDE_DIRS}/**/jni_md.h")
+        foreach(PATH IN LISTS JNI_MD_PATHS)
+            get_filename_component(DIR ${PATH} DIRECTORY)
+            list(APPEND JNI_INCLUDE_DIRS "${JNI_INCLUDE_DIRS}/${DIR}")
+        endforeach()
+    endif()
+endif()
+if(NOT JNI_INCLUDE_DIRS)
+    message(FATAL_ERROR "Could not determine JNI include directories")
+endif()
+
+target_include_directories(jllama PRIVATE src/main/cpp ${JNI_INCLUDE_DIRS})
 target_link_libraries(jllama PRIVATE common llama ${LLAMA_EXTRA_LIBS})
-
 target_compile_features(jllama PRIVATE cxx_std_11)
 
 if(OS_NAME STREQUAL "Windows")
