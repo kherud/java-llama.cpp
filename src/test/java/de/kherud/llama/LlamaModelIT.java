@@ -13,7 +13,7 @@ public class LlamaModelIT {
 	private static final String prefix = "def remove_non_ascii(s: str) -> str:\n    \"\"\" ";
 	private static final String suffix = "\n    return result\n";
 	private static String logOutput = "";
-	private static final int nPredict = 11;
+	private static final int nPredict = 10;
 
 	private static LlamaModel model;
 
