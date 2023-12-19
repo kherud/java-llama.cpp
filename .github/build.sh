@@ -1,8 +1,5 @@
 #!/bin/bash
 
-pushd ..
-mkdir -p build
-cd build
-cmake .. $@ || (popd && exit 1)
-cmake --build . --config Release || (popd && exit 1)
-popd
+mkdir build
+cmake -Bbuild $@ || exit 1
+cmake --build build --config Release || exit 1

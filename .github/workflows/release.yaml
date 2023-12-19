@@ -49,7 +49,7 @@ jobs:
             cmake: '-DCMAKE_OSX_ARCHITECTURES=x86_64'
           }
           - {
-            name: Mac,
+            os: Mac,
             arch: aarch64,
             cmake: '-DCMAKE_OSX_ARCHITECTURES=arm64'
           }
@@ -58,7 +58,6 @@ jobs:
       - name: Build libraries
         shell: bash
         run: |
-          ../jclingo/.github/build.sh ${{ matrix.target.cmake }}
           .github/build.sh ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v3

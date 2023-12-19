@@ -1,12 +1,7 @@
 @echo off
 
-pushd ..
-if not exist "build" (
-    mkdir build
-)
-cd build
-cmake .. %*
-cmake --build . --config Release
-popd
+mkdir build
+cmake -Bbuild %*
+cmake --build build --config Release
 
 if errorlevel 1 exit /b %ERRORLEVEL%
