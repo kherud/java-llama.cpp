@@ -25,11 +25,12 @@ There are multiple [examples](src/test/java/examples). Make sure to set `model.h
 ```bash
 mvn exec:java -Dexec.mainClass="examples.MainExample" -Dmodel.home="/path/to/models" -Dmodel.name="codellama-13b.Q5_K_M.gguf"
 ```
+Note: if your model is in the `models` directory, then you can ommit the `-Dmodel.home` property.
 
-You can also run some integration tests, which will automatically download a model to `model.home`:
+You can also run some integration tests, which will automatically download a model to the `models` directory:
 
 ```bash
-mvn verify -Dmodel.home=/path/to/models
+mvn verify
 ```
 
 ### No Setup required

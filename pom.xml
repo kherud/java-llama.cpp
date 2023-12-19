@@ -87,7 +87,7 @@
 				<artifactId>exec-maven-plugin</artifactId>
 				<version>3.0.0</version>
 				<configuration>
-					<classpathScope>test</classpathScope>
+          <classpathScope>test</classpathScope>
 				</configuration>
 			</plugin>
 
