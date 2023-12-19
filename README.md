@@ -1,5 +1,5 @@
 ![Java 11+](https://img.shields.io/badge/Java-11%2B-informational)
-![llama.cpp b1382](https://img.shields.io/badge/llama.cpp-%23b1382-informational)
+![llama.cpp b1645](https://img.shields.io/badge/llama.cpp-%23b1645-informational)
 
 # Java Bindings for [llama.cpp](https://github.com/ggerganov/llama.cpp)
 
@@ -20,47 +20,17 @@ Access this library via Maven:
 </dependency>
 ```
 
-Here is a short example:
+There are multiple [examples](src/test/java/examples). Make sure to set `model.home` and `model.name` to run them:
 
-```java
-public class Example {
-
-	public static void main(String... args) throws IOException {
-        LlamaModel.setLogger((level, message) -> System.out.print(message));
-        ModelParameters modelParams = new ModelParameters()
-                .setNGpuLayers(43);
-        InferenceParameters inferParams = new InferenceParameters()
-                .setTemperature(0.7f)
-                .setPenalizeNl(true)
-                .setMirostat(InferenceParameters.MiroStat.V2)
-                .setAntiPrompt("\n");
-
-        String modelPath = "/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/ggml-model-q4_0.gguf";
-        String system = "This is a conversation between User and Llama, a friendly chatbot.\n" +
-                "Llama is helpful, kind, honest, good at writing, and never fails to answer any " +
-                "requests immediately and with precision.\n";
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
-        try (LlamaModel model = new LlamaModel(modelPath, modelParams)) {
-            System.out.print(system);
-            String prompt = system;
-            while (true) {
-                prompt += "\nUser: ";
-                System.out.print("\nUser: ");
-                String input = reader.readLine();
-                prompt += input;
-                System.out.print("Llama: ");
-                prompt += "\nLlama: ";
-                for (String output : model.generate(prompt, inferParams)) {
-                    System.out.print(output);
-                    prompt += output;
-                }
-            }
-        }
-    }
-}
+```bash
+mvn exec:java -Dexec.mainClass="examples.MainExample" -Dmodel.home="/path/to/models" -Dmodel.name="codellama-13b.Q5_K_M.gguf"
 ```
 
-Also have a look at the [examples](src/test/java/examples).
+You can also run some integration tests, which will automatically download a model to `model.home`:
+
+```bash
+mvn verify -Dmodel.home=/path/to/models
+```
 
 ### No Setup required
 
@@ -149,6 +119,50 @@ Look for the shared library in `build`.
 > If you are running MacOS with Metal, you have to put the file `ggml-metal.metal` from `build/bin` in the same directory as the shared library.
 
 ## Documentation
+
+### Example
+
+This is a short example on how to use this library:
+
+```java
+public class Example {
+
+	public static void main(String... args) throws IOException {
+        LlamaModel.setLogger((level, message) -> System.out.print(message));
+        ModelParameters modelParams = new ModelParameters()
+                .setNGpuLayers(43);
+        InferenceParameters inferParams = new InferenceParameters()
+                .setTemperature(0.7f)
+                .setPenalizeNl(true)
+                .setMirostat(InferenceParameters.MiroStat.V2)
+                .setAntiPrompt("\n");
+
+        String modelPath = "/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/ggml-model-q4_0.gguf";
+        String system = "This is a conversation between User and Llama, a friendly chatbot.\n" +
+                "Llama is helpful, kind, honest, good at writing, and never fails to answer any " +
+                "requests immediately and with precision.\n";
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
+        try (LlamaModel model = new LlamaModel(modelPath, modelParams)) {
+            System.out.print(system);
+            String prompt = system;
+            while (true) {
+                prompt += "\nUser: ";
+                System.out.print("\nUser: ");
+                String input = reader.readLine();
+                prompt += input;
+                System.out.print("Llama: ");
+                prompt += "\nLlama: ";
+                for (String output : model.generate(prompt, inferParams)) {
+                    System.out.print(output);
+                    prompt += output;
+                }
+            }
+        }
+    }
+}
+```
+
+Also have a look at the other [examples](src/test/java/examples).
 
 ### Inference
 
