@@ -28,7 +28,7 @@ jobs:
       - name: Build libraries
         shell: bash
         run: |
-          .github/dockcross/${{ matrix.target.image }} bash -c .github/build.sh "-DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}"
+          .github/dockcross/${{ matrix.target.image }} bash -c .github/build.sh -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
