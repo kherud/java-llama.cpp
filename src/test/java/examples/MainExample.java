@@ -1,5 +1,6 @@
 package examples;
 
+import de.kherud.llama.ModelResolver;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -20,12 +21,15 @@ public class MainExample {
                 .setPenalizeNl(true)
 //                .setNProbs(10)
                 .setMirostat(InferenceParameters.MiroStat.V2)
-                .setAntiPrompt("\n");
-
-        String modelPath = "/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/ggml-model-q4_0.gguf";
+                .setAntiPrompt("User:");
+        String modelName = System.getProperty("model.name");
+        String modelPath = ModelResolver.getPathToModel(modelName);
         String system = "This is a conversation between User and Llama, a friendly chatbot.\n" +
                 "Llama is helpful, kind, honest, good at writing, and never fails to answer any " +
-                "requests immediately and with precision.\n";
+                "requests immediately and with precision.\n\n" +
+                "User: Hello Llama\n" +
+                "Llama: Hello.  How may I help you today?";
+                ;
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
         try (LlamaModel model = new LlamaModel(modelPath, modelParams)) {
             System.out.print(system);

@@ -1,5 +1,6 @@
 package examples;
 
+import de.kherud.llama.ModelResolver;
 import java.util.HashMap;
 
 import de.kherud.llama.InferenceParameters;
@@ -12,9 +13,9 @@ public class GrammarExample {
 				"expr  ::= term ([-+*/] term)*\n" +
 				"term  ::= [0-9]";
 		InferenceParameters params = new InferenceParameters().setGrammar(grammar);
-
-		String filePath = "/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/gguf-model-q4_0.bin";
-		try (LlamaModel model = new LlamaModel(filePath)) {
+		String modelName = System.getProperty("model.name");
+		String modelPath = ModelResolver.getPathToModel(modelName);
+		try (LlamaModel model = new LlamaModel(modelPath)) {
 			for (LlamaModel.Output output : model.generate("", params)) {
 				System.out.print(output);
 			}
