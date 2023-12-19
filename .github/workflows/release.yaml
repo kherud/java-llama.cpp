@@ -1,120 +1,181 @@
-name: Build JNI bindings and publish to Maven Central
+name: Release to Maven Central
 on:
   workflow_dispatch:
   release:
     types: [created]
 jobs:
-  build:
-    name: Build ${{ matrix.target.name }}-${{ matrix.target.arch }}
-    runs-on: ${{ matrix.target.image }}
+
+
+  build-linux-docker:
+    name: Build ${{ matrix.target.os }}-${{ matrix.target.arch }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         target:
           - {
-            name: Linux,
+            os: Linux,
             arch: x86_64,
-            image: ubuntu-latest,
-            cmake: "-DCMAKE_CXX_FLAGS='-march=x86-64' -DLLAMA_NATIVE=OFF"
+            image: dockcross-manylinux2014-x64,
           }
           - {
-            name: Mac,
+            os: Linux,
+            arch: aarch64,
+            image: dockcross-linux-arm64-lts,
+          }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build libraries
+        shell: bash
+        run: |
+          .github/dockcross/${{ matrix.target.image }} bash -c .github/build.sh "'-DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}'"
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifacts
+          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
+
+
+  build-macos-native:
+    name: Build ${{ matrix.target.os }}-${{ matrix.target.arch }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - {
+            os: Mac,
             arch: x86_64,
-            image: macos-latest,
-            cmake: "-DCMAKE_OSX_ARCHITECTURES=x86_64 -DLLAMA_NATIVE=OFF"
+            cmake: '-DCMAKE_OSX_ARCHITECTURES=x86_64'
           }
           - {
             name: Mac,
             arch: aarch64,
-            image: macos-latest,
-            cmake: "-DCMAKE_OSX_ARCHITECTURES=arm64 -DLLAMA_NATIVE=OFF"
-          }
-          - {
-            name: Windows,
-            arch: x86_64,
-            image: windows-latest,
-            cmake: "-DCMAKE_GENERATOR_PLATFORM=x64"
+            cmake: '-DCMAKE_OSX_ARCHITECTURES=arm64'
           }
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: CMake (Windows)
-        if: ${{ matrix.target.name == 'Windows' }}
-        shell: cmd
-        run: |
-          cd scripts && .\build.bat ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.name }} -DOS_ARCH=${{ matrix.target.arch }}
-      - name: CMake (Unix)
-        if: ${{ matrix.target.name != 'Windows' }}
+      - uses: actions/checkout@v4
+      - name: Build libraries
         shell: bash
         run: |
-          cd scripts && ./build.sh ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.name }} -DOS_ARCH=${{ matrix.target.arch }}
-      - name: Upload Windows Artifact
-        if: ${{ matrix.target.name == 'Windows' }}
-        uses: actions/upload-artifact@v3
-        with:
-          name: artifacts
-          path: ${{ github.workspace }}\src\main\resources\de\kherud\llama\
-      - name: Upload Unix Artifact
-        if: ${{ matrix.target.name != 'Windows' }}
+          ../jclingo/.github/build.sh ${{ matrix.target.cmake }}
+          .github/build.sh ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}
+      - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: artifacts
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
-  build-linux-arm64:
-    name: Build Linux-aarch64
-    runs-on: ubuntu-latest
+
+
+  build-win-native:
+    name: Build ${{ matrix.target.os }}-${{ matrix.target.arch }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - {
+            os: Windows,
+            arch: x86_64,
+            cmake: '-G "Visual Studio 17 2022" -A "x64"'
+          }
+          - {
+            os: Windows,
+            arch: aarch64,
+            cmake: '-G "Visual Studio 17 2022" -A "ARM64"'
+          }
+          - {
+            os: Windows,
+            arch: x86,
+            cmake: '-G "Visual Studio 17 2022" -A "Win32"'
+          }
+          - {
+            os: Windows,
+            arch: arm,
+            cmake: '-G "Visual Studio 17 2022" -A "ARM"'
+          }
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: linux/arm64
-      - name: CMake (Linux)
+      - uses: actions/checkout@v4
+      - name: Build libraries
+        shell: cmd
         run: |
-          docker run \
-            --rm \
-            -v $(pwd):/${{ github.workspace }} \
-            -w ${{ github.workspace }} \
-            --platform linux/arm64 \
-            eclipse-temurin:11 \
-            sh -c "apt-get update && apt-get install -y cmake openjdk-11-jdk git build-essential && cd scripts && ./build.sh -DCMAKE_CXX_FLAGS='-march=armv8-a' -DOS_NAME=Linux -DOS_ARCH=aarch64"
-            # The above apt-get commands can be moved to a Dockerfile, but then
-            # the image needs to be built for the docker-arch architecture,
-            # which means using the docker/setup-buildx-action
-      - name: Upload Unix Artifact
+          .github\build.bat ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}
+      - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: artifacts
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
-  publish:
-    needs: [build,build-linux-arm64]
+
+
+  test-linux:
+    name: Test Linux
+    needs: build-linux-docker
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-      - name: Download Artifacts
-        uses: actions/download-artifact@v3
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v3
         with:
           name: artifacts
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
-      - name: Set up Maven Central Repository
-        uses: actions/setup-java@v3
+      - name: Run tests
+        shell: bash
+        run: mvn verify -Dmodel.home=target
+          
+
+  test-macos:
+    name: Test Mac
+    needs: build-macos-native
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v3
         with:
-          java-version: '17'
-          distribution: 'zulu'
-          server-id: ossrh
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
-          gpg-private-key: ${{ secrets.GPG_SIGNING_KEY }}
-          gpg-passphrase: MAVEN_GPG_PASSPHRASE
-      - name: Publish package
-        run: mvn --batch-mode -P release deploy
-        env:
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          name: artifacts
+          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
+      - name: Run tests
+        shell: bash
+        run: mvn verify -Dmodel.home=target
+          
+
+  test-windows:
+    name: Test Windows
+    needs: build-win-native
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifacts
+          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
+      - name: Run tests
+        shell: cmd
+        run: mvn verify -Dmodel.home=target
+
+
+#  publish:
+#    needs: [build,build-linux-arm64]
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout Repository
+#        uses: actions/checkout@v4
+#      - name: Download Artifacts
+#        uses: actions/download-artifact@v3
+#        with:
+#          name: artifacts
+#          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
+#      - name: Set up Maven Central Repository
+#        uses: actions/setup-java@v3
+#        with:
+#          java-version: '17'
+#          distribution: 'zulu'
+#          server-id: ossrh
+#          server-username: MAVEN_USERNAME
+#          server-password: MAVEN_PASSWORD
+#          gpg-private-key: ${{ secrets.GPG_SIGNING_KEY }}
+#          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+#      - name: Publish package
+#        run: mvn --batch-mode -P release deploy
+#        env:
+#          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+#          MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+#          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
