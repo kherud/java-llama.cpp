@@ -4,6 +4,9 @@ else()
     set(LLAMA_METAL_DEFAULT OFF)
 endif()
 
+# general
+option(LLAMA_NATIVE "llama: enable -march=native flag" ON)
+
 # instruction set specific
 if (LLAMA_NATIVE)
     set(INS_ENB OFF)
