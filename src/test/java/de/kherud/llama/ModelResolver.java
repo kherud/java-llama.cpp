@@ -1,5 +1,6 @@
 package de.kherud.llama;
 
+import java.io.File;
 import java.nio.file.Paths;
 
 
@@ -22,6 +23,9 @@ public enum ModelResolver {
   public String resolve() {
     String ret = System.getProperty(systemPropertyName);
     if(ret == null) {
+      if(new File("models").exists()) {
+        return "models";
+      }
       throw new IllegalArgumentException(String.format(errorMessage, systemPropertyName));
     }
     return ret;
