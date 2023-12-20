@@ -521,7 +521,7 @@ elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(x86_64|i686|AMD64)$" OR "${CMAKE_GE
     if (MSVC)
         # instruction set detection for MSVC only
         if (LLAMA_NATIVE)
-            include(cmake/FindSIMD.cmake)
+            include(${llama.cpp_SOURCE_DIR}/cmake/FindSIMD.cmake)
         endif ()
         if (LLAMA_AVX512)
             add_compile_options($<$<COMPILE_LANGUAGE:C>:/arch:AVX512>)

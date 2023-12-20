@@ -2,21 +2,20 @@ cmake_minimum_required(VERSION 3.12)
 
 project(jllama CXX)
 
-set(LLAMA_CPP_TAG b1645)
+# checkout llama.cpp
+include(FetchContent)
+FetchContent_Declare(
+	llama.cpp
+	GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
+	GIT_TAG        b1645
+)
+FetchContent_MakeAvailable(llama.cpp)
 
 # todo: Is there a better way to build the library than copy & pasting the build argument cmake definition of llama.cpp?
 include(build-args.cmake)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_SHARED_LIBS ON)
 
-# checkout llama.cpp
-include(FetchContent)
-FetchContent_Declare(
-	llama.cpp
-	GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-	GIT_TAG        ${LLAMA_CPP_TAG}
-)
-FetchContent_MakeAvailable(llama.cpp)
 
 # find which OS we build for if not set (make sure to run mvn compile first)
 if(NOT DEFINED OS_NAME)
