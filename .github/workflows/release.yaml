@@ -22,32 +22,23 @@ jobs:
             os: Linux,
             arch: x86_64,
             image: dockcross-manylinux2014-x64,
-            cmake: "",
           }
           - {
             os: Linux,
             arch: aarch64,
             image: dockcross-linux-arm64-lts,
-            cmake: "",
           }
           - {
             os: Linux-Android,
             arch: aarch64,
             image: dockcross-android-arm64,
-            cmake: "",
-          }
-          - {
-            os: Linux-Android,
-            arch: arm,
-            image: dockcross-android-arm,
-            cmake: "-DCMAKE_SYSTEM_PROCESSOR=arm",
           }
     steps:
       - uses: actions/checkout@v4
       - name: Build libraries
         shell: bash
         run: |
-          .github/dockcross/${{ matrix.target.image }} .github/build.sh "${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}"
+          .github/dockcross/${{ matrix.target.image }} .github/build.sh "-DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}"
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
