@@ -52,7 +52,7 @@ add_library(jllama SHARED src/main/cpp/jllama.cpp)
 
 # include jni.h and jni_md.h
 if(NOT DEFINED JNI_INCLUDE_DIRS)
-    if(OS_NAME STREQUAL "Linux" OR OS_NAME STREQUAL "Mac")
+    if(OS_NAME MATCHES "^Linux" OR OS_NAME STREQUAL "Mac")
         set(JNI_INCLUDE_DIRS .github/include/unix)
     elseif(OS_NAME STREQUAL "Windows")
         set(JNI_INCLUDE_DIRS .github/include/windows)

@@ -1,6 +1,11 @@
 name: Release to Maven Central
 on:
   workflow_dispatch:
+    inputs:
+      build_only:
+        description: 'Whether to only build the project and skip releasing it (yes/NO)'
+        required: false
+        default: 'no'
   release:
     types: [created]
 jobs:
@@ -22,6 +27,16 @@ jobs:
             os: Linux,
             arch: aarch64,
             image: dockcross-linux-arm64-lts,
+          }
+          - {
+            os: Linux-Android,
+            arch: aarch64,
+            image: dockcross-android-arm64,
+          }
+          - {
+            os: Linux-Android,
+            arch: arm,
+            image: dockcross-android-arm,
           }
     steps:
       - uses: actions/checkout@v4
@@ -166,6 +181,7 @@ jobs:
 
 
   publish:
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_only == 'no' }}
     needs: [test-linux,build-macos-native,test-windows]
     runs-on: ubuntu-latest
     steps:
