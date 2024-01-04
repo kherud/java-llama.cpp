@@ -950,7 +950,6 @@ static gpt_params parse_model_params(JNIEnv *env, jobject jparams, jstring java_
     params.rope_freq_scale = env->GetFloatField(jparams, f_rope_freq_scale);
     params.mul_mat_q = env->GetBooleanField(jparams, f_mul_mat_q);
     params.embedding = env->GetBooleanField(jparams, f_embedding);
-    params.escape = env->GetIntField(jparams, f_n_predict);
     params.use_mmap = env->GetBooleanField(jparams, f_use_mmap);
     params.use_mlock = env->GetBooleanField(jparams, f_use_mlock);
     params.numa = env->GetBooleanField(jparams, f_numa);
