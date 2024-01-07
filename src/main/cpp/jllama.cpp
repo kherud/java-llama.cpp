@@ -361,7 +361,6 @@ static void jllama_log_callback(enum ggml_log_level level, const char *text, voi
 
     env->CallVoidMethod(g_log_callback, m_biconsumer_accept, java_log_level, java_text);
 
-    env->DeleteLocalRef(java_log_level);
     env->DeleteLocalRef(java_text);
 }
 
@@ -1251,7 +1250,7 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_getNext(JNIEnv *env, j
 
     if (!llama->has_next_token)
     {
-        env->SetLongField(iter, f_iter_has_next, false);
+        env->SetBooleanField(iter, f_iter_has_next, false);
         // llama.mutex.unlock();
         // lock.release();
     }
