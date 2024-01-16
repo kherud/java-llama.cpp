@@ -110,6 +110,18 @@ class LlamaLoader {
 			}
 		}
 
+		if (OSInfo.isAndroid()) {
+			try {
+				// loadLibrary can load directly from packed apk file automatically
+				// if java-llama.cpp is added as code source
+				System.loadLibrary(name);
+				return;
+			} catch (UnsatisfiedLinkError e) {
+				triedPaths.add("Directly from .apk/lib");
+			}
+		}
+
+
 		// Load the os-dependent library from the jar file
 		nativeLibPath = getNativeResourcePath();
 		if (hasNativeLib(nativeLibPath, nativeLibName)) {

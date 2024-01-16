@@ -90,6 +90,60 @@ This includes:
 If you then compile your own JAR from this directory, you are ready to go. Otherwise, if you still want to use the library
 as a Maven dependency, see below how to set the necessary paths in order for Java to find your compiled libraries.
 
+### Importing in Android
+
+You can use this library in Android project.
+1. Add java-llama.cpp as a submodule in your android `app` project directory
+```shell
+git submodule add https://github.com/kherud/java-llama.cpp 
+```
+2. Declare the library as a source in your build.gradle
+```gradle
+android {
+    val jllamaLib = file("java-llama.cpp")
+
+    // Execute "mvn compile" if folder target/ doesn't exist at ./java-llama.cpp/
+    if (!file("$jllamaLib/target").exists()) {
+        exec {
+            commandLine = listOf("mvn", "compile")
+            workingDir = file("libs/java-llama.cpp/")
+        }
+    }
+
+    ...
+    defaultConfig {
+	...
+        externalNativeBuild {
+            cmake {
+		// Add an flags if needed
+                cppFlags += ""
+                arguments += ""
+            }
+        }
+    }
+
+    // Declare c++ sources
+    externalNativeBuild {
+        cmake {
+            path = file("$jllamaLib/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+
+    // Declare java sources
+    sourceSets {
+        named("main") {
+            // Add source directory for java-llama.cpp
+            java.srcDir("$jllamaLib/src/main/java")
+        }
+    }
+}
+```
+3. Exclude `de.kherud.llama` in proguard-rules.pro
+```proguard
+keep class de.kherud.llama.** { *; }
+```
+
 ### Custom llama.cpp Setup (GPU acceleration)
 
 This repository provides default support for CPU based inference. You can compile `llama.cpp` any way you want, however.
