@@ -106,7 +106,7 @@ android {
     if (!file("$jllamaLib/target").exists()) {
         exec {
             commandLine = listOf("mvn", "compile")
-            workingDir = file("libs/java-llama.cpp/")
+            workingDir = file("java-llama.cpp/")
         }
     }
 
