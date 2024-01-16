@@ -303,7 +303,7 @@ error:
     return JNI_ERR;
 
 success:
-    return JNI_VERSION_1_1;
+    return JNI_VERSION_1_2;
 }
 
 JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
