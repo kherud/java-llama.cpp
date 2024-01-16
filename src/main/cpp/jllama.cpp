@@ -280,10 +280,11 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 //    o_utf_8 = env->GetStaticObjectField(c_standard_charsets, f_utf_8);
     o_utf_8 = env->NewStringUTF("UTF-8");
     o_utf_8 = (jclass)env->NewGlobalRef(o_utf_8);
-    o_log_level_debug = env->GetStaticObjectField(c_log_level, f_log_level_debug);
-    o_log_level_info = env->GetStaticObjectField(c_log_level, f_log_level_info);
-    o_log_level_warn = env->GetStaticObjectField(c_log_level, f_log_level_warn);
-    o_log_level_error = env->GetStaticObjectField(c_log_level, f_log_level_error);
+
+    o_log_level_debug = (jobject)env->NewGlobalRef(env->GetStaticObjectField(c_log_level, f_log_level_debug));
+    o_log_level_info = (jobject)env->NewGlobalRef(env->GetStaticObjectField(c_log_level, f_log_level_info));
+    o_log_level_warn = (jobject)env->NewGlobalRef(env->GetStaticObjectField(c_log_level, f_log_level_warn));
+    o_log_level_error = (jobject)env->NewGlobalRef(env->GetStaticObjectField(c_log_level, f_log_level_error));
 
     if (!(o_utf_8 && o_log_level_debug && o_log_level_info && o_log_level_warn && o_log_level_error))
     {
@@ -331,6 +332,11 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
     env->DeleteGlobalRef(c_error_oom);
 
     env->DeleteGlobalRef(o_utf_8);
+
+    env->DeleteGlobalRef(o_log_level_debug);
+    env->DeleteGlobalRef(o_log_level_info);
+    env->DeleteGlobalRef(o_log_level_warn);
+    env->DeleteGlobalRef(o_log_level_error);
 }
 
 static void jllama_log_callback(enum ggml_log_level level, const char *text, void *user_data)
