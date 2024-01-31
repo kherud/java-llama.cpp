@@ -594,7 +594,7 @@ struct jllama_context
 
     std::vector<llama_token> tokenize(std::string prompt, bool add_bos) const
     {
-        return ::llama_tokenize(ctx, prompt, add_bos);
+        return ::llama_tokenize(ctx, prompt, add_bos, true);
     }
 
     bool loadGrammar()
@@ -1239,7 +1239,7 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_getNext(JNIEnv *env, j
 		std::vector<completion_token_output> probs_output = {};
 
 		if (llama->params.sparams.n_probs > 0) {
-			const std::vector<llama_token> to_send_toks = llama_tokenize(llama->ctx, to_send, false);
+			const std::vector<llama_token> to_send_toks = llama_tokenize(llama->ctx, to_send, false, true);
 			size_t probs_pos = std::min(sent_token_probs_index, llama->generated_token_probs.size());
 			size_t probs_stop_pos = std::min(sent_token_probs_index + to_send_toks.size(), llama->generated_token_probs.size());
 			if (probs_pos < probs_stop_pos) {
