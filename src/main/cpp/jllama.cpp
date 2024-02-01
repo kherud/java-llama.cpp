@@ -78,6 +78,7 @@ static jfieldID f_n_beams = 0;
 static jfieldID f_grammar = 0;
 static jfieldID f_antiprompt = 0;
 static jfieldID f_infer_seed = 0;
+static jfieldID f_tokenize_special = 0;
 // model parameters
 static jfieldID f_n_threads = 0;
 static jfieldID f_model_seed = 0;
@@ -229,6 +230,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     f_grammar = env->GetFieldID(c_infer_params, "grammar", "Ljava/lang/String;");
     f_antiprompt = env->GetFieldID(c_infer_params, "antiPrompt", "[Ljava/lang/String;");
     f_infer_seed = env->GetFieldID(c_infer_params, "seed", "I");
+    f_tokenize_special = env->GetFieldID(c_infer_params, "tokenizeSpecial", "Z");
 
     f_n_threads = env->GetFieldID(c_model_params, "nThreads", "I");
     f_model_seed = env->GetFieldID(c_model_params, "seed", "I");
@@ -257,7 +259,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     {
         goto error;
     }
-    if (!(f_n_predict && f_n_keep && f_n_probs && f_logit_bias && f_top_k && f_top_p && f_tfs_z && f_typical_p && f_temperature && f_repeat_penalty && f_repeat_last_n && f_frequency_penalty && f_presence_penalty && f_penalize_nl && f_ignore_eos && f_mirostat && f_mirostat_tau && f_mirostat_eta && f_beam_search && f_n_beams && f_grammar && f_antiprompt && f_infer_seed))
+    if (!(f_n_predict && f_n_keep && f_n_probs && f_logit_bias && f_top_k && f_top_p && f_tfs_z && f_typical_p && f_temperature && f_repeat_penalty && f_repeat_last_n && f_frequency_penalty && f_presence_penalty && f_penalize_nl && f_ignore_eos && f_mirostat && f_mirostat_tau && f_mirostat_eta && f_beam_search && f_n_beams && f_grammar && f_antiprompt && f_infer_seed && f_tokenize_special))
     {
         goto error;
     }
@@ -520,6 +522,9 @@ struct jllama_context
     grammar_parser::parse_state parsed_grammar;
     llama_grammar *grammar = nullptr;
 
+    // Whether to tokenize special and/or control tokens which otherwise are not exposed and treated as plaintext.
+    bool tokenize_special = false;
+
     bool truncated = false;
     bool stopped_eos = false;
     bool stopped_word = false;
@@ -594,7 +599,7 @@ struct jllama_context
 
     std::vector<llama_token> tokenize(std::string prompt, bool add_bos) const
     {
-        return ::llama_tokenize(ctx, prompt, add_bos);
+        return ::llama_tokenize(ctx, prompt, add_bos, tokenize_special);
     }
 
     bool loadGrammar()
@@ -1115,6 +1120,7 @@ static void setup_infer_params(JNIEnv *env, jllama_context *llama, jobject jpara
     }
 
     llama->ctx_sampling = *llama_sampling_init(params.sparams);
+    llama->tokenize_special = env->GetBooleanField(jparams, f_tokenize_special);
 }
 
 static void setup_answering(JNIEnv *env, jllama_context *llama, jstring prompt, jobject params)
@@ -1239,7 +1245,7 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_getNext(JNIEnv *env, j
 		std::vector<completion_token_output> probs_output = {};
 
 		if (llama->params.sparams.n_probs > 0) {
-			const std::vector<llama_token> to_send_toks = llama_tokenize(llama->ctx, to_send, false);
+			const std::vector<llama_token> to_send_toks = llama_tokenize(llama->ctx, to_send, false, llama->tokenize_special);
 			size_t probs_pos = std::min(sent_token_probs_index, llama->generated_token_probs.size());
 			size_t probs_stop_pos = std::min(sent_token_probs_index + to_send_toks.size(), llama->generated_token_probs.size());
 			if (probs_pos < probs_stop_pos) {
