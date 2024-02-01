@@ -62,6 +62,8 @@ public final class InferenceParameters {
 	@Nullable
 	@Native private String[] antiPrompt = null;
 	@Native private int seed = 42;
+	// Whether to tokenize special and/or control tokens which otherwise are not exposed and treated as plaintext.
+	@Native private boolean tokenizeSpecial = false;
 
 	public InferenceParameters setNPredict(int nPredict) {
 		this.nPredict = nPredict;
@@ -191,6 +193,15 @@ public final class InferenceParameters {
 		return this;
 	}
 
+	/**
+	 * Changes whether special and/or control tokens are tokenized which otherwise are not exposed and treated as
+	 * plaintext.
+	 */
+	public InferenceParameters setTokenizeSpecial(boolean tokenizeSpecial) {
+		this.tokenizeSpecial = tokenizeSpecial;
+		return this;
+	}
+
 	public int getNPredict() {
 		return nPredict;
 	}
@@ -281,6 +292,10 @@ public final class InferenceParameters {
 
 	public int getSeed() {
 		return seed;
+	}
+
+	public boolean getTokenizeSpecial() {
+		return tokenizeSpecial;
 	}
 
 	public enum MiroStat {
