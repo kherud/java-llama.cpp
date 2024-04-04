@@ -93,9 +93,6 @@ option(LLAMA_BUILD_SERVER                    "llama: build server example"      
 # add perf arguments
 option(LLAMA_PERF                            "llama: enable perf"                               OFF)
 
-# Required for relocatable CMake package
-include(${CMAKE_CURRENT_SOURCE_DIR}/scripts/build-info.cmake)
-
 #
 # Compile flags
 #
