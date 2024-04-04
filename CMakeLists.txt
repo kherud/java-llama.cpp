@@ -10,7 +10,7 @@ include(FetchContent)
 FetchContent_Declare(
 	llama.cpp
 	GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-	GIT_TAG        b1645
+	GIT_TAG        b2589
 )
 FetchContent_MakeAvailable(llama.cpp)
 
@@ -90,6 +90,6 @@ else()
 endif()
 
 if (LLAMA_METAL)
-    # copy ggml-metal.metal to bin directory
+    # copy ggml-metal.metal to shared library directory
     configure_file(${llama.cpp_SOURCE_DIR}/ggml-metal.metal ${JLLAMA_DIR}/ggml-metal.metal COPYONLY)
 endif()
