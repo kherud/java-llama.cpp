@@ -1,4 +1,4 @@
-package de.kherud.llama;
+package de.kherud.llama.args;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -11,155 +11,299 @@ import java.util.Map;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import de.kherud.llama.LlamaModel;
+
 /**
  * Parameters used throughout inference of a {@link LlamaModel}, e.g., {@link LlamaModel#generate(String)} and
  * {@link LlamaModel#complete(String)}.
  */
 public final class InferenceParameters {
 
-	// new tokens to predict
-	@Native private int nPredict = -1;
+	@Native
+	private int nPredict = -1; // new tokens to predict
+	@Native
+	private boolean cachePrompt = false;
 	// number of tokens to keep from initial prompt
-	@Native private int nKeep = 0;
+	@Native
+	private int nKeep = 0;
+	@Native
+	private int nDiscard = 0;
+	private int minKeep = 0;
 	// if greater than 0, output the probabilities of top nProbs tokens.
-	@Native private int nProbs = 0;
+	@Native
+	private int nProbs = 0;
 	// logit bias for specific tokens
 	@Nullable
-	@Native private Map<Integer, Float> logitBias = null;
+	@Native
+	private Map<Integer, Float> logitBias = null;
 	// <= 0 to use vocab size
-	@Native private int topK = 40;
+	@Native
+	private int topK = 40;
 	// 1.0 = disabled
-	@Native private float topP = 0.95f;
+	@Native
+	private float topP = 0.95f;
+	@Native
+	private float minP = 0.05f;
 	// 1.0 = disabled
-	@Native private float tfsZ = 1.00f;
+	@Native
+	private float tfsZ = 1.00f;
 	// 1.0 = disabled
-	@Native private float typicalP = 1.00f;
+	@Native
+	private float typicalP = 1.00f;
 	// 1.0 = disabled
-	@Native private float temperature = 0.80f;
+	@Native
+	private float temperature = 0.80f;
+	private float dynamicTemperatureRange = 0.00f;
+	private float dynamicTemperatureExponent = 1.00f;
 	// 1.0 = disabled
-	@Native private float repeatPenalty = 1.10f;
+	@Native
+	private float repeatPenalty = 1.10f;
 	// last n tokens to penalize (0 = disable penalty, -1 = context size)
-	@Native private int repeatLastN = 64;
+	@Native
+	private int repeatLastN = 64;
 	// 0.0 = disabled
-	@Native private float frequencyPenalty = 0.00f;
+	@Native
+	private float frequencyPenalty = 0.00f;
 	// 0.0 = disabled
-	@Native private float presencePenalty = 0.00f;
+	@Native
+	private float presencePenalty = 0.00f;
 	// 0.0 = disabled
-	@Native private boolean penalizeNl = false;
-	@Native private boolean ignoreEos = false;
+	@Native
+	private boolean penalizeNl = false;
+	@Native
+	private boolean ignoreEos = false;
 	// 0 = disabled, 1 = mirostat, 2 = mirostat 2.0
-	@Native private int mirostat = MiroStat.Disabled.level;
+	@Native
+	private MiroStat mirostat = MiroStat.DISABLED;
 	// target entropy
-	@Native private float mirostatTau = 5.00f;
+	@Native
+	private float mirostatTau = 5.00f;
 	// learning rate
-	@Native private float mirostatEta = 0.10f;
-	@Native private boolean beamSearch = false;
-	@Native private int nBeams = 2;
+	@Native
+	private float mirostatEta = 0.10f;
+	@Native
+	private boolean beamSearch = false;
+	@Native
+	private int nBeams = 2;
 	// optional BNF-like grammar to constrain sampling
 	@Nullable
-	@Native private String grammar = null;
+	@Native
+	private String grammar = null;
 	// strings upon seeing which more user input is prompted
 	@Nullable
-	@Native private String[] antiPrompt = null;
-	@Native private int seed = 42;
-	// Whether to tokenize special and/or control tokens which otherwise are not exposed and treated as plaintext.
-	@Native private boolean tokenizeSpecial = false;
+	@Native
+	private String[] stopStrings = null;
+	@Nullable
+	@Native
+	private String[] promptTokenPenalties = null;
+	@Native
+	private Sampler[] samplers = null;
+	@Native
+	private int seed = 42;
 
+	/**
+	 * Set the amount of new tokens to predict
+	 */
 	public InferenceParameters setNPredict(int nPredict) {
 		this.nPredict = nPredict;
 		return this;
 	}
 
+	/**
+	 *
+	 */
+	public InferenceParameters setCachePrompt(boolean cachePrompt) {
+		this.cachePrompt = cachePrompt;
+		return this;
+	}
+
+	/**
+	 *
+	 */
 	public InferenceParameters setNKeep(int nKeep) {
 		this.nKeep = nKeep;
 		return this;
 	}
 
+	/**
+	 *
+	 */
+	public InferenceParameters setNDiscard(int nDiscard) {
+		this.nDiscard = nDiscard;
+		return this;
+	}
+
+	/**
+	 *
+	 */
+	public InferenceParameters setMinKeep(int minKeep) {
+		this.minKeep = minKeep;
+		return this;
+	}
+
+	/**
+	 *
+	 */
 	public InferenceParameters setNProbs(int nProbs) {
 		this.nProbs = nProbs;
 		return this;
 	}
 
+	/**
+	 *
+	 */
 	public InferenceParameters setLogitBias(@NotNull Map<Integer, Float> logitBias) {
 		this.logitBias = Collections.unmodifiableMap(logitBias);
 		return this;
 	}
 
+	/**
+	 *
+	 */
 	public InferenceParameters setTopK(int topK) {
 		this.topK = topK;
 		return this;
 	}
 
+	/**
+	 *
+	 */
 	public InferenceParameters setTopP(float topP) {
 		this.topP = topP;
 		return this;
 	}
 
+	/**
+	 *
+	 */
+	public InferenceParameters setMinP(float minP) {
+		this.minP = minP;
+		return this;
+	}
+
+	/**
+	 *
+	 */
 	public InferenceParameters setTfsZ(float tfsZ) {
 		this.tfsZ = tfsZ;
 		return this;
 	}
 
+	/**
+	 *
+	 */
 	public InferenceParameters setTypicalP(float typicalP) {
 		this.typicalP = typicalP;
 		return this;
 	}
 
+	/**
+	 *
+	 */
 	public InferenceParameters setTemperature(float temperature) {
 		this.temperature = temperature;
 		return this;
 	}
 
+	/**
+	 *
+	 */
+	public InferenceParameters setDynamicTemperatureRange(float dynamicTemperatureRange) {
+		this.dynamicTemperatureRange = dynamicTemperatureRange;
+		return this;
+	}
+
+	/**
+	 *
+	 */
+	public InferenceParameters setDynamicTemperatureExponent(float dynamicTemperatureExponent) {
+		this.dynamicTemperatureExponent = dynamicTemperatureExponent;
+		return this;
+	}
+
+	/**
+	 *
+	 */
 	public InferenceParameters setRepeatPenalty(float repeatPenalty) {
 		this.repeatPenalty = repeatPenalty;
 		return this;
 	}
 
+	/**
+	 *
+	 */
 	public InferenceParameters setRepeatLastN(int repeatLastN) {
 		this.repeatLastN = repeatLastN;
 		return this;
 	}
 
+	/**
+	 *
+	 */
 	public InferenceParameters setFrequencyPenalty(float frequencyPenalty) {
 		this.frequencyPenalty = frequencyPenalty;
 		return this;
 	}
 
+	/**
+	 *
+	 */
 	public InferenceParameters setPresencePenalty(float presencePenalty) {
 		this.presencePenalty = presencePenalty;
 		return this;
 	}
 
+	/**
+	 *
+	 */
 	public InferenceParameters setPenalizeNl(boolean penalizeNl) {
 		this.penalizeNl = penalizeNl;
 		return this;
 	}
 
+	/**
+	 *
+	 */
 	public InferenceParameters setIgnoreEos(boolean ignoreEos) {
 		this.ignoreEos = ignoreEos;
 		return this;
 	}
 
-	public InferenceParameters setMirostat(MiroStat mode) {
-		this.mirostat = mode.level;
+	/**
+	 *
+	 */
+	public InferenceParameters setMirostat(MiroStat mirostat) {
+		this.mirostat = mirostat;
 		return this;
 	}
 
+	/**
+	 *
+	 */
 	public InferenceParameters setMirostatTau(float mirostatTau) {
 		this.mirostatTau = mirostatTau;
 		return this;
 	}
 
+	/**
+	 *
+	 */
 	public InferenceParameters setMirostatEta(float mirostatEta) {
 		this.mirostatEta = mirostatEta;
 		return this;
 	}
 
+	/**
+	 *
+	 */
 	public InferenceParameters setBeamSearch(boolean beamSearch) {
 		this.beamSearch = beamSearch;
 		return this;
 	}
 
+	/**
+	 *
+	 */
 	public InferenceParameters setNBeams(int nBeams) {
 		this.nBeams = nBeams;
 		return this;
@@ -178,27 +322,43 @@ public final class InferenceParameters {
 		return setGrammar(grammarBuilder.toString());
 	}
 
+	/**
+	 *
+	 */
 	public InferenceParameters setGrammar(@Nullable String grammar) {
 		this.grammar = grammar;
 		return this;
 	}
 
-	public InferenceParameters setAntiPrompt(@NotNull String... antiPrompt) {
-		this.antiPrompt = antiPrompt;
-		return this;
-	}
-
-	public InferenceParameters setSeed(int seed) {
-		this.seed = seed;
+	/**
+	 *
+	 */
+	public InferenceParameters setStopStrings(@NotNull String... stopStrings) {
+		this.stopStrings = stopStrings;
 		return this;
 	}
 
 	/**
-	 * Changes whether special and/or control tokens are tokenized which otherwise are not exposed and treated as
-	 * plaintext.
+	 *
 	 */
-	public InferenceParameters setTokenizeSpecial(boolean tokenizeSpecial) {
-		this.tokenizeSpecial = tokenizeSpecial;
+	public InferenceParameters setPromptTokenPenalties(@NotNull String... promptTokenPenalties) {
+		this.promptTokenPenalties = promptTokenPenalties;
+		return this;
+	}
+
+	/**
+	 *
+	 */
+	public InferenceParameters setSamplers(@NotNull Sampler... samplers) {
+		this.samplers = samplers;
+		return this;
+	}
+
+	/**
+	 *
+	 */
+	public InferenceParameters setSeed(int seed) {
+		this.seed = seed;
 		return this;
 	}
 
@@ -206,8 +366,20 @@ public final class InferenceParameters {
 		return nPredict;
 	}
 
+	public boolean isCachePrompt() {
+		return cachePrompt;
+	}
+
 	public int getNKeep() {
 		return nKeep;
+	}
+
+	public int getMinKeep() {
+		return minKeep;
+	}
+
+	public int getNDiscard() {
+		return nDiscard;
 	}
 
 	public int getNProbs() {
@@ -226,6 +398,10 @@ public final class InferenceParameters {
 		return topP;
 	}
 
+	public float getMinP() {
+		return minP;
+	}
+
 	public float getTfsZ() {
 		return tfsZ;
 	}
@@ -236,6 +412,14 @@ public final class InferenceParameters {
 
 	public float getTemperature() {
 		return temperature;
+	}
+
+	public float getDynamicTemperatureRange() {
+		return dynamicTemperatureRange;
+	}
+
+	public float getDynamicTemperatureExponent() {
+		return dynamicTemperatureExponent;
 	}
 
 	public float getRepeatPenalty() {
@@ -262,7 +446,7 @@ public final class InferenceParameters {
 		return ignoreEos;
 	}
 
-	public int getMirostat() {
+	public MiroStat getMirostat() {
 		return mirostat;
 	}
 
@@ -278,7 +462,7 @@ public final class InferenceParameters {
 		return beamSearch;
 	}
 
-	public int getnBeams() {
+	public int getNBeams() {
 		return nBeams;
 	}
 
@@ -286,28 +470,20 @@ public final class InferenceParameters {
 		return grammar;
 	}
 
-	public @Nullable String[] getAntiPrompt() {
-		return antiPrompt;
+	public @Nullable String[] getStopStrings() {
+		return stopStrings;
+	}
+
+	public @Nullable String[] getPromptTokenPenalties() {
+		return promptTokenPenalties;
+	}
+
+	public @Nullable Sampler[] getSamplers() {
+		return samplers;
 	}
 
 	public int getSeed() {
 		return seed;
 	}
 
-	public boolean getTokenizeSpecial() {
-		return tokenizeSpecial;
-	}
-
-	public enum MiroStat {
-
-		Disabled(0),
-		V1(1),
-		V2(2);
-
-		private final int level;
-
-		MiroStat(int level) {
-			this.level = level;
-		}
-	}
 }
