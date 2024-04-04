@@ -5,7 +5,8 @@ project(jllama CXX)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_SHARED_LIBS ON)
 
-# checkout llama.cpp
+#################### llama.cpp ####################
+
 include(FetchContent)
 FetchContent_Declare(
 	llama.cpp
@@ -13,6 +14,18 @@ FetchContent_Declare(
 	GIT_TAG        b2589
 )
 FetchContent_MakeAvailable(llama.cpp)
+
+
+#################### json ####################
+
+FetchContent_Declare(
+	json
+	GIT_REPOSITORY https://github.com/nlohmann/json
+	GIT_TAG        v3.11.3
+)
+FetchContent_MakeAvailable(json)
+
+#################### jllama ####################
 
 # todo: Is there a better way to build the library than copy & pasting the build argument cmake definition of llama.cpp?
 include(build-args.cmake)
@@ -48,8 +61,6 @@ endif()
 set(JLLAMA_DIR ${CMAKE_SOURCE_DIR}/src/main/resources/de/kherud/llama/${OS_NAME}/${OS_ARCH})
 message(STATUS "Installing files to ${JLLAMA_DIR}")
 
-add_library(jllama SHARED src/main/cpp/jllama.cpp)
-
 # include jni.h and jni_md.h
 if(NOT DEFINED JNI_INCLUDE_DIRS)
     if(OS_NAME MATCHES "^Linux" OR OS_NAME STREQUAL "Mac")
@@ -75,8 +86,10 @@ if(NOT JNI_INCLUDE_DIRS)
     message(FATAL_ERROR "Could not determine JNI include directories")
 endif()
 
+add_library(jllama SHARED src/main/cpp/jllama.cpp src/main/cpp/server.cpp src/main/cpp/utils.cpp)
+
 target_include_directories(jllama PRIVATE src/main/cpp ${JNI_INCLUDE_DIRS})
-target_link_libraries(jllama PRIVATE common llama ${LLAMA_EXTRA_LIBS})
+target_link_libraries(jllama PRIVATE common llama nlohmann_json ${LLAMA_EXTRA_LIBS})
 target_compile_features(jllama PRIVATE cxx_std_11)
 
 if(OS_NAME STREQUAL "Windows")
