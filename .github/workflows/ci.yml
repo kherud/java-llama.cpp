@@ -1,0 +1,47 @@
+# This work flow runs all Java tests for continuous integration.
+# Since it has to build llama.cpp first, for speed, it only runs / tests on the natively supported GitHub runners.
+
+name: Continuous Integration
+on: [ "push", "pull_request", "workflow_dispatch" ]
+jobs:
+
+  # don't split build and test jobs to keep the workflow simple
+  build-and-test-unix:
+    name: ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - ubuntu-latest
+          - macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build libraries
+        shell: bash
+        # cmake should figure out OS and ARCH automatically when running build.sh
+        run: .github/build.sh
+      - uses: actions/setup-java@
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+      - name: Run tests
+        shell: bash
+        run: mvn verify -Dmodel.home=target
+
+  build-and-test-windows:
+    name: windows-latest
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build libraries
+        shell: cmd
+        run: |
+          .github\build.bat
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+      - name: Run tests
+        shell: cmd
+        run: mvn verify -Dmodel.home=target
