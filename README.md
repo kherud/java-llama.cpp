@@ -16,16 +16,15 @@ Access this library via Maven:
 <dependency>
     <groupId>de.kherud</groupId>
     <artifactId>llama</artifactId>
-    <version>2.3.5</version>
+    <version>3.0.0</version>
 </dependency>
 ```
 
-There are multiple [examples](src/test/java/examples). Make sure to set `model.home` and `model.name` to run them:
+There are multiple [examples](src/test/java/examples):
 
 ```bash
-mvn exec:java -Dexec.mainClass="examples.MainExample" -Dmodel.home="/path/to/models" -Dmodel.name="codellama-13b.Q5_K_M.gguf"
+mvn exec:java -Dexec.mainClass="examples.MainExample"
 ```
-Note: if your model is in the `models` directory, then you can ommit the `-Dmodel.home` property.
 
 You can also run some integration tests, which will automatically download a model to the `models` directory:
 
@@ -90,6 +89,34 @@ This includes:
 If you then compile your own JAR from this directory, you are ready to go. Otherwise, if you still want to use the library
 as a Maven dependency, see below how to set the necessary paths in order for Java to find your compiled libraries.
 
+### Custom llama.cpp Setup (GPU acceleration)
+
+This repository provides default support for CPU based inference. You can compile `llama.cpp` any way you want, however.
+In order to use your self-compiled library, set either of the [JVM options](https://www.jetbrains.com/help/idea/tuning-the-ide.html#configure-jvm-options):
+
+- `de.kherud.llama.lib.path`, for example `-Dde.kherud.llama.lib.path=/directory/containing/lib`
+- `java.library.path`, for example `-Djava.library.path=/directory/containing/lib`
+
+This repository uses [`System#mapLibraryName`](https://docs.oracle.com/javase%2F7%2Fdocs%2Fapi%2F%2F/java/lang/System.html) to determine the name of the shared library for you platform.
+If for any reason your library has a different name, you can set it with
+
+- `de.kherud.llama.lib.name`, for example `-Dde.kherud.llama.lib.name=myname.so`
+
+For compiling `llama.cpp`, refer to the official [readme](https://github.com/ggerganov/llama.cpp#build) for details.
+The library can be built with the `llama.cpp` project:
+
+```shell
+mkdir build
+cd build
+cmake .. -DBUILD_SHARED_LIBS=ON  # add any other arguments for your backend
+cmake --build . --config Release
+```
+
+Look for the shared library in `build`.
+
+> [!IMPORTANT]
+> If you are running MacOS with Metal, you have to put the file `ggml-metal.metal` from `build/bin` in the same directory as the shared library.
+
 ### Importing in Android
 
 You can use this library in Android project.
@@ -144,34 +171,6 @@ android {
 keep class de.kherud.llama.** { *; }
 ```
 
-### Custom llama.cpp Setup (GPU acceleration)
-
-This repository provides default support for CPU based inference. You can compile `llama.cpp` any way you want, however.
-In order to use your self-compiled library, set either of the [JVM options](https://www.jetbrains.com/help/idea/tuning-the-ide.html#configure-jvm-options):
-
-- `de.kherud.llama.lib.path`, for example `-Dde.kherud.llama.lib.path=/directory/containing/lib`
-- `java.library.path`, for example `-Djava.library.path=/directory/containing/lib`
-
-This repository uses [`System#mapLibraryName`](https://docs.oracle.com/javase%2F7%2Fdocs%2Fapi%2F%2F/java/lang/System.html) to determine the name of the shared library for you platform.
-If for any reason your library has a different name, you can set it with
-
-- `de.kherud.llama.lib.name`, for example `-Dde.kherud.llama.lib.name=myname.so`
-
-For compiling `llama.cpp`, refer to the official [readme](https://github.com/ggerganov/llama.cpp#build) for details.
-The library can be built with the `llama.cpp` project:
-
-```shell
-mkdir build
-cd build
-cmake .. -DBUILD_SHARED_LIBS=ON  # add any other arguments for your backend
-cmake --build . --config Release
-```
-
-Look for the shared library in `build`.
-
-> [!IMPORTANT]
-> If you are running MacOS with Metal, you have to put the file `ggml-metal.metal` from `build/bin` in the same directory as the shared library.
-
 ## Documentation
 
 ### Example
@@ -182,21 +181,15 @@ This is a short example on how to use this library:
 public class Example {
 
 	public static void main(String... args) throws IOException {
-        LlamaModel.setLogger((level, message) -> System.out.print(message));
         ModelParameters modelParams = new ModelParameters()
+                .setModelFilePath("/path/to/model.gguf")
                 .setNGpuLayers(43);
-        InferenceParameters inferParams = new InferenceParameters()
-                .setTemperature(0.7f)
-                .setPenalizeNl(true)
-                .setMirostat(InferenceParameters.MiroStat.V2)
-                .setAntiPrompt("\n");
 
-        String modelPath = "/run/media/konstantin/Seagate/models/llama2/llama-2-13b-chat/ggml-model-q4_0.gguf";
         String system = "This is a conversation between User and Llama, a friendly chatbot.\n" +
                 "Llama is helpful, kind, honest, good at writing, and never fails to answer any " +
                 "requests immediately and with precision.\n";
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
-        try (LlamaModel model = new LlamaModel(modelPath, modelParams)) {
+        try (LlamaModel model = new LlamaModel(modelParams)) {
             System.out.print(system);
             String prompt = system;
             while (true) {
@@ -206,7 +199,12 @@ public class Example {
                 prompt += input;
                 System.out.print("Llama: ");
                 prompt += "\nLlama: ";
-                for (String output : model.generate(prompt, inferParams)) {
+				InferenceParameters inferParams = new InferenceParameters(prompt)
+						.setTemperature(0.7f)
+						.setPenalizeNl(true)
+						.setMirostat(InferenceParameters.MiroStat.V2)
+						.setAntiPrompt("\n");
+                for (String output : model.generate(inferParams)) {
                     System.out.print(output);
                     prompt += output;
                 }
@@ -225,13 +223,15 @@ model to your prompt in order to extend the context. If there is repeated conten
 cache this, to improve performance.
 
 ```java
-try (LlamaModel model = new LlamaModel("/path/to/gguf-model")) {
+ModelParameters modelParams = new ModelParameters().setModelFilePath("/path/to/model.gguf");
+InferenceParameters inferParams = new InferenceParameters("Tell me a joke.");
+try (LlamaModel model = new LlamaModel(modelParams)) {
     // Stream a response and access more information about each output.
-    for (String output : model.generate("Tell me a joke.")) {
+    for (String output : model.generate(inferParams)) {
         System.out.print(output);
     }
     // Calculate a whole response before returning it.
-    String response = model.complete("Tell me another one");
+    String response = model.complete(inferParams);
     // Returns the hidden representation of the context + prompt.
     float[] embedding = model.embed("Embed this");
 }
@@ -243,39 +243,29 @@ try (LlamaModel model = new LlamaModel("/path/to/gguf-model")) {
 > freed when the model is no longer needed. This isn't strictly required, but avoids memory leaks if you use different
 > models throughout the lifecycle of your application.
 
-#### Infilling
+### Infilling
 
-You can simply pass `prefix` and `suffix` to `generate()` or `complete()`.
+You can simply set `InferenceParameters#setInputPrefix(String)` and `InferenceParameters#setInputSuffix(String)`.
 
 ### Model/Inference Configuration
 
 There are two sets of parameters you can configure, `ModelParameters` and `InferenceParameters`. Both provide builder 
-classes to ease configuration. All non-specified options have sensible defaults.
+classes to ease configuration. `ModelParameters` are once needed for loading a model, `InferenceParameters` are needed
+for every inference task. All non-specified options have sensible defaults.
 
 ```java
 ModelParameters modelParams = new ModelParameters()
-                            .setLoraAdapter("/path/to/lora/adapter")
-                            .setLoraBase("/path/to/lora/base");
-InferenceParameters inferParams = new InferenceParameters()
-		.setGrammar(new File("/path/to/grammar.gbnf"))
+        .setModelFilePath("/path/to/model.gguf")
+        .setLoraAdapter("/path/to/lora/adapter")
+        .setLoraBase("/path/to/lora/base");
+String grammar = """
+		root  ::= (expr "=" term "\\n")+
+		expr  ::= term ([-+*/] term)*
+		term  ::= [0-9]""";
+InferenceParameters inferParams = new InferenceParameters("")
+        .setGrammar(grammar)
         .setTemperature(0.8);
-LlamaModel model = new LlamaModel("/path/to/model.bin", modelParams);
-model.generate(prompt, inferParams)
-```
-
-### Logging
-
-Both Java and C++ logging can be configured via the static method `LlamaModel.setLogger`:
-
-```java
-// The method accepts a BiConsumer<LogLevel, String>.
-LlamaModel.setLogger((level, message) -> System.out.println(level.name() + ": " + message));
-// To completely silence any output, pass a no-op.
-LlamaModel.setLogger((level, message) -> {});
-
-// Similarly, a progress callback can be set (only the C++ side will call this).
-// I think this is only used to report progress loading the model with a value of 0-1.
-// It is thus state specific and can be done via the parameters.
-new ModelParameters()
-        .setProgressCallback(progress -> System.out.println("progress: " + progress));
+try (LlamaModel model = new LlamaModel(modelParams)) {
+    model.generate(inferParams);
+}
 ```
