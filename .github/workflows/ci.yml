@@ -11,18 +11,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '11'
       - name: Install libcurl
         run: |
           sudo apt-get update
           sudo apt-get install -y libcurl4-openssl-dev
       - name: Build libraries
         shell: bash
-        # cmake should figure out OS and ARCH automatically when running build.sh
-        run: .github/build.sh -DLLAMA_CURL=ON
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '11'
+        # cmake should figure out OS and ARCH automatically when running build.sh (but we need mvn compile for it)
+        run: |
+          mvn compile
+          .github/build.sh -DLLAMA_CURL=ON
       - name: Run tests
         shell: bash
         run: mvn verify
@@ -32,16 +34,18 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '11'
       - name: Install libcurl
         run: |
           brew install curl
       - name: Build libraries
         shell: bash
-        run: .github/build.sh -DLLAMA_CURL=ON
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '11'
+        run: |
+          mvn compile
+          .github/build.sh -DLLAMA_CURL=ON
       - name: Run tests
         shell: bash
         run: mvn verify
@@ -51,16 +55,18 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install libcurl
-        run: |
-          .\vcpkg\vcpkg install curl
-      - name: Build libraries
-        shell: cmd
-        run: .github\build.bat -DLLAMA_CURL=ON
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '11'
+      - name: Install libcurl
+        run: |
+          choco install curl
+      - name: Build libraries
+        shell: cmd
+        run: |
+          mvn compile
+          .github\build.bat -DLLAMA_CURL=ON
       - name: Run tests
         shell: cmd
         run: mvn verify
