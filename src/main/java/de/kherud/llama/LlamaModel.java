@@ -5,10 +5,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.function.BiConsumer;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+
+import de.kherud.llama.args.InferenceParameters;
+import de.kherud.llama.args.ModelParameters;
 
 /**
  * This class is a wrapper around the llama.cpp functionality.
@@ -29,31 +30,22 @@ public class LlamaModel implements AutoCloseable {
 		LlamaLoader.initialize();
 	}
 
-	private static final ModelParameters defaultModelParams = new ModelParameters();
-	private static final InferenceParameters defaultInferenceParams = new InferenceParameters();
-
 	@Native
 	private long ctx;
 
 	/**
-	 * Load a <b>gguf</b> llama.cpp model from a given file path with default {@link ModelParameters}.
+	 * Load with the given {@link ModelParameters}. Make sure to either set
+	 * <ul>
+	 *     <li>{@link ModelParameters#setModelFilePath(String)}</li>
+	 *     <li>{@link ModelParameters#setModelUrl(String)}</li>
+	 *     <li>{@link ModelParameters#setHuggingFaceRepository(String)}}, {@link ModelParameters#setHuggingFaceFile(String)}</li>
+	 * </ul>
 	 *
-	 * @param filePath a file path pointing to the model
+	 * @param parameters the set of options
 	 * @throws LlamaException if no model could be loaded from the given file path
 	 */
-	public LlamaModel(String filePath) {
-		this(filePath, defaultModelParams);
-	}
-
-	/**
-	 * Load a <b>gguf</b> llama.cpp model from a given file path with custom {@link ModelParameters}.
-	 *
-	 * @param filePath a file path pointing to the model
-	 * @param parameters the set of previously configured options
-	 * @throws LlamaException if no model could be loaded from the given file path
-	 */
-	public LlamaModel(String filePath, ModelParameters parameters) {
-		loadModel(filePath, parameters);
+	public LlamaModel(ModelParameters parameters) {
+		loadModel(parameters.toString());
 	}
 
 	/**
@@ -64,7 +56,7 @@ public class LlamaModel implements AutoCloseable {
 	 * @return an LLM response
 	 */
 	public String complete(String prompt) {
-		return complete(prompt, defaultInferenceParams);
+		return complete(prompt, new InferenceParameters());
 	}
 
 	/**
@@ -75,7 +67,7 @@ public class LlamaModel implements AutoCloseable {
 	 * @return an LLM response
 	 */
 	public String complete(String prompt, InferenceParameters parameters) {
-		byte[] bytes = getAnswer(prompt, parameters);
+		byte[] bytes = getAnswer(prompt, parameters.toString());
 		return new String(bytes, StandardCharsets.UTF_8);
 	}
 
@@ -88,7 +80,7 @@ public class LlamaModel implements AutoCloseable {
 	 * @return an LLM response
 	 */
 	public String complete(String prefix, String suffix) {
-		return complete(prefix, suffix, defaultInferenceParams);
+		return complete(prefix, suffix, new InferenceParameters());
 	}
 
 	/**
@@ -100,7 +92,7 @@ public class LlamaModel implements AutoCloseable {
 	 * @return an LLM response
 	 */
 	public String complete(String prefix, String suffix, InferenceParameters parameters) {
-		byte[] bytes = getInfill(prefix, suffix, parameters);
+		byte[] bytes = getInfill(prefix, suffix, parameters.toString());
 		return new String(bytes, StandardCharsets.UTF_8);
 	}
 
@@ -112,7 +104,7 @@ public class LlamaModel implements AutoCloseable {
 	 * @return iterable LLM outputs
 	 */
 	public Iterable<Output> generate(String prompt) {
-		return generate(prompt, defaultInferenceParams);
+		return generate(prompt, new InferenceParameters());
 	}
 
 	/**
@@ -135,7 +127,7 @@ public class LlamaModel implements AutoCloseable {
 	 * @return iterable LLM outputs
 	 */
 	public Iterable<Output> generate(String prefix, String suffix) {
-		return generate(prefix, suffix, defaultInferenceParams);
+		return generate(prefix, suffix, new InferenceParameters());
 	}
 
 	/**
@@ -179,12 +171,12 @@ public class LlamaModel implements AutoCloseable {
 		return new String(bytes, StandardCharsets.UTF_8);
 	}
 
-	/**
-	 * Sets a callback for both Java and C++ log messages. Can be set to {@code null} to disable logging.
-	 *
-	 * @param callback a method to call for log messages
-	 */
-	public static native void setLogger(@Nullable BiConsumer<LogLevel, String> callback);
+//	/**
+//	 * Sets a callback for both Java and C++ log messages. Can be set to {@code null} to disable logging.
+//	 *
+//	 * @param callback a method to call for log messages
+//	 */
+//	public static native void setLogger(@Nullable BiConsumer<LogLevel, String> callback);
 
 	@Override
 	public void close() {
@@ -192,12 +184,12 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 	// don't overload native methods since the C++ function names get nasty
-	private native void loadModel(String filePath, ModelParameters parameters) throws LlamaException;
-	private native void newAnswerIterator(String prompt, InferenceParameters parameters);
-	private native void newInfillIterator(String prefix, String suffix, InferenceParameters parameters);
+	private native void loadModel(String parameters) throws LlamaException;
+	private native void newAnswerIterator(String prompt, String parameters);
+	private native void newInfillIterator(String prefix, String suffix, String parameters);
 	private native Output getNext(LlamaIterator iterator);
-	private native byte[] getAnswer(String prompt, InferenceParameters parameters);
-	private native byte[] getInfill(String prefix, String suffix, InferenceParameters parameters);
+	private native byte[] getAnswer(String prompt, String parameters);
+	private native byte[] getInfill(String prefix, String suffix, String parameters);
 	private native byte[] decodeBytes(int[] tokens);
 	private native void delete();
 
@@ -240,11 +232,11 @@ public class LlamaModel implements AutoCloseable {
 		private long tokenIndex = 0;
 
 		private LlamaIterator(String prompt, InferenceParameters parameters) {
-			newAnswerIterator(prompt, parameters);
+			newAnswerIterator(prompt, parameters.toString());
 		}
 
 		private LlamaIterator(String prefix, String suffix, InferenceParameters parameters) {
-			newInfillIterator(prefix, suffix, parameters);
+			newInfillIterator(prefix, suffix, parameters.toString());
 		}
 
 		@Override
