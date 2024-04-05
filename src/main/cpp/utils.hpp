@@ -25,33 +25,21 @@ enum error_type {
     ERROR_TYPE_NOT_SUPPORTED, // custom error
 };
 
-extern bool server_verbose;
 extern bool server_log_json;
 
 #ifndef SERVER_VERBOSE
 #define SERVER_VERBOSE 1
 #endif
 
+#if SERVER_VERBOSE != 1
+#define LOG_VERBOSE(MSG, ...)
+#else
 #define LOG_VERBOSE(MSG, ...)                                            \
     do                                                                   \
     {                                                                    \
-        if (server_verbose)                                              \
-        {                                                                \
-            server_log("VERB", __func__, __LINE__, MSG, __VA_ARGS__); \
-        }                                                                \
+		server_log("VERB", __func__, __LINE__, MSG, __VA_ARGS__);        \
     } while (0)
-//#if SERVER_VERBOSE != 1
-//#define LOG_VERBOSE(MSG, ...)
-//#else
-//#define LOG_VERBOSE(MSG, ...)                                            \
-//    do                                                                   \
-//    {                                                                    \
-//        if (server_verbose)                                              \
-//        {                                                                \
-//            server_log("VERB", __func__, __LINE__, MSG, __VA_ARGS__); \
-//        }                                                                \
-//    } while (0)
-//#endif
+#endif
 
 #define LOG_ERROR(  MSG, ...) server_log("ERR",  __func__, __LINE__, MSG, __VA_ARGS__)
 #define LOG_WARNING(MSG, ...) server_log("WARN", __func__, __LINE__, MSG, __VA_ARGS__)
@@ -477,9 +465,9 @@ static json format_final_response_oaicompat(const json & request, json result, c
         {"id", completion_id}
     };
 
-    if (server_verbose) {
-        res["__verbose"] = result;
-    }
+#if SERVER_VERBOSE
+	res["__verbose"] = result;
+#endif
 
     if (result.contains("completion_probabilities")) {
         res["completion_probabilities"] = json_value(result, "completion_probabilities", json::array());
