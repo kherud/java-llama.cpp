@@ -21,7 +21,7 @@ class ProcessRunner {
 		return getProcessOutput(p);
 	}
 
-	static String getProcessOutput(Process process) throws IOException {
+	private static String getProcessOutput(Process process) throws IOException {
 		try (InputStream in = process.getInputStream()) {
 			int readLen;
 			ByteArrayOutputStream b = new ByteArrayOutputStream();

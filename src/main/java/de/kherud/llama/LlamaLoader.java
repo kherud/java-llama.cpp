@@ -73,7 +73,8 @@ class LlamaLoader {
 	private static void cleanup() {
 		try (Stream<Path> dirList = Files.list(getTempDir().toPath())) {
 			dirList.filter(LlamaLoader::shouldCleanPath).forEach(LlamaLoader::cleanPath);
-		} catch (IOException e) {
+		}
+		catch (IOException e) {
 			System.err.println("Failed to open directory: " + e.getMessage());
 		}
 	}
@@ -86,7 +87,8 @@ class LlamaLoader {
 	private static void cleanPath(Path path) {
 		try {
 			Files.delete(path);
-		} catch (Exception e) {
+		}
+		catch (Exception e) {
 			System.err.println("Failed to delete old native lib: " + e.getMessage());
 		}
 	}
@@ -105,7 +107,8 @@ class LlamaLoader {
 			Path path = Paths.get(nativeLibPath, nativeLibName);
 			if (loadNativeLibrary(path)) {
 				return;
-			} else {
+			}
+			else {
 				triedPaths.add(nativeLibPath);
 			}
 		}
@@ -116,11 +119,11 @@ class LlamaLoader {
 				// if java-llama.cpp is added as code source
 				System.loadLibrary(name);
 				return;
-			} catch (UnsatisfiedLinkError e) {
+			}
+			catch (UnsatisfiedLinkError e) {
 				triedPaths.add("Directly from .apk/lib");
 			}
 		}
-
 
 		// Load the os-dependent library from the jar file
 		nativeLibPath = getNativeResourcePath();
@@ -130,7 +133,8 @@ class LlamaLoader {
 			// Try extracting the library from jar
 			if (extractAndLoadLibraryFile(nativeLibPath, nativeLibName, tempFolder)) {
 				return;
-			} else {
+			}
+			else {
 				triedPaths.add(nativeLibPath);
 			}
 		}
@@ -144,7 +148,8 @@ class LlamaLoader {
 			Path path = Paths.get(ldPath, nativeLibName);
 			if (loadNativeLibrary(path)) {
 				return;
-			} else {
+			}
+			else {
 				triedPaths.add(ldPath);
 			}
 		}
@@ -173,7 +178,8 @@ class LlamaLoader {
 		try {
 			System.load(absolutePath);
 			return true;
-		} catch (UnsatisfiedLinkError e) {
+		}
+		catch (UnsatisfiedLinkError e) {
 			System.err.println(e.getMessage());
 			System.err.println("Failed to load native library: " + absolutePath + ". osinfo: " + OSInfo.getNativeLibFolderPathForCurrentOS());
 			return false;
@@ -193,7 +199,8 @@ class LlamaLoader {
 					return null;
 				}
 				Files.copy(reader, extractedFilePath, StandardCopyOption.REPLACE_EXISTING);
-			} finally {
+			}
+			finally {
 				// Delete the extracted lib file on JVM exit.
 				extractedFilePath.toFile().deleteOnExit();
 			}
@@ -213,7 +220,8 @@ class LlamaLoader {
 
 			System.out.println("Extracted '" + fileName + "' to '" + extractedFilePath + "'");
 			return extractedFilePath;
-		} catch (IOException e) {
+		}
+		catch (IOException e) {
 			System.err.println(e.getMessage());
 			return null;
 		}

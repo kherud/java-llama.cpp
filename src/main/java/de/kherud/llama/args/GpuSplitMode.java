@@ -5,5 +5,4 @@ public enum GpuSplitMode {
 	NONE,
 	LAYER,
 	ROW
-
 }

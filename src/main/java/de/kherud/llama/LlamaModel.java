@@ -74,7 +74,8 @@ public class LlamaModel implements AutoCloseable {
 	 *
 	 * @param prompt the string to embed
 	 * @return an embedding float array
-	 * @throws IllegalStateException if embedding mode was not activated (see {@link ModelParameters#setEmbedding(boolean)})
+	 * @throws IllegalStateException if embedding mode was not activated (see
+	 *                               {@link ModelParameters#setEmbedding(boolean)})
 	 */
 	public native float[] embed(String prompt);
 
@@ -92,7 +93,7 @@ public class LlamaModel implements AutoCloseable {
 	 * @param tokens an array of tokens
 	 * @return the token ids decoded to a string
 	 */
-	public String decode(int[] tokens)  {
+	public String decode(int[] tokens) {
 		byte[] bytes = decodeBytes(tokens);
 		return new String(bytes, StandardCharsets.UTF_8);
 	}
@@ -111,9 +112,13 @@ public class LlamaModel implements AutoCloseable {
 
 	// don't overload native methods since the C++ function names get nasty
 	private native void loadModel(String parameters) throws LlamaException;
+
 	private native int requestCompletion(String params) throws LlamaException;
+
 	private native Output receiveCompletion(int taskId) throws LlamaException;
+
 	private native byte[] decodeBytes(int[] tokens);
+
 	private native void delete();
 
 	/**
@@ -138,7 +143,6 @@ public class LlamaModel implements AutoCloseable {
 		public String toString() {
 			return text;
 		}
-
 	}
 
 	private final class LlamaIterator implements Iterator<Output> {
@@ -169,5 +173,4 @@ public class LlamaModel implements AutoCloseable {
 			return output;
 		}
 	}
-
 }

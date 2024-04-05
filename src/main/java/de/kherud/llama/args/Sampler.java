@@ -8,5 +8,4 @@ public enum Sampler {
 	TOP_P,
 	MIN_P,
 	TEMPERATURE
-
 }

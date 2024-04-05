@@ -83,7 +83,8 @@ abstract class JsonParameters {
 						hhhh = Integer.toHexString(c);
 						builder.append("0000", 0, 4 - hhhh.length());
 						builder.append(hhhh);
-					} else {
+					}
+					else {
 						builder.append(c);
 					}
 			}
