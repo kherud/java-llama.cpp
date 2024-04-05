@@ -20,8 +20,8 @@ public class LlamaModelIT {
 	public static void setup() {
 		model = new LlamaModel(
 				new ModelParameters()
-						.setModelFilePath("models/mistral-7b-instruct-v0.2.Q2_K.gguf")
-						.setModelUrl("https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q2_K.gguf")
+						.setModelFilePath("models/llama-160m-chat-v1.q2_k.gguf")
+						.setModelUrl("https://huggingface.co/afrideva/Llama-160M-Chat-v1-GGUF/resolve/main/llama-160m-chat-v1.q2_k.gguf")
 						// we need to disable logging since it causes problems with the maven failsafe plugin
 						.setDisableLog(true)
 						.setNGpuLayers(43)
@@ -136,7 +136,7 @@ public class LlamaModelIT {
 	@Test
 	public void testEmbedding() {
 		float[] embedding = model.embed(prefix);
-		Assert.assertEquals(4096, embedding.length);
+		Assert.assertEquals(768, embedding.length);
 	}
 
 	@Test
