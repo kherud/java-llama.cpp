@@ -252,6 +252,12 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     json json_params = json::parse(c_params);
     server_params_parse(json_params, sparams, params);
 
+    if (json_value(json_params, "disable_log", false)) {
+    	log_disable();
+    } else {
+    	log_enable();
+    }
+
     if (!sparams.system_prompt.empty())
     {
         ctx_server->system_prompt_set(sparams.system_prompt);
