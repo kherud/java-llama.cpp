@@ -49,11 +49,9 @@ static jmethodID m_biconsumer_accept = 0;
 
 // fields
 static jfieldID f_model_pointer = 0;
+static jfieldID f_task_id = 0;
 static jfieldID f_utf_8 = 0;
-// iterator
 static jfieldID f_iter_has_next = 0;
-static jfieldID f_iter_n_generated = 0;
-static jfieldID f_iter_token_index = 0;
 
 // objects
 static jobject o_utf_8 = 0;
@@ -146,7 +144,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     c_error_oom = (jclass)env->NewGlobalRef(c_error_oom);
 
     // find constructors
-    cc_output = env->GetMethodID(c_output, "<init>", "(I[BLjava/util/Map;)V");
+    cc_output = env->GetMethodID(c_output, "<init>", "([BLjava/util/Map;Z)V");
     cc_hash_map = env->GetMethodID(c_hash_map, "<init>", "()V");
     cc_integer = env->GetMethodID(c_integer, "<init>", "(I)V");
     cc_float = env->GetMethodID(c_float, "<init>", "(F)V");
@@ -177,12 +175,11 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
     // find fields
     f_model_pointer = env->GetFieldID(c_llama_model, "ctx", "J");
+    f_task_id = env->GetFieldID(c_llama_iterator, "taskId", "I");
     f_utf_8 = env->GetStaticFieldID(c_standard_charsets, "UTF_8", "Ljava/nio/charset/Charset;");
     f_iter_has_next = env->GetFieldID(c_llama_iterator, "hasNext", "Z");
-    f_iter_n_generated = env->GetFieldID(c_llama_iterator, "generatedCount", "J");
-    f_iter_token_index = env->GetFieldID(c_llama_iterator, "tokenIndex", "J");
 
-    if (!(f_model_pointer && f_utf_8 && f_iter_has_next && f_iter_n_generated && f_iter_token_index))
+    if (!(f_model_pointer && f_task_id && f_utf_8 && f_iter_has_next))
     {
         goto error;
     }
@@ -339,157 +336,109 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     env->SetLongField(obj, f_model_pointer, reinterpret_cast<jlong>(ctx_server));
 }
 
-// JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_newAnswerIterator(JNIEnv *env, jobject obj, jstring prompt,
-//                                                                          jobject params)
-//{
-//     jlong llama_handle = env->GetLongField(obj, f_model_pointer);
-//     jllama_context *llama = reinterpret_cast<jllama_context *>(llama_handle);
-//
-//     //    auto lock = llama->lock();
-//
-//     llama->rewind();
-//
-//     llama_reset_timings(llama->ctx);
-//
-//     setup_answering(env, llama, prompt, params);
-//
-//     llama->loadPrompt();
-//     llama->beginCompletion();
-// }
-//
-// JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_newInfillIterator(JNIEnv *env, jobject obj, jstring prefix,
-//                                                                          jstring suffix, jobject params)
-//{
-//     jlong llama_handle = env->GetLongField(obj, f_model_pointer);
-//     jllama_context *llama = reinterpret_cast<jllama_context *>(llama_handle);
-//
-//     //    auto lock = llama->lock();
-//
-//     llama->rewind();
-//
-//     llama_reset_timings(llama->ctx);
-//
-//     setup_infilling(env, llama, prefix, suffix, params);
-//
-//     llama->loadInfill();
-//     llama->beginCompletion();
-// }
-//
-// JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_getNext(JNIEnv *env, jobject obj, jobject iter)
-//{
-//     jlong llama_handle = env->GetLongField(obj, f_model_pointer);
-//     jllama_context *llama = reinterpret_cast<jllama_context *>(llama_handle);
-//
-//     size_t sent_count = env->GetLongField(iter, f_iter_n_generated);
-//     size_t sent_token_probs_index = env->GetLongField(iter, f_iter_token_index);
-//
-//     completion_token_output token_with_probs;
-//     while (llama->has_next_token)
-//     {
-//         token_with_probs = llama->doCompletion();
-//         if (token_with_probs.tok >= 0 && llama->multibyte_pending <= 0)
-//         {
-//             break;
-//         }
-//     }
-//     const std::string token_text = llama_token_to_piece(llama->ctx, token_with_probs.tok);
-//
-//     size_t pos = std::min(sent_count, llama->generated_text.size());
-//
-//     const std::string str_test = llama->generated_text.substr(pos);
-//     bool is_stop_full = false;
-//     size_t stop_pos = llama->findStoppingStrings(str_test, token_text.size(), STOP_FULL);
-//     if (stop_pos != std::string::npos)
-//     {
-//         is_stop_full = true;
-//         llama->generated_text.erase(llama->generated_text.begin() + pos + stop_pos, llama->generated_text.end());
-//         pos = std::min(sent_count, llama->generated_text.size());
-//     }
-//     else
-//     {
-//         is_stop_full = false;
-//         stop_pos = llama->findStoppingStrings(str_test, token_text.size(), STOP_PARTIAL);
-//     }
-//
-//     std::string to_send;
-//     if (stop_pos == std::string::npos ||
-//         // Send rest of the text if we are at the end of the generation
-//         (!llama->has_next_token && !is_stop_full && stop_pos > 0))
-//     {
-//         to_send = llama->generated_text.substr(pos, std::string::npos);
-//
-//         sent_count += to_send.size();
-//         env->SetLongField(iter, f_iter_n_generated, sent_count);
-//
-//         std::vector<completion_token_output> probs_output = {};
-//
-//         if (llama->params.sparams.n_probs > 0)
-//         {
-//             const std::vector<llama_token> to_send_toks =
-//                 llama_tokenize(llama->ctx, to_send, false, llama->tokenize_special);
-//             size_t probs_pos = std::min(sent_token_probs_index, llama->generated_token_probs.size());
-//             size_t probs_stop_pos =
-//                 std::min(sent_token_probs_index + to_send_toks.size(), llama->generated_token_probs.size());
-//             if (probs_pos < probs_stop_pos)
-//             {
-//                 probs_output =
-//                     std::vector<completion_token_output>(llama->generated_token_probs.begin() + probs_pos,
-//                                                          llama->generated_token_probs.begin() + probs_stop_pos);
-//             }
-//             sent_token_probs_index = probs_stop_pos;
-//             env->SetLongField(iter, f_iter_token_index, sent_token_probs_index);
-//         }
-//     }
-//     else
-//     {
-//         to_send = "";
-//     }
-//
-//     if (!llama->has_next_token)
-//     {
-//         env->SetBooleanField(iter, f_iter_has_next, false);
-//         // llama.mutex.unlock();
-//         // lock.release();
-//     }
-//
-//     jobject o_probabilities = env->NewObject(c_hash_map, cc_hash_map);
-//     for (const auto &tp : token_with_probs.probs)
-//     {
-//         jobject jtoken = env->NewObject(c_integer, cc_integer, tp.tok);
-//         jobject jprob = env->NewObject(c_float, cc_float, tp.prob);
-//         env->CallObjectMethod(o_probabilities, m_map_put, jtoken, jprob);
-//     }
-//     jbyteArray jbytes = parse_jbytes(env, to_send);
-//     return env->NewObject(c_output, cc_output, token_with_probs.tok, jbytes, o_probabilities);
-// }
-//
-JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getAnswer(JNIEnv *env, jobject obj, jstring jprompt,
-                                                                       jstring jparams)
+JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv *env, jobject obj, jstring jparams)
 {
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
     server_context *ctx_server = reinterpret_cast<server_context *>(server_handle);
 
     std::string c_params = parse_jstring(env, jparams);
     json json_params = json::parse(c_params);
-    json_params["prompt"] = parse_jstring(env, jprompt);
+    const bool infill = json_params.contains("input_prefix") || json_params.contains("input_suffix");
 
     const int id_task = ctx_server->queue_tasks.get_new_id();
     ctx_server->queue_results.add_waiting_task_id(id_task);
-    ctx_server->request_completion(id_task, -1, json_params, false, false);
+    ctx_server->request_completion(id_task, -1, json_params, infill, false);
+
+    return id_task;
+}
+
+JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIEnv *env, jobject obj, jint id_task)
+{
+    jlong server_handle = env->GetLongField(obj, f_model_pointer);
+    server_context *ctx_server = reinterpret_cast<server_context *>(server_handle);
 
     server_task_result result = ctx_server->queue_results.recv(id_task);
 
-    if (!result.error && result.stop)
-    {
-        std::string response = result.data["content"].get<std::string>();
-        ctx_server->queue_results.remove_waiting_task_id(id_task);
-        return parse_jbytes(env, response);
-    }
-    else
+    LOG_VERBOSE("data stream", {{"to_send", result.data}});
+
+    if (result.error)
     {
         std::string response = result.data["message"].get<std::string>();
         env->ThrowNew(c_llama_error, response.c_str());
         return nullptr;
+    }
+    else
+    {
+        std::string response = result.data["content"].get<std::string>();
+        if (result.stop)
+        {
+            ctx_server->queue_results.remove_waiting_task_id(id_task);
+        }
+
+        jobject o_probabilities = env->NewObject(c_hash_map, cc_hash_map);
+        if (result.data.contains("completion_probabilities"))
+        {
+            auto completion_probabilities = result.data["completion_probabilities"];
+            for (const auto &entry : completion_probabilities)
+            {
+                auto probs = entry["probs"];
+                for (const auto &tp : probs)
+                {
+                    std::string tok_str = tp["tok_str"];
+                    jstring jtok_str = env->NewStringUTF(tok_str.c_str());
+                    float prob = tp["prob"];
+                    jobject jprob = env->NewObject(c_float, cc_float, prob);
+                    env->CallObjectMethod(o_probabilities, m_map_put, jtok_str, jprob);
+                    env->DeleteLocalRef(jtok_str);
+                    env->DeleteLocalRef(jprob);
+                }
+            }
+        }
+
+        jbyteArray jbytes = parse_jbytes(env, response);
+        return env->NewObject(c_output, cc_output, jbytes, o_probabilities, result.stop);
+    }
+}
+
+JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env, jobject obj, jstring jprompt)
+{
+    jlong server_handle = env->GetLongField(obj, f_model_pointer);
+    server_context *ctx_server = reinterpret_cast<server_context *>(server_handle);
+
+    if (!ctx_server->params.embedding) {
+		env->ThrowNew(c_llama_error, "model was not loaded with embedding support (see ModelParameters#setEmbedding(boolean))");
+		return nullptr;
+    }
+
+	const std::string prompt = parse_jstring(env, jprompt);
+
+    const int id_task = ctx_server->queue_tasks.get_new_id();
+    ctx_server->queue_results.add_waiting_task_id(id_task);
+    ctx_server->request_completion(id_task, -1, {{"prompt", prompt}}, false, true);
+
+    server_task_result result = ctx_server->queue_results.recv(id_task);
+    ctx_server->queue_results.remove_waiting_task_id(id_task);
+    if (result.error)
+    {
+        std::string response = result.data["message"].get<std::string>();
+        env->ThrowNew(c_llama_error, response.c_str());
+        return nullptr;
+    }
+    else
+    {
+    	std::cout << result.data << std::endl;
+        std::vector<float> embedding = result.data["embedding"].get<std::vector<float>>();
+
+        jfloatArray j_embedding = env->NewFloatArray(embedding.size());
+        if (j_embedding == nullptr)
+        {
+            env->ThrowNew(c_error_oom, "could not allocate embedding");
+            return nullptr;
+        }
+
+        env->SetFloatArrayRegion(j_embedding, 0, embedding.size(), reinterpret_cast<const jfloat *>(embedding.data()));
+
+        return j_embedding;
     }
 }
 
