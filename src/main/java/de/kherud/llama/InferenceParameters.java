@@ -1,15 +1,19 @@
-package de.kherud.llama.args;
+package de.kherud.llama;
 
 import java.util.Map;
 
-import de.kherud.llama.LlamaModel;
+import de.kherud.llama.args.MiroStat;
+import de.kherud.llama.args.Sampler;
 
 /**
- * Parameters used throughout inference of a {@link LlamaModel}, e.g., {@link LlamaModel#generate(String)} and
- * {@link LlamaModel#complete(String)}.
+ * Parameters used throughout inference of a {@link LlamaModel}, e.g., {@link LlamaModel#generate(InferenceParameters)} and
+ * {@link LlamaModel#complete(InferenceParameters)}.
  */
 public final class InferenceParameters extends JsonParameters {
 
+	private static final String PARAM_PROMPT = "prompt";
+	private static final String PARAM_INPUT_PREFIX = "input_prefix";
+	private static final String PARAM_INPUT_SUFFIX = "input_suffix";
 	private static final String PARAM_CACHE_PROMPT = "cache_prompt";
 	private static final String PARAM_N_PREDICT = "n_predict";
 	private static final String PARAM_TOP_K = "top_k";
@@ -38,6 +42,36 @@ public final class InferenceParameters extends JsonParameters {
 	private static final String PARAM_LOGIT_BIAS = "logit_bias";
 	private static final String PARAM_STOP = "stop";
 	private static final String PARAM_SAMPLERS = "samplers";
+	private static final String PARAM_STREAM = "stream";
+
+	public InferenceParameters(String prompt) {
+		// we always need a prompt
+		setPrompt(prompt);
+	}
+
+	/**
+	 * Set the prompt to start generation with (default: empty)
+	 */
+	public InferenceParameters setPrompt(String prompt) {
+		parameters.put(PARAM_PROMPT, toJsonString(prompt));
+		return this;
+	}
+
+	/**
+	 * Set a prefix for infilling (default: empty)
+	 */
+	public InferenceParameters setInputPrefix(String inputPrefix) {
+		parameters.put(PARAM_INPUT_PREFIX, toJsonString(inputPrefix));
+		return this;
+	}
+
+	/**
+	 * Set a suffix for infilling (default: empty)
+	 */
+	public InferenceParameters setInputSuffix(String inputSuffix) {
+		parameters.put(PARAM_INPUT_SUFFIX, toJsonString(inputSuffix));
+		return this;
+	}
 
 	/**
 	 * Whether to remember the prompt to avoid reprocessing it
@@ -313,6 +347,11 @@ public final class InferenceParameters extends JsonParameters {
 			builder.append("]");
 			parameters.put(PARAM_SAMPLERS, builder.toString());
 		}
+		return this;
+	}
+
+	InferenceParameters setStream(boolean stream) {
+		parameters.put(PARAM_STREAM, String.valueOf(stream));
 		return this;
 	}
 }
