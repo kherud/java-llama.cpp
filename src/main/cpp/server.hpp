@@ -2403,12 +2403,12 @@ static void server_params_parse(json jparams, server_params &sparams, gpt_params
 
 	if (jparams.contains("tensor_split")) {
 #if defined(GGML_USE_CUDA) || defined(GGML_USE_SYCL)
-		auto tensor_split = json_value(jparams, "tensor_split", default_params.tensor_split);
+		std::vector<float> tensor_split = jparams["tensor_split"].get<std::vector<float>>();
 		GGML_ASSERT(tensor_split.size() <= llama_max_devices());
 
 		for (size_t i_device = 0; i_device < llama_max_devices(); ++i_device) {
 			if (i_device < tensor_split.size()) {
-				params.tensor_split[i_device] = tensor_split.at(i_device).get<float>();
+				params.tensor_split[i_device] = tensor_split.at(i_device);
 			} else {
 				params.tensor_split[i_device] = 0.0f;
 			}
