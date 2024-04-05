@@ -1,4 +1,4 @@
-package de.kherud.llama.args;
+package de.kherud.llama;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,16 +35,58 @@ abstract class JsonParameters {
 		return builder.toString();
 	}
 
+	// taken from org.json.JSONObject#quote(String, Writer)
 	String toJsonString(String text) {
 		if (text == null) return null;
 		StringBuilder builder = new StringBuilder((text.length()) + 2);
+
+		char b;
+		char c = 0;
+		String hhhh;
+		int i;
+		int len = text.length();
+
 		builder.append('"');
-		for (int i = 0; i < text.length(); i++) {
-			char c = text.charAt(i);
-			if (c == '"' || c == '\\') {
-				builder.append('\\');
+		for (i = 0; i < len; i += 1) {
+			b = c;
+			c = text.charAt(i);
+			switch (c) {
+				case '\\':
+				case '"':
+					builder.append('\\');
+					builder.append(c);
+					break;
+				case '/':
+					if (b == '<') {
+						builder.append('\\');
+					}
+					builder.append(c);
+					break;
+				case '\b':
+					builder.append("\\b");
+					break;
+				case '\t':
+					builder.append("\\t");
+					break;
+				case '\n':
+					builder.append("\\n");
+					break;
+				case '\f':
+					builder.append("\\f");
+					break;
+				case '\r':
+					builder.append("\\r");
+					break;
+				default:
+					if (c < ' ' || (c >= '\u0080' && c < '\u00a0') || (c >= '\u2000' && c < '\u2100')) {
+						builder.append("\\u");
+						hhhh = Integer.toHexString(c);
+						builder.append("0000", 0, 4 - hhhh.length());
+						builder.append(hhhh);
+					} else {
+						builder.append(c);
+					}
 			}
-			builder.append(c);
 		}
 		builder.append('"');
 		return builder.toString();
