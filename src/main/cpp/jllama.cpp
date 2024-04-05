@@ -492,147 +492,49 @@ JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getAnswer(JNIEnv *e
         return nullptr;
     }
 }
-//
-// JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getInfill(JNIEnv *env, jobject obj, jstring prefix,
-//                                                                        jstring suffix, jobject params)
-//{
-//     jlong llama_handle = env->GetLongField(obj, f_model_pointer);
-//     jllama_context *llama = reinterpret_cast<jllama_context *>(llama_handle);
-//
-//     //	auto lock = llama->lock();
-//
-//     llama->rewind();
-//
-//     llama_reset_timings(llama->ctx);
-//
-//     setup_infilling(env, llama, prefix, suffix, params);
-//
-//     llama->loadInfill();
-//     llama->beginCompletion();
-//
-//     size_t stop_pos = std::string::npos;
-//
-//     while (llama->has_next_token)
-//     {
-//         const completion_token_output token_with_probs = llama->doCompletion();
-//         const std::string token_text =
-//             token_with_probs.tok == -1 ? "" : llama_token_to_piece(llama->ctx, token_with_probs.tok);
-//
-//         stop_pos = llama->findStoppingStrings(llama->generated_text, token_text.size(), STOP_FULL);
-//     }
-//
-//     if (stop_pos == std::string::npos)
-//     {
-//         stop_pos = llama->findStoppingStrings(llama->generated_text, 0, STOP_PARTIAL);
-//     }
-//     if (stop_pos != std::string::npos)
-//     {
-//         llama->generated_text.erase(llama->generated_text.begin() + stop_pos, llama->generated_text.end());
-//     }
-//
-//     //	llama->lock().release();
-//     //	llama->mutex.unlock();
-//
-//     return parse_jbytes(env, llama->generated_text);
-// }
-//
-// JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env, jobject obj, jstring java_prompt)
-//{
-//     jlong llama_handle = env->GetLongField(obj, f_model_pointer);
-//     jllama_context *llama = reinterpret_cast<jllama_context *>(llama_handle);
-//
-//     //	auto lock = llama->lock();
-//
-//     llama->rewind();
-//     llama_reset_timings(llama->ctx);
-//     llama->prompt = parse_jstring(env, java_prompt);
-//     llama->params.n_predict = 0;
-//     llama->loadPrompt();
-//     llama->beginCompletion();
-//     llama->doCompletion();
-//
-//     static const int n_embd = llama_n_embd(llama->model);
-//     const float *data = llama_get_embeddings(llama->ctx);
-//     std::vector<float> embedding(data, data + n_embd);
-//
-//     jfloatArray java_embedding = env->NewFloatArray(embedding.size());
-//     if (java_embedding == nullptr)
-//     {
-//         env->ThrowNew(c_error_oom, "could not allocate embedding");
-//         return nullptr;
-//     }
-//
-//     env->SetFloatArrayRegion(java_embedding, 0, embedding.size(), reinterpret_cast<const jfloat
-//     *>(embedding.data()));
-//
-//     return java_embedding;
-// }
-//
-// JNIEXPORT jintArray JNICALL Java_de_kherud_llama_LlamaModel_encode(JNIEnv *env, jobject obj, jstring jprompt)
-//{
-//     jlong llama_handle = env->GetLongField(obj, f_model_pointer);
-//     jllama_context *llama = reinterpret_cast<jllama_context *>(llama_handle);
-//
-//     //	auto lock = llama->lock();
-//
-//     std::string prompt = parse_jstring(env, jprompt);
-//     std::vector<llama_token> tokens = llama->tokenize(prompt, false);
-//
-//     jintArray java_tokens = env->NewIntArray(tokens.size());
-//     if (java_tokens == nullptr)
-//     {
-//         env->ThrowNew(c_error_oom, "could not allocate tokens");
-//         return nullptr;
-//     }
-//
-//     env->SetIntArrayRegion(java_tokens, 0, tokens.size(), reinterpret_cast<const jint *>(tokens.data()));
-//
-//     //	lock.release();
-//     return java_tokens;
-// }
-//
-// JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_decodeBytes(JNIEnv *env, jobject obj,
-//                                                                          jintArray java_tokens)
-//{
-//     jlong llama_handle = env->GetLongField(obj, f_model_pointer);
-//     jllama_context *llama = reinterpret_cast<jllama_context *>(llama_handle);
-//
-//     //    auto lock = llama->lock();
-//
-//     jsize length = env->GetArrayLength(java_tokens);
-//     jint *elements = env->GetIntArrayElements(java_tokens, nullptr);
-//     std::vector<llama_token> tokens(elements, elements + length);
-//     std::string text = tokens_to_str(llama->ctx, tokens.cbegin(), tokens.cend());
-//
-//     env->ReleaseIntArrayElements(java_tokens, elements, 0);
-//
-//     //	lock.release();
-//     return parse_jbytes(env, text);
-// }
-//
-// JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_setLogger(JNIEnv *env, jclass clazz, jobject callback)
-//{
-//     env->GetJavaVM(&g_vm);
-//
-//     if (g_log_callback != nullptr)
-//     {
-//         env->DeleteGlobalRef(g_log_callback);
-//     }
-//
-//     if (callback == nullptr)
-//     {
-//         llama_log_set(nullptr, nullptr);
-//     }
-//     else
-//     {
-//         g_log_callback = env->NewGlobalRef(callback);
-//         llama_log_set(jllama_log_callback, nullptr);
-//     }
-// }
-//
-// JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_delete(JNIEnv *env, jobject obj)
-//{
-//     jlong llama_handle = env->GetLongField(obj, f_model_pointer);
-//     jllama_context *llama = reinterpret_cast<jllama_context *>(llama_handle);
-//     delete llama;
-// }
+
+JNIEXPORT jintArray JNICALL Java_de_kherud_llama_LlamaModel_encode(JNIEnv *env, jobject obj, jstring jprompt)
+{
+    jlong server_handle = env->GetLongField(obj, f_model_pointer);
+    server_context *ctx_server = reinterpret_cast<server_context *>(server_handle);
+
+    const std::string c_prompt = parse_jstring(env, jprompt);
+    std::vector<llama_token> tokens = ctx_server->tokenize(c_prompt, false);
+
+    jintArray java_tokens = env->NewIntArray(tokens.size());
+    if (java_tokens == nullptr)
+    {
+        env->ThrowNew(c_error_oom, "could not allocate token memory");
+        return nullptr;
+    }
+
+    env->SetIntArrayRegion(java_tokens, 0, tokens.size(), reinterpret_cast<const jint *>(tokens.data()));
+
+    return java_tokens;
+}
+
+JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_decodeBytes(JNIEnv *env, jobject obj,
+                                                                         jintArray java_tokens)
+{
+    jlong server_handle = env->GetLongField(obj, f_model_pointer);
+    server_context *ctx_server = reinterpret_cast<server_context *>(server_handle);
+
+    jsize length = env->GetArrayLength(java_tokens);
+    jint *elements = env->GetIntArrayElements(java_tokens, nullptr);
+    std::vector<llama_token> tokens(elements, elements + length);
+    std::string text = tokens_to_str(ctx_server->ctx, tokens.cbegin(), tokens.cend());
+
+    env->ReleaseIntArrayElements(java_tokens, elements, 0);
+
+    return parse_jbytes(env, text);
+}
+
+JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_delete(JNIEnv *env, jobject obj)
+{
+    jlong server_handle = env->GetLongField(obj, f_model_pointer);
+    server_context *ctx_server = reinterpret_cast<server_context *>(server_handle);
+    ctx_server->queue_tasks.terminate();
+    // maybe we should keep track how many models were loaded before freeing the backend
+    llama_backend_free();
+    delete ctx_server;
+}
