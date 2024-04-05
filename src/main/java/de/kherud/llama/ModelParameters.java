@@ -1,8 +1,11 @@
-package de.kherud.llama.args;
+package de.kherud.llama;
 
 import java.util.Map;
 
-import de.kherud.llama.LlamaModel;
+import de.kherud.llama.args.GpuSplitMode;
+import de.kherud.llama.args.NumaStrategy;
+import de.kherud.llama.args.PoolingType;
+import de.kherud.llama.args.RopeScalingType;
 
 /***
  * Parameters used for initializing a {@link LlamaModel}.
@@ -49,7 +52,6 @@ public final class ModelParameters extends JsonParameters {
 	private static final String PARAM_MODEL_URL = "model_url";
 	private static final String PARAM_HF_REPO = "hf_repo";
 	private static final String PARAM_HF_FILE = "hf_file";
-	private static final String PARAM_ANTIPROMPT = "antiprompt";
 	private static final String PARAM_LOGDIR = "logdir";
 	private static final String PARAM_LOOKUP_CACHE_STATIC = "lookup_cache_static";
 	private static final String PARAM_LOOKUP_CACHE_DYNAMIC = "lookup_cache_dynamic";
@@ -496,7 +498,7 @@ public final class ModelParameters extends JsonParameters {
 	}
 
 	/**
-	 * Whether to only get sentence embeddings
+	 * Whether to load model with embedding support
 	 */
 	public ModelParameters setEmbedding(boolean embedding) {
 		parameters.put(PARAM_EMBEDDING, String.valueOf(embedding));
