@@ -45,7 +45,7 @@ jobs:
         shell: bash
         run: |
           mvn compile
-          .github/build.sh -DLLAMA_CURL=ON
+          .github/build.sh -DLLAMA_CURL=ON -DLLAMA_METAL_EMBED_LIBRARY=ON
       - name: Run tests
         shell: bash
         run: mvn verify
