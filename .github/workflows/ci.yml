@@ -21,7 +21,7 @@ jobs:
         shell: bash
         # cmake should figure out OS and ARCH automatically when running build.sh
         run: .github/build.sh
-      - uses: actions/setup-java@4
+      - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '11'
