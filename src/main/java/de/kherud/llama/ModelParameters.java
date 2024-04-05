@@ -53,6 +53,7 @@ public final class ModelParameters extends JsonParameters {
 	private static final String PARAM_HF_REPO = "hf_repo";
 	private static final String PARAM_HF_FILE = "hf_file";
 	private static final String PARAM_LOGDIR = "logdir";
+	private static final String PARAM_LOG_DISABLE = "disable_log";
 	private static final String PARAM_LOOKUP_CACHE_STATIC = "lookup_cache_static";
 	private static final String PARAM_LOOKUP_CACHE_DYNAMIC = "lookup_cache_dynamic";
 	private static final String PARAM_LORA_ADAPTER = "lora_adapter";
@@ -416,7 +417,8 @@ public final class ModelParameters extends JsonParameters {
 	}
 
 	/**
-	 * Set a URL to download a model from (default: unused)
+	 * Set a URL to download a model from (default: unused).
+	 * Note, that this requires the library to be built with CURL (<code>-DLLAMA_CURL=ON</code>).
 	 */
 	public ModelParameters setModelUrl(String modelUrl) {
 		parameters.put(PARAM_MODEL_URL, toJsonString(modelUrl));
@@ -445,6 +447,14 @@ public final class ModelParameters extends JsonParameters {
 	 */
 	public ModelParameters setLogDirectory(String logdir) {
 		parameters.put(PARAM_LOGDIR, toJsonString(logdir));
+		return this;
+	}
+
+	/**
+	 * Set whether to disable logging
+	 */
+	public ModelParameters setDisableLog(boolean logDisable) {
+		parameters.put(PARAM_LOG_DISABLE, String.valueOf(logDisable));
 		return this;
 	}
 
