@@ -8,7 +8,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class LlamaModelIT {
+public class LlamaModelTest {
 
 	private static final String prefix = "def remove_non_ascii(s: str) -> str:\n    \"\"\" ";
 	private static final String suffix = "\n    return result\n";
@@ -22,8 +22,6 @@ public class LlamaModelIT {
 				new ModelParameters()
 						.setModelFilePath("models/llama-160m-chat-v1.q2_k.gguf")
 						.setModelUrl("https://huggingface.co/afrideva/Llama-160M-Chat-v1-GGUF/resolve/main/llama-160m-chat-v1.q2_k.gguf")
-						// we need to disable logging since it causes problems with the maven failsafe plugin
-						.setDisableLog(true)
 						.setNGpuLayers(43)
 						.setEmbedding(true)
 		);

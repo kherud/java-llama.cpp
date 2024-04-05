@@ -27,7 +27,7 @@ jobs:
           .github/build.sh -DLLAMA_CURL=ON
       - name: Run tests
         shell: bash
-        run: mvn verify
+        run: mvn test
 
   build-and-test-macos:
     name: macos-latest
@@ -48,7 +48,7 @@ jobs:
           .github/build.sh -DLLAMA_CURL=ON -DLLAMA_METAL_EMBED_LIBRARY=ON
       - name: Run tests
         shell: bash
-        run: mvn verify
+        run: mvn test
 
   build-and-test-windows:
     name: windows-latest
@@ -68,4 +68,4 @@ jobs:
           mvn compile && .github\build.bat -DLLAMA_CURL=ON
       - name: Run tests
         shell: cmd
-        run: mvn verify
+        run: mvn test
