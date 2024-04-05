@@ -163,9 +163,6 @@ if (LLAMA_METAL)
         add_compile_definitions(GGML_METAL_NDEBUG)
     endif()
 
-    # copy ggml-common.h and ggml-metal.metal to bin directory
-    configure_file(ggml-common.h    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ggml-common.h    COPYONLY)
-
     if (LLAMA_METAL_EMBED_LIBRARY)
         enable_language(ASM)
         add_compile_definitions(GGML_METAL_EMBED_LIBRARY)
@@ -229,11 +226,6 @@ if (LLAMA_METAL)
             COMMAND rm -f ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ggml-metal.metal
             DEPENDS ggml-metal.metal ggml-common.h
             COMMENT "Compiling Metal kernels"
-            )
-
-        add_custom_target(
-            ggml-metal ALL
-            DEPENDS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/default.metallib
             )
     endif() # LLAMA_METAL_EMBED_LIBRARY
 

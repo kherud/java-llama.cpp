@@ -108,7 +108,7 @@ else()
 	)
 endif()
 
-if (LLAMA_METAL)
+if (LLAMA_METAL AND NOT LLAMA_METAL_EMBED_LIBRARY)
     # copy ggml-metal.metal to shared library directory
     configure_file(${llama.cpp_SOURCE_DIR}/ggml-metal.metal ${JLLAMA_DIR}/ggml-metal.metal COPYONLY)
 endif()
