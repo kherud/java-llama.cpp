@@ -8,9 +8,6 @@ import java.util.NoSuchElementException;
 
 import org.jetbrains.annotations.NotNull;
 
-import de.kherud.llama.args.InferenceParameters;
-import de.kherud.llama.args.ModelParameters;
-
 /**
  * This class is a wrapper around the llama.cpp functionality.
  * Upon being created, it natively allocates memory for the model context.
@@ -18,8 +15,8 @@ import de.kherud.llama.args.ModelParameters;
  * <p>
  * The main functionality of this class is:
  * <ul>
- *     <li>Streaming answers (and probabilities) via {@link #generate(String)}</li>
- *     <li>Creating whole responses to prompts via {@link #complete(String)}</li>
+ *     <li>Streaming answers (and probabilities) via {@link #generate(InferenceParameters)}</li>
+ *     <li>Creating whole responses to prompts via {@link #complete(InferenceParameters)}</li>
  *     <li>Creating embeddings via {@link #embed(String)} (make sure to configure {@link ModelParameters#setEmbedding(boolean)}</li>
  *     <li>Accessing the tokenizer via {@link #encode(String)} and {@link #decode(int[])}</li>
  * </ul>
@@ -49,97 +46,26 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 	/**
-	 * Generate and return a whole answer with default parameters. Note, that the prompt isn't preprocessed in any
-	 * way, nothing like "User: ", "###Instruction", etc. is added.
-	 *
-	 * @param prompt the LLM prompt
-	 * @return an LLM response
-	 */
-	public String complete(String prompt) {
-		return complete(prompt, new InferenceParameters());
-	}
-
-	/**
 	 * Generate and return a whole answer with custom parameters. Note, that the prompt isn't preprocessed in any
 	 * way, nothing like "User: ", "###Instruction", etc. is added.
 	 *
-	 * @param prompt the LLM prompt
 	 * @return an LLM response
 	 */
-	public String complete(String prompt, InferenceParameters parameters) {
-		byte[] bytes = getAnswer(prompt, parameters.toString());
-		return new String(bytes, StandardCharsets.UTF_8);
-	}
-
-	/**
-	 * Infill a whole answer with default parameters. Note, that the prompt isn't preprocessed in any
-	 * way. Nothing like "User: ", "###Instruction", etc. is added.
-	 *
-	 * @param prefix the prefix prompt of the completion to infill
-	 * @param suffix the suffix prompt of the completion to infill
-	 * @return an LLM response
-	 */
-	public String complete(String prefix, String suffix) {
-		return complete(prefix, suffix, new InferenceParameters());
-	}
-
-	/**
-	 * Infill a whole answer with custom parameters. Note, that the prompt isn't preprocessed in any
-	 * way. Nothing like "User: ", "###Instruction", etc. is added.
-	 *
-	 * @param prefix the prefix prompt of the completion to infill
-	 * @param suffix the suffix prompt of the completion to infill
-	 * @return an LLM response
-	 */
-	public String complete(String prefix, String suffix, InferenceParameters parameters) {
-		byte[] bytes = getInfill(prefix, suffix, parameters.toString());
-		return new String(bytes, StandardCharsets.UTF_8);
-	}
-
-	/**
-	 * Generate and stream outputs with default inference parameters. Note, that the prompt isn't preprocessed in any
-	 * way, nothing like "User: ", "###Instruction", etc. is added.
-	 *
-	 * @param prompt the LLM prompt
-	 * @return iterable LLM outputs
-	 */
-	public Iterable<Output> generate(String prompt) {
-		return generate(prompt, new InferenceParameters());
+	public String complete(InferenceParameters parameters) {
+		parameters.setStream(false);
+		int taskId = requestCompletion(parameters.toString());
+		Output output = receiveCompletion(taskId);
+		return output.text;
 	}
 
 	/**
 	 * Generate and stream outputs with custom inference parameters. Note, that the prompt isn't preprocessed in any
 	 * way, nothing like "User: ", "###Instruction", etc. is added.
 	 *
-	 * @param prompt the LLM prompt
 	 * @return iterable LLM outputs
 	 */
-	public Iterable<Output> generate(String prompt, InferenceParameters parameters) {
-		return () -> new LlamaIterator(prompt, parameters);
-	}
-
-	/**
-	 * Infill and stream outputs with default inference parameters. Note, that the prompt isn't preprocessed in any
-	 * way, nothing like "User: ", "###Instruction", etc. is added.
-	 *
-	 * @param prefix the prefix prompt of the completion to infill
-	 * @param suffix the suffix prompt of the completion to infill
-	 * @return iterable LLM outputs
-	 */
-	public Iterable<Output> generate(String prefix, String suffix) {
-		return generate(prefix, suffix, new InferenceParameters());
-	}
-
-	/**
-	 * Infill and stream outputs with custom inference parameters. Note, that the prompt isn't preprocessed in any
-	 * way, nothing like "User: ", "###Instruction", etc. is added.
-	 *
-	 * @param prefix the prefix prompt of the completion to infill
-	 * @param suffix the suffix prompt of the completion to infill
-	 * @return iterable LLM outputs
-	 */
-	public Iterable<Output> generate(String prefix, String suffix, InferenceParameters parameters) {
-		return () -> new LlamaIterator(prefix, suffix, parameters);
+	public Iterable<Output> generate(InferenceParameters parameters) {
+		return () -> new LlamaIterator(parameters);
 	}
 
 	/**
@@ -185,32 +111,27 @@ public class LlamaModel implements AutoCloseable {
 
 	// don't overload native methods since the C++ function names get nasty
 	private native void loadModel(String parameters) throws LlamaException;
-	private native void newAnswerIterator(String prompt, String parameters);
-	private native void newInfillIterator(String prefix, String suffix, String parameters);
-	private native Output getNext(LlamaIterator iterator);
-	private native byte[] getAnswer(String prompt, String parameters);
-	private native byte[] getInfill(String prefix, String suffix, String parameters);
+	private native int requestCompletion(String params) throws LlamaException;
+	private native Output receiveCompletion(int taskId) throws LlamaException;
 	private native byte[] decodeBytes(int[] tokens);
 	private native void delete();
 
 	/**
-	 * A generated output of the LLM. Note that you have to configure {@link InferenceParameters#setNPredict(int)}
+	 * A generated output of the LLM. Note that you have to configure {@link InferenceParameters#setNProbs(int)}
 	 * in order for probabilities to be returned.
-	 * For multibyte outputs (unicode characters like emojis) only the last generated token and its probabilities
-	 * are returned.
 	 */
 	public static final class Output {
 
-		public final int token;
 		@NotNull
 		public final String text;
 		@NotNull
-		public final Map<Integer, Float> probabilities;
+		public final Map<String, Float> probabilities;
+		private final boolean stop;
 
-		private Output(int token, byte[] generated, @NotNull Map<Integer, Float> probabilities) {
-			this.token = token;
+		private Output(byte[] generated, @NotNull Map<String, Float> probabilities, boolean stop) {
 			this.text = new String(generated, StandardCharsets.UTF_8);
 			this.probabilities = probabilities;
+			this.stop = stop;
 		}
 
 		@Override
@@ -220,23 +141,17 @@ public class LlamaModel implements AutoCloseable {
 
 	}
 
-	// fields are modified by native code and thus should not be final
-	@SuppressWarnings("FieldMayBeFinal")
 	private final class LlamaIterator implements Iterator<Output> {
 
+		private final int taskId;
+
 		@Native
+		@SuppressWarnings("FieldMayBeFinal")
 		private boolean hasNext = true;
-		@Native
-		private long generatedCount = 0;
-		@Native
-		private long tokenIndex = 0;
 
-		private LlamaIterator(String prompt, InferenceParameters parameters) {
-			newAnswerIterator(prompt, parameters.toString());
-		}
-
-		private LlamaIterator(String prefix, String suffix, InferenceParameters parameters) {
-			newInfillIterator(prefix, suffix, parameters.toString());
+		private LlamaIterator(InferenceParameters parameters) {
+			parameters.setStream(true);
+			taskId = requestCompletion(parameters.toString());
 		}
 
 		@Override
@@ -249,7 +164,9 @@ public class LlamaModel implements AutoCloseable {
 			if (!hasNext) {
 				throw new NoSuchElementException();
 			}
-			return getNext(this);
+			Output output = receiveCompletion(taskId);
+			hasNext = !output.stop;
+			return output;
 		}
 	}
 
