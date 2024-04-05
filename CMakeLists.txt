@@ -5,6 +5,8 @@ project(jllama CXX)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_SHARED_LIBS ON)
 
+option(LLAMA_VERBOSE	"llama: verbose output"		OFF)
+
 #################### llama.cpp ####################
 
 include(FetchContent)
@@ -86,11 +88,15 @@ if(NOT JNI_INCLUDE_DIRS)
     message(FATAL_ERROR "Could not determine JNI include directories")
 endif()
 
-add_library(jllama SHARED src/main/cpp/jllama.cpp src/main/cpp/server.cpp src/main/cpp/utils.cpp)
+add_library(jllama SHARED src/main/cpp/jllama.cpp src/main/cpp/server.hpp src/main/cpp/utils.hpp)
 
 target_include_directories(jllama PRIVATE src/main/cpp ${JNI_INCLUDE_DIRS})
 target_link_libraries(jllama PRIVATE common llama nlohmann_json ${LLAMA_EXTRA_LIBS})
 target_compile_features(jllama PRIVATE cxx_std_11)
+
+target_compile_definitions(jllama PRIVATE
+    SERVER_VERBOSE=$<BOOL:${LLAMA_VERBOSE}>
+)
 
 if(OS_NAME STREQUAL "Windows")
 	set_target_properties(jllama llama PROPERTIES

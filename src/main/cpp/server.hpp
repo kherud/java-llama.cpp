@@ -14,7 +14,6 @@
 #include <signal.h>
 #include <thread>
 
-bool server_verbose = false;
 bool server_log_json = true;
 
 enum stop_type
@@ -484,8 +483,6 @@ struct server_queue
         while (true)
         {
             LOG_VERBOSE("new task may arrive", {});
-
-            std::cout << "hello, X" << std::endl;
 
             while (true)
             {
