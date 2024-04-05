@@ -1,171 +1,122 @@
 package de.kherud.llama.args;
 
-import java.lang.annotation.Native;
+import java.util.Map;
 
 import de.kherud.llama.LlamaModel;
 
-/**
+/***
  * Parameters used for initializing a {@link LlamaModel}.
  */
-public final class ModelParameters {
+public final class ModelParameters extends JsonParameters {
 
-	@Native
-	private int seed = -1; // RNG seed
-	@Native
-	private int nThreads = Runtime.getRuntime().availableProcessors();
-	@Native
-	private int nThreadsBatch = -1; // number of threads to use for batch processing (-1 = use n_threads)
-	@Native
-	private String modelFilePath; // model path
-	@Native
-	private String modelUrl; // model url to download
-	@Native
-	private String huggingFaceRepository; // HF repo
-	@Native
-	private String huggingFaceFile; // HF file
-	@Native
-	private String modelAlias; // model alias
-	@Native
-	private String systemPromptFile;
-	@Native
-	private int nCtx = 512; // context size
-	@Native
-	private int nBatch = 2048; // logical batch size for prompt processing (must be >=32 to use BLAS)
-	@Native
-	private int nUBatch = 512; // physical batch size for prompt processing (must be >=32 to use BLAS)
-	@Native
-	private int nParallel = 1; // number of parallel sequences to decode
-	@Native
-	private int nPredict = -1; // new tokens to predict
-	@Native
-	private GpuSplitMode gpuSplitMode = GpuSplitMode.LAYER; // how to split the model across GPUs
-	@Native
-	private int nGpuLayers = -1; // number of layers to store in VRAM (-1 - use default)
-	@Native
-	private int mainGpu = 0; // the GPU that is used for scratch and small tensors
-	@Native
-	private float[] tensorSplit = null; // // how split tensors should be distributed across GPUs
-	@Native
-	private RopeScalingType ropeScalingType = RopeScalingType.UNSPECIFIED;
-	@Native
-	private float ropeFreqBase = 0f; // RoPE base frequency
-	@Native
-	private float ropeFreqScale = 0f; // RoPE frequency scaling factor
-	@Native
-	private float yarnExtFactor = -1.0f;
-	@Native
-	private float yarnAttnFactor = 1.0f;
-	@Native
-	private float yarnBetaFast = 32.0f;
-	@Native
-	private float yarnBetaSlow = 1.0f;
-	@Native
-	private PoolingType poolingType = PoolingType.UNSPECIFIED; // pooling type for embeddings
-	@Native
-	private float defragmentationThreshold = -1.0f; // KV cache defragmentation threshold
-	@Native
-	private int groupAttnN = 1;
-	@Native
-	private int groupAttnW = 512;
-	@Native
-	private boolean useMmap = true; // use mmap if possible
-	@Native
-	private boolean useMlock = false; // force system to keep model in RAM
-	@Native
-	private boolean noKVOffload = false;
-	@Native
-	private boolean embedding = false; // embedding mode
-	@Native
-	private boolean continuousBatching = true; // insert new sequences for decoding on-the-fly
-	@Native
-	private NumaStrategy numa = NumaStrategy.NONE; // attempt optimizations that help on some NUMA systems
-	@Native
-	private LogFormat logFormat = LogFormat.TEXT;
-	@Native
-	private boolean verbose = false;
-
-//	@Nullable
-//	private String loraAdapter = null;
-//	@Nullable
-//	private String loraBase = null;
+	private static final String PARAM_SEED = "seed";
+	private static final String PARAM_N_THREADS = "n_threads";
+	private static final String PARAM_N_THREADS_DRAFT = "n_threads_draft";
+	private static final String PARAM_N_THREADS_BATCH = "n_threads_batch";
+	private static final String PARAM_N_THREADS_BATCH_DRAFT = "n_threads_batch_draft";
+	private static final String PARAM_N_PREDICT = "n_predict";
+	private static final String PARAM_N_CTX = "n_ctx";
+	private static final String PARAM_N_BATCH = "n_batch";
+	private static final String PARAM_N_UBATCH = "n_ubatch";
+	private static final String PARAM_N_KEEP = "n_keep";
+	private static final String PARAM_N_DRAFT = "n_draft";
+	private static final String PARAM_N_CHUNKS = "n_chunks";
+	private static final String PARAM_N_PARALLEL = "n_parallel";
+	private static final String PARAM_N_SEQUENCES = "n_sequences";
+	private static final String PARAM_P_SPLIT = "p_split";
+	private static final String PARAM_N_GPU_LAYERS = "n_gpu_layers";
+	private static final String PARAM_N_GPU_LAYERS_DRAFT = "n_gpu_layers_draft";
+	private static final String PARAM_SPLIT_MODE = "split_mode";
+	private static final String PARAM_MAIN_GPU = "main_gpu";
+	private static final String PARAM_TENSOR_SPLIT = "tensor_split";
+	private static final String PARAM_N_BEAMS = "n_beams";
+	private static final String PARAM_GRP_ATTN_N = "grp_attn_n";
+	private static final String PARAM_GRP_ATTN_W = "grp_attn_w";
+	private static final String PARAM_ROPE_FREQ_BASE = "rope_freq_base";
+	private static final String PARAM_ROPE_FREQ_SCALE = "rope_freq_scale";
+	private static final String PARAM_YARN_EXT_FACTOR = "yarn_ext_factor";
+	private static final String PARAM_YARN_ATTN_FACTOR = "yarn_attn_factor";
+	private static final String PARAM_YARN_BETA_FAST = "yarn_beta_fast";
+	private static final String PARAM_YARN_BETA_SLOW = "yarn_beta_slow";
+	private static final String PARAM_YARN_ORIG_CTX = "yarn_orig_ctx";
+	private static final String PARAM_DEFRAG_THOLD = "defrag_thold";
+	private static final String PARAM_NUMA = "numa";
+	private static final String PARAM_ROPE_SCALING_TYPE = "rope_scaling_type";
+	private static final String PARAM_POOLING_TYPE = "pooling_type";
+	private static final String PARAM_MODEL = "model";
+	private static final String PARAM_MODEL_DRAFT = "model_draft";
+	private static final String PARAM_MODEL_ALIAS = "model_alias";
+	private static final String PARAM_MODEL_URL = "model_url";
+	private static final String PARAM_HF_REPO = "hf_repo";
+	private static final String PARAM_HF_FILE = "hf_file";
+	private static final String PARAM_ANTIPROMPT = "antiprompt";
+	private static final String PARAM_LOGDIR = "logdir";
+	private static final String PARAM_LOOKUP_CACHE_STATIC = "lookup_cache_static";
+	private static final String PARAM_LOOKUP_CACHE_DYNAMIC = "lookup_cache_dynamic";
+	private static final String PARAM_LORA_ADAPTER = "lora_adapter";
+	private static final String PARAM_LORA_BASE = "lora_base";
+	private static final String PARAM_EMBEDDING = "embedding";
+	private static final String PARAM_CONT_BATCHING = "cont_batching";
+	private static final String PARAM_INPUT_PREFIX_BOS = "input_prefix_bos";
+	private static final String PARAM_IGNORE_EOS = "ignore_eos";
+	private static final String PARAM_USE_MMAP = "use_mmap";
+	private static final String PARAM_USE_MLOCK = "use_mlock";
+	private static final String PARAM_NO_KV_OFFLOAD = "no_kv_offload";
 
 	/**
 	 * Set the RNG seed
 	 */
 	public ModelParameters setSeed(int seed) {
-		this.seed = seed;
+		parameters.put(PARAM_SEED, String.valueOf(seed));
 		return this;
 	}
 
 	/**
-	 * Set the total amount of threads ever used
+	 * Set the number of threads to use during generation (default: 8)
 	 */
 	public ModelParameters setNThreads(int nThreads) {
-		this.nThreads = nThreads;
+		parameters.put(PARAM_N_THREADS, String.valueOf(nThreads));
 		return this;
 	}
 
 	/**
-	 * number of threads to use for batch processing (-1 = use {@link #nThreads})
+	 * Set the number of threads to use during draft generation (default: same as {@link #setNThreads(int)})
+	 */
+	public ModelParameters setNThreadsDraft(int nThreadsDraft) {
+		parameters.put(PARAM_N_THREADS_DRAFT, String.valueOf(nThreadsDraft));
+		return this;
+	}
+
+	/**
+	 * Set the number of threads to use during batch and prompt processing (default: same as {@link #setNThreads(int)})
 	 */
 	public ModelParameters setNThreadsBatch(int nThreadsBatch) {
-		this.nThreadsBatch = nThreadsBatch;
+		parameters.put(PARAM_N_THREADS_BATCH, String.valueOf(nThreadsBatch));
 		return this;
 	}
 
 	/**
-	 * Set a file path to load the model from
+	 * Set the number of threads to use during batch and prompt processing (default: same as
+	 * {@link #setNThreadsDraft(int)})
 	 */
-	public ModelParameters setModelFilePath(String modelFilePath) {
-		this.modelFilePath = modelFilePath;
+	public ModelParameters setNThreadsBatchDraft(int nThreadsBatchDraft) {
+		parameters.put(PARAM_N_THREADS_BATCH_DRAFT, String.valueOf(nThreadsBatchDraft));
 		return this;
 	}
 
 	/**
-	 * Set a URL to load the model from
+	 * Set the number of tokens to predict (default: -1, -1 = infinity, -2 = until context filled)
 	 */
-	public ModelParameters setModelUrl(String modelUrl) {
-		this.modelUrl = modelUrl;
+	public ModelParameters setNPredict(int nPredict) {
+		parameters.put(PARAM_N_PREDICT, String.valueOf(nPredict));
 		return this;
 	}
 
 	/**
-	 * Set a HuggingFace repository to load a model from (see {@link #setHuggingFaceFile(String)})
-	 */
-	public ModelParameters setHuggingFaceRepository(String huggingFaceRepository) {
-		this.huggingFaceRepository = huggingFaceRepository;
-		return this;
-	}
-
-	/**
-	 * Set a HuggingFace file to load a model from (see {@link #setHuggingFaceRepository(String)})
-	 */
-	public ModelParameters setHuggingFaceFile(String huggingFaceFile) {
-		this.huggingFaceFile = huggingFaceFile;
-		return this;
-	}
-
-	/**
-	 * Set the model alias
-	 */
-	public ModelParameters setModelAlias(String modelAlias) {
-		this.modelAlias = modelAlias;
-		return this;
-	}
-
-	/**
-	 * Set a file path to load a system prompt from
-	 */
-	public ModelParameters setSystemPrompt(String systemPromptFile) {
-		this.systemPromptFile = systemPromptFile;
-		return this;
-	}
-
-	/**
-	 * Set the context size
+	 * Set the size of the prompt context (default: 512, 0 = loaded from model)
 	 */
 	public ModelParameters setNCtx(int nCtx) {
-		this.nCtx = nCtx;
+		parameters.put(PARAM_N_CTX, String.valueOf(nCtx));
 		return this;
 	}
 
@@ -173,39 +124,63 @@ public final class ModelParameters {
 	 * Set the logical batch size for prompt processing (must be >=32 to use BLAS)
 	 */
 	public ModelParameters setNBatch(int nBatch) {
-		this.nBatch = nBatch;
+		parameters.put(PARAM_N_BATCH, String.valueOf(nBatch));
 		return this;
 	}
 
 	/**
 	 * Set the physical batch size for prompt processing (must be >=32 to use BLAS)
 	 */
-	public ModelParameters setNUBatch(int nUBatch) {
-		this.nUBatch = nUBatch;
+	public ModelParameters setNUbatch(int nUbatch) {
+		parameters.put(PARAM_N_UBATCH, String.valueOf(nUbatch));
 		return this;
 	}
 
 	/**
-	 * Set how the number of parallel sequences to decode
+	 * Set the number of tokens to keep from the initial prompt (default: 0, -1 = all)
+	 */
+	public ModelParameters setNKeep(int nKeep) {
+		parameters.put(PARAM_N_KEEP, String.valueOf(nKeep));
+		return this;
+	}
+
+	/**
+	 * Set the number of tokens to draft for speculative decoding (default: 5)
+	 */
+	public ModelParameters setNDraft(int nDraft) {
+		parameters.put(PARAM_N_DRAFT, String.valueOf(nDraft));
+		return this;
+	}
+
+	/**
+	 * Set the maximal number of chunks to process (default: -1, -1 = all)
+	 */
+	public ModelParameters setNChunks(int nChunks) {
+		parameters.put(PARAM_N_CHUNKS, String.valueOf(nChunks));
+		return this;
+	}
+
+	/**
+	 * Set the number of parallel sequences to decode (default: 1)
 	 */
 	public ModelParameters setNParallel(int nParallel) {
-		this.nParallel = nParallel;
+		parameters.put(PARAM_N_PARALLEL, String.valueOf(nParallel));
 		return this;
 	}
 
 	/**
-	 * Set the amount of new tokens to predict
+	 * Set the number of sequences to decode (default: 1)
 	 */
-	public ModelParameters setNPredict(int nPredict) {
-		this.nPredict = nPredict;
+	public ModelParameters setNSequences(int nSequences) {
+		parameters.put(PARAM_N_SEQUENCES, String.valueOf(nSequences));
 		return this;
 	}
 
 	/**
-	 * Set how to split the model across GPUs
+	 * Set the speculative decoding split probability (default: 0.1)
 	 */
-	public ModelParameters setGpuSplitMode(GpuSplitMode gpuSplitMode) {
-		this.gpuSplitMode = gpuSplitMode;
+	public ModelParameters setPSplit(float pSplit) {
+		parameters.put(PARAM_P_SPLIT, String.valueOf(pSplit));
 		return this;
 	}
 
@@ -213,7 +188,28 @@ public final class ModelParameters {
 	 * Set the number of layers to store in VRAM (-1 - use default)
 	 */
 	public ModelParameters setNGpuLayers(int nGpuLayers) {
-		this.nGpuLayers = nGpuLayers;
+		parameters.put(PARAM_N_GPU_LAYERS, String.valueOf(nGpuLayers));
+		return this;
+	}
+
+	/**
+	 * Set the number of layers to store in VRAM for the draft model (-1 - use default)
+	 */
+	public ModelParameters setNGpuLayersDraft(int nGpuLayersDraft) {
+		parameters.put(PARAM_N_GPU_LAYERS_DRAFT, String.valueOf(nGpuLayersDraft));
+		return this;
+	}
+
+	/**
+	 * Set how to split the model across GPUs
+	 */
+	public ModelParameters setSplitMode(GpuSplitMode splitMode) {
+//		switch (splitMode) {
+//			case NONE: parameters.put(PARAM_SPLIT_MODE, "\"none\""); break;
+//			case ROW: parameters.put(PARAM_SPLIT_MODE, "\"row\""); break;
+//			case LAYER: parameters.put(PARAM_SPLIT_MODE, "\"layer\""); break;
+//		}
+		parameters.put(PARAM_SPLIT_MODE, String.valueOf(splitMode.ordinal()));
 		return this;
 	}
 
@@ -221,7 +217,7 @@ public final class ModelParameters {
 	 * Set the GPU that is used for scratch and small tensors
 	 */
 	public ModelParameters setMainGpu(int mainGpu) {
-		this.mainGpu = mainGpu;
+		parameters.put(PARAM_MAIN_GPU, String.valueOf(mainGpu));
 		return this;
 	}
 
@@ -229,119 +225,273 @@ public final class ModelParameters {
 	 * Set how split tensors should be distributed across GPUs
 	 */
 	public ModelParameters setTensorSplit(float[] tensorSplit) {
-		this.tensorSplit = tensorSplit;
+		if (tensorSplit.length > 0) {
+			StringBuilder builder = new StringBuilder();
+			builder.append("[");
+			for (int i = 0; i < tensorSplit.length; i++) {
+				builder.append(tensorSplit[i]);
+				if (i < tensorSplit.length - 1) {
+					builder.append(", ");
+				}
+			}
+			builder.append("]");
+			parameters.put(PARAM_TENSOR_SPLIT, builder.toString());
+		}
 		return this;
 	}
 
 	/**
-	 * Set the RoPE scaling type
+	 * Set usage of beam search of given width if non-zero.
 	 */
-	public ModelParameters setRopeScalingType(RopeScalingType ropeScalingType) {
-		this.ropeScalingType = ropeScalingType;
+	public ModelParameters setNBeams(int nBeams) {
+		parameters.put(PARAM_N_BEAMS, String.valueOf(nBeams));
 		return this;
 	}
 
 	/**
-	 * Set the RoPE base frequency
+	 * Set the group-attention factor (default: 1)
+	 */
+	public ModelParameters setGrpAttnN(int grpAttnN) {
+		parameters.put(PARAM_GRP_ATTN_N, String.valueOf(grpAttnN));
+		return this;
+	}
+
+	/**
+	 * Set the group-attention width (default: 512.0)
+	 */
+	public ModelParameters setGrpAttnW(int grpAttnW) {
+		parameters.put(PARAM_GRP_ATTN_W, String.valueOf(grpAttnW));
+		return this;
+	}
+
+	/**
+	 * Set the RoPE base frequency, used by NTK-aware scaling (default: loaded from model)
 	 */
 	public ModelParameters setRopeFreqBase(float ropeFreqBase) {
-		this.ropeFreqBase = ropeFreqBase;
+		parameters.put(PARAM_ROPE_FREQ_BASE, String.valueOf(ropeFreqBase));
 		return this;
 	}
 
 	/**
-	 * Set the RoPE frequency scaling factor
+	 * Set the RoPE frequency scaling factor, expands context by a factor of 1/N
 	 */
 	public ModelParameters setRopeFreqScale(float ropeFreqScale) {
-		this.ropeFreqScale = ropeFreqScale;
+		parameters.put(PARAM_ROPE_FREQ_SCALE, String.valueOf(ropeFreqScale));
 		return this;
 	}
 
 	/**
-	 * Set the YaRN extrapolation mix factor
+	 * Set the YaRN extrapolation mix factor (default: 1.0, 0.0 = full interpolation)
 	 */
-	public ModelParameters setYarnExtrapolationFactor(float yarnExtFactor) {
-		this.yarnExtFactor = yarnExtFactor;
+	public ModelParameters setYarnExtFactor(float yarnExtFactor) {
+		parameters.put(PARAM_YARN_EXT_FACTOR, String.valueOf(yarnExtFactor));
 		return this;
 	}
 
 	/**
-	 * Set the YaRN magnitude scaling factor
+	 * Set the YaRN scale sqrt(t) or attention magnitude (default: 1.0)
 	 */
-	public ModelParameters setYarnMagnitudeFactor(float yarnAttnFactor) {
-		this.yarnAttnFactor = yarnAttnFactor;
+	public ModelParameters setYarnAttnFactor(float yarnAttnFactor) {
+		parameters.put(PARAM_YARN_ATTN_FACTOR, String.valueOf(yarnAttnFactor));
 		return this;
 	}
 
 	/**
-	 * Set the YaRN low correction dim
+	 * Set the YaRN low correction dim or beta (default: 32.0)
 	 */
 	public ModelParameters setYarnBetaFast(float yarnBetaFast) {
-		this.yarnBetaFast = yarnBetaFast;
+		parameters.put(PARAM_YARN_BETA_FAST, String.valueOf(yarnBetaFast));
 		return this;
 	}
 
 	/**
-	 * Set the YaRN high correction dim
+	 * Set the YaRN high correction dim or alpha (default: 1.0)
 	 */
 	public ModelParameters setYarnBetaSlow(float yarnBetaSlow) {
-		this.yarnBetaSlow = yarnBetaSlow;
+		parameters.put(PARAM_YARN_BETA_SLOW, String.valueOf(yarnBetaSlow));
 		return this;
 	}
 
 	/**
-	 * Set the pooling type for embeddings
+	 * Set the YaRN original context size of model (default: 0 = model training context size)
+	 */
+	public ModelParameters setYarnOrigCtx(int yarnOrigCtx) {
+		parameters.put(PARAM_YARN_ORIG_CTX, String.valueOf(yarnOrigCtx));
+		return this;
+	}
+
+	/**
+	 * Set the KV cache defragmentation threshold (default: -1.0, < 0 - disabled)
+	 */
+	public ModelParameters setDefragmentationThreshold(float defragThold) {
+		parameters.put(PARAM_DEFRAG_THOLD, String.valueOf(defragThold));
+		return this;
+	}
+
+	/**
+	 * Set optimization strategies that help on some NUMA systems (if available)
+	 * <ul>
+	 * <li><b>distribute</b>: spread execution evenly over all nodes</li>
+	 * <li><b>isolate</b>: only spawn threads on CPUs on the node that execution started on</li>
+	 * <li><b>numactl</b>: use the CPU map provided by numactl</li>
+	 * </ul>
+	 * If run without this previously, it is recommended to drop the system page cache before using this
+	 * (see <a href="https://github.com/ggerganov/llama.cpp/issues/1437">#1437</a>).
+	 */
+	public ModelParameters setNuma(NumaStrategy numa) {
+//		switch (numa) {
+//			case DISTRIBUTE:
+//				parameters.put(PARAM_NUMA, "\"distribute\"");
+//				break;
+//			case ISOLATE:
+//				parameters.put(PARAM_NUMA, "\"isolate\"");
+//				break;
+//			case NUMA_CTL:
+//				parameters.put(PARAM_NUMA, "\"numactl\"");
+//				break;
+//			case MIRROR:
+//				parameters.put(PARAM_NUMA, "\"mirror\"");
+//				break;
+//		}
+		parameters.put(PARAM_NUMA, String.valueOf(numa.ordinal()));
+		return this;
+	}
+
+	/**
+	 * Set the RoPE frequency scaling method, defaults to linear unless specified by the model
+	 */
+	public ModelParameters setRopeScalingType(RopeScalingType ropeScalingType) {
+//		switch (ropeScalingType) {
+//			case LINEAR:
+//				parameters.put(PARAM_ROPE_SCALING_TYPE, "\"linear\"");
+//				break;
+//			case YARN:
+//				parameters.put(PARAM_ROPE_SCALING_TYPE, "\"yarn\"");
+//				break;
+//		}
+		parameters.put(PARAM_ROPE_SCALING_TYPE, String.valueOf(ropeScalingType.ordinal()));
+		return this;
+	}
+
+	/**
+	 * Set the pooling type for embeddings, use model default if unspecified
 	 */
 	public ModelParameters setPoolingType(PoolingType poolingType) {
-		this.poolingType = poolingType;
+//		switch (poolingType) {
+//			case MEAN:
+//				parameters.put(PARAM_POOLING_TYPE, "\"mean\"");
+//				break;
+//			case CLS:
+//				parameters.put(PARAM_POOLING_TYPE, "\"cls\"");
+//				break;
+//		}
+		parameters.put(PARAM_POOLING_TYPE, String.valueOf(poolingType.ordinal()));
 		return this;
 	}
 
 	/**
-	 * Set the KV cache defragmentation threshold
+	 * Set the model file path to load (default: models/7B/ggml-model-f16.gguf)
 	 */
-	public ModelParameters setDefragmentationThreshold(float defragmentationThreshold) {
-		this.defragmentationThreshold = defragmentationThreshold;
+	public ModelParameters setModelFilePath(String model) {
+		parameters.put(PARAM_MODEL, toJsonString(model));
 		return this;
 	}
 
 	/**
-	 * Set the group-attention factor
+	 * Set the draft model for speculative decoding (default: unused)
 	 */
-	public ModelParameters setGroupAttnN(int groupAttnN) {
-		this.groupAttnN = groupAttnN;
+	public ModelParameters setModelDraft(String modelDraft) {
+		parameters.put(PARAM_MODEL_DRAFT, toJsonString(modelDraft));
 		return this;
 	}
 
 	/**
-	 * Set the group-attention width
+	 * Set a model alias
 	 */
-	public ModelParameters setGroupAttnW(int groupAttnW) {
-		this.groupAttnW = groupAttnW;
+	public ModelParameters setModelAlias(String modelAlias) {
+		parameters.put(PARAM_MODEL_ALIAS, toJsonString(modelAlias));
 		return this;
 	}
 
 	/**
-	 * Whether to use mmap for faster loads
+	 * Set a URL to download a model from (default: unused)
 	 */
-	public ModelParameters setUseMmap(boolean useMmap) {
-		this.useMmap = useMmap;
+	public ModelParameters setModelUrl(String modelUrl) {
+		parameters.put(PARAM_MODEL_URL, toJsonString(modelUrl));
 		return this;
 	}
 
 	/**
-	 * Whether to use mlock to keep model in memory
+	 * Set a Hugging Face model repository to use a model from (default: unused, see
+	 * {@link #setHuggingFaceFile(String)})
 	 */
-	public ModelParameters setUseMlock(boolean useMlock) {
-		this.useMlock = useMlock;
+	public ModelParameters setHuggingFaceRepository(String hfRepo) {
+		parameters.put(PARAM_HF_REPO, toJsonString(hfRepo));
 		return this;
 	}
 
 	/**
-	 * Whether to disable KV offloading
+	 * Set a Hugging Face model file to use (default: unused, see {@link #setHuggingFaceRepository(String)})
 	 */
-	public ModelParameters setNoKVOffload(boolean noKVOffload) {
-		this.noKVOffload = noKVOffload;
+	public ModelParameters setHuggingFaceFile(String hfFile) {
+		parameters.put(PARAM_HF_FILE, toJsonString(hfFile));
+		return this;
+	}
+
+	/**
+	 * Set path under which to save YAML logs (no logging if unset)
+	 */
+	public ModelParameters setLogDirectory(String logdir) {
+		parameters.put(PARAM_LOGDIR, toJsonString(logdir));
+		return this;
+	}
+
+	/**
+	 * Set path to static lookup cache to use for lookup decoding (not updated by generation)
+	 */
+	public ModelParameters setLookupCacheStaticFilePath(String lookupCacheStatic) {
+		parameters.put(PARAM_LOOKUP_CACHE_STATIC, toJsonString(lookupCacheStatic));
+		return this;
+	}
+
+	/**
+	 * Set path to dynamic lookup cache to use for lookup decoding (updated by generation)
+	 */
+	public ModelParameters setLookupCacheDynamicFilePath(String lookupCacheDynamic) {
+		parameters.put(PARAM_LOOKUP_CACHE_DYNAMIC, toJsonString(lookupCacheDynamic));
+		return this;
+	}
+
+	/**
+	 * Set LoRA adapters to use (implies --no-mmap).
+	 * The key is expected to be a file path, the values are expected to be scales.
+	 */
+	public ModelParameters setLoraAdapters(Map<String, Float> loraAdapters) {
+		if (!loraAdapters.isEmpty()) {
+			StringBuilder builder = new StringBuilder();
+			builder.append("{");
+			int i = 0;
+			for (Map.Entry<String, Float> entry : loraAdapters.entrySet()) {
+				String key = entry.getKey();
+				Float value = entry.getValue();
+				builder.append(toJsonString(key))
+						.append(": ")
+						.append(value);
+				if (i++ < loraAdapters.size() - 1) {
+					builder.append(", ");
+				}
+			}
+			builder.append("}");
+			parameters.put(PARAM_LORA_ADAPTER, builder.toString());
+		}
+		return this;
+	}
+
+	/**
+	 * Set an optional model to use as a base for the layers modified by the LoRA adapter
+	 */
+	public ModelParameters setLoraBase(String loraBase) {
+		parameters.put(PARAM_LORA_BASE, toJsonString(loraBase));
 		return this;
 	}
 
@@ -349,183 +499,55 @@ public final class ModelParameters {
 	 * Whether to only get sentence embeddings
 	 */
 	public ModelParameters setEmbedding(boolean embedding) {
-		this.embedding = embedding;
+		parameters.put(PARAM_EMBEDDING, String.valueOf(embedding));
 		return this;
 	}
 
 	/**
-	 * Whether to insert new sequences for decoding on-the-fly
+	 * Whether to enable continuous batching (also called "dynamic batching") (default: disabled)
 	 */
-	public ModelParameters setContinuousBatching(boolean continuousBatching) {
-		this.continuousBatching = continuousBatching;
+	public ModelParameters setContinuousBatching(boolean contBatching) {
+		parameters.put(PARAM_CONT_BATCHING, String.valueOf(contBatching));
 		return this;
 	}
 
 	/**
-	 * Set a numa strategy if compiled with NUMA support
+	 * Whether to add prefix BOS to user inputs, preceding the `--in-prefix` string
 	 */
-	public ModelParameters setNumaStrategy(NumaStrategy numa) {
-		this.numa = numa;
+	public ModelParameters setInputPrefixBos(boolean inputPrefixBos) {
+		parameters.put(PARAM_INPUT_PREFIX_BOS, String.valueOf(inputPrefixBos));
 		return this;
 	}
 
 	/**
-	 * Set the log format
+	 * Whether to ignore end of stream token and continue generating (implies --logit-bias 2-inf)
 	 */
-	public ModelParameters setLogFormat(LogFormat logFormat) {
-		this.logFormat = logFormat;
+	public ModelParameters setIgnoreEos(boolean ignoreEos) {
+		parameters.put(PARAM_IGNORE_EOS, String.valueOf(ignoreEos));
 		return this;
 	}
 
 	/**
-	 * Whether to log additional output (if compiled with <code>LLAMA_VERBOSE</code>)
+	 * Whether to use memory-map model (faster load but may increase pageouts if not using mlock)
 	 */
-	public ModelParameters setVerbose(boolean verbose) {
-		this.verbose = verbose;
+	public ModelParameters setUseMmap(boolean useMmap) {
+		parameters.put(PARAM_USE_MMAP, String.valueOf(useMmap));
 		return this;
 	}
 
-	public int getSeed() {
-		return seed;
+	/**
+	 * Whether to force the system to keep model in RAM rather than swapping or compressing
+	 */
+	public ModelParameters setUseMlock(boolean useMlock) {
+		parameters.put(PARAM_USE_MLOCK, String.valueOf(useMlock));
+		return this;
 	}
 
-	public int getNThreads() {
-		return nThreads;
-	}
-
-	public int getNThreadsBatch() {
-		return nThreadsBatch;
-	}
-
-	public String getModelFilePath() {
-		return modelFilePath;
-	}
-
-	public String getModelUrl() {
-		return modelUrl;
-	}
-
-	public String getHuggingFaceRepository() {
-		return huggingFaceRepository;
-	}
-
-	public String getHuggingFaceFile() {
-		return huggingFaceFile;
-	}
-
-	public String getModelAlias() {
-		return modelAlias;
-	}
-
-	public String getSystemPromptFile() {
-		return systemPromptFile;
-	}
-
-	public int getNCtx() {
-		return nCtx;
-	}
-
-	public int getNBatch() {
-		return nBatch;
-	}
-
-	public int getNUBatch() {
-		return nUBatch;
-	}
-
-	public int getNParallel() {
-		return nParallel;
-	}
-
-	public int getNPredict() {
-		return nPredict;
-	}
-
-	public GpuSplitMode getGpuSplitMode() {
-		return gpuSplitMode;
-	}
-
-	public int getNGpuLayers() {
-		return nGpuLayers;
-	}
-
-	public int getMainGpu() {
-		return mainGpu;
-	}
-
-	public float[] getTensorSplit() {
-		return tensorSplit;
-	}
-
-	public RopeScalingType getRopeScalingType() {
-		return ropeScalingType;
-	}
-
-	public float getRopeFreqBase() {
-		return ropeFreqBase;
-	}
-
-	public float getRopeFreqScale() {
-		return ropeFreqScale;
-	}
-
-	public float getYarnExtFactor() {
-		return yarnExtFactor;
-	}
-
-	public float getYarnAttnFactor() {
-		return yarnAttnFactor;
-	}
-
-	public float getYarnBetaFast() {
-		return yarnBetaFast;
-	}
-
-	public float getYarnBetaSlow() {
-		return yarnBetaSlow;
-	}
-
-	public PoolingType getPoolingType() {
-		return poolingType;
-	}
-
-	public float getDefragmentationThreshold() {
-		return defragmentationThreshold;
-	}
-
-	public int getGroupAttnN() {
-		return groupAttnN;
-	}
-
-	public int getGroupAttnW() {
-		return groupAttnW;
-	}
-
-	public boolean isUseMmap() {
-		return useMmap;
-	}
-
-	public boolean isUseMlock() {
-		return useMlock;
-	}
-
-	public boolean isNoKVOffload() {
-		return noKVOffload;
-	}
-
-	public boolean isEmbedding() {
-		return embedding;
-	}
-
-	public NumaStrategy getNuma() {
-		return numa;
-	}
-
-	public LogFormat getLogFormat() {
-		return logFormat;
-	}
-
-	public boolean isVerbose() {
-		return verbose;
+	/**
+	 * Whether to disable KV offload
+	 */
+	public ModelParameters setNoKvOffload(boolean noKvOffload) {
+		parameters.put(PARAM_NO_KV_OFFLOAD, String.valueOf(noKvOffload));
+		return this;
 	}
 }
