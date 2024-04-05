@@ -289,7 +289,7 @@ public final class InferenceParameters extends JsonParameters {
 						.append(", ")
 						.append(value)
 						.append("]");
-				if (i++ < logitBias.size()) {
+				if (i++ < logitBias.size() - 1) {
 					builder.append(", ");
 				}
 			}
