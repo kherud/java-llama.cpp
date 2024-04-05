@@ -2,9 +2,10 @@ package de.kherud.llama.args;
 
 public enum NumaStrategy {
 
-	NONE,
+	DISABLED,
 	DISTRIBUTE,
 	ISOLATE,
-	NUMA_CTL
+	NUMA_CTL,
+	MIRROR
 
 }
