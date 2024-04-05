@@ -5,5 +5,4 @@ public enum PoolingType {
 	UNSPECIFIED,
 	MEAN,
 	CLS
-
 }

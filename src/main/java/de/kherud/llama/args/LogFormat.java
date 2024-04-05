@@ -5,5 +5,4 @@ public enum LogFormat {
 	NONE,
 	JSON,
 	TEXT
-
 }

@@ -7,5 +7,4 @@ public enum NumaStrategy {
 	ISOLATE,
 	NUMA_CTL,
 	MIRROR
-
 }
