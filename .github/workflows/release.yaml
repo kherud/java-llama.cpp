@@ -7,7 +7,7 @@ on:
         required: false
         default: 'no'
   release:
-    types: [created]
+    types: [ created ]
 jobs:
 
 
@@ -38,7 +38,7 @@ jobs:
       - name: Build libraries
         shell: bash
         run: |
-          .github/dockcross/${{ matrix.target.image }} .github/build.sh "-DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}"
+          .github/dockcross/${{ matrix.target.image }} .github/build.sh "-DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}" -DLLAMA_CURL=ON
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -68,7 +68,7 @@ jobs:
       - name: Build libraries
         shell: bash
         run: |
-          .github/build.sh ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}
+          .github/build.sh ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }} -DLLAMA_CURL=ON
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -88,12 +88,11 @@ jobs:
             arch: x86_64,
             cmake: '-G "Visual Studio 17 2022" -A "x64"'
           }
-          # todo: This currently doesn't work. I'm not sure why.
-          # - {
-          #   os: Windows,
-          #   arch: aarch64,
-          #   cmake: '-G "Visual Studio 17 2022" -A "ARM64"'
-          # }
+          - {
+            os: Windows,
+            arch: aarch64,
+            cmake: '-G "Visual Studio 17 2022" -A "ARM64"'
+          }
           - {
             os: Windows,
             arch: x86,
@@ -109,7 +108,7 @@ jobs:
       - name: Build libraries
         shell: cmd
         run: |
-          .github\build.bat ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}
+          .github\build.bat ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }} -DLLAMA_CURL=ON
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -133,28 +132,27 @@ jobs:
           java-version: '11'
       - name: Run tests
         shell: bash
-        run: mvn verify -Dmodel.home=target
-          
+        run: mvn verify
 
-  # todo: also currently doesn't work
-#  test-macos:
-#    name: Test Mac
-#    needs: build-macos-native
-#    runs-on: macos-latest
-#    steps:
-#      - uses: actions/checkout@v4
-#      - uses: actions/download-artifact@v3
-#        with:
-#          name: artifacts
-#          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
-#      - uses: actions/setup-java@v4
-#        with:
-#          distribution: 'zulu'
-#          java-version: '11'
-#      - name: Run tests
-#        shell: bash
-#        run: mvn verify -Dmodel.home=target
-          
+
+  test-macos:
+    name: Test Mac
+    needs: build-macos-native
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifacts
+          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+      - name: Run tests
+        shell: bash
+        run: mvn verify
+
 
   test-windows:
     name: Test Windows
@@ -172,12 +170,12 @@ jobs:
           java-version: '11'
       - name: Run tests
         shell: cmd
-        run: mvn verify -Dmodel.home=target
+        run: mvn verify
 
 
   publish:
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_only == 'no' }}
-    needs: [test-linux,build-macos-native,test-windows]
+    needs: [ test-linux,build-macos-native,test-windows ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
