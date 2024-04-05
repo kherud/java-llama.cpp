@@ -48,9 +48,6 @@
 		<junit.version>4.13.1</junit.version>
 		<test.plugin.version>3.2.3</test.plugin.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<model.home>${project.basedir}/models</model.home>
-		<integration.test.model>mistral-7b-instruct-v0.2.Q2_K.gguf</integration.test.model>
-		<integration.test.model.url>https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/${integration.test.model}</integration.test.model.url>
 	</properties>
 
 	<dependencies>
@@ -80,87 +77,6 @@
 						<arg>src/main/cpp</arg>
 					</compilerArgs>
 				</configuration>
-			</plugin>
-			<!-- This allows us to execute the examples from the command line -->
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>exec-maven-plugin</artifactId>
-				<version>3.0.0</version>
-				<configuration>
-					<classpathScope>test</classpathScope>
-				</configuration>
-			</plugin>
-
-			<!-- Surefire plugin for unit tests -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-plugin</artifactId>
-				<version>${test.plugin.version}</version>
-				<configuration>
-
-				</configuration>
-			</plugin>
-
-			<!-- Failsafe plugin for integration tests -->
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-failsafe-plugin</artifactId>
-				<version>${test.plugin.version}</version>
-				<configuration>
-					<!-- Integration Tests need a model home variable -->
-					<systemPropertyVariables>
-						<propertyName>model.home</propertyName>
-						<integration.test.model>${integration.test.model}</integration.test.model>
-						<model.home>${model.home}</model.home>
-					</systemPropertyVariables>
-				</configuration>
-				<executions>
-					<execution>
-						<goals>
-							<goal>integration-test</goal>
-							<goal>verify</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-antrun-plugin</artifactId>
-				<version>3.0.0</version>
-				<executions>
-					<execution>
-						<id>Download the integration test model if it doesn't exist</id>
-						<phase>pre-integration-test</phase>
-						<configuration>
-							<target>
-								<!-- Check if the system property is set -->
-								<condition property="isModelHomeSet" value="true">
-									<isset property="model.home"/>
-								</condition>
-
-								<!-- Fail the build if the property is not set -->
-								<fail message="The 'model.home' system property is not set." unless="isModelHomeSet"/>
-								<!-- Check if the directory exists -->
-								<available file="${model.home}" type="dir" property="model.home.exists"/>
-
-								<!-- Fail the build if the directory does not exist -->
-								<fail message="Model home directory does not exist: ${model.home}" unless="model.home.exists"/>
-
-								<!-- Define the file path using the system property -->
-								<property name="modelPath" value="${model.home}${file.separator}${integration.test.model}"/>
-
-								<!-- Check if the file exists -->
-								<available file="${modelPath}" property="fileExists"/>
-
-								<!-- Download the file if it doesn't exist -->
-								<get src="${integration.test.model.url}" dest="${modelPath}" skipexisting="true"/>
-							</target>
-						</configuration>
-						<goals>
-							<goal>run</goal>
-						</goals>
-					</execution>
-				</executions>
 			</plugin>
 		</plugins>
 	</build>

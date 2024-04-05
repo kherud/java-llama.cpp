@@ -12,45 +12,41 @@ public class LlamaModelIT {
 
 	private static final String prefix = "def remove_non_ascii(s: str) -> str:\n    \"\"\" ";
 	private static final String suffix = "\n    return result\n";
-	private static String logOutput = "";
 	private static final int nPredict = 10;
 
 	private static LlamaModel model;
 
 	@BeforeClass
 	public static void setup() {
-		LlamaModel.setLogger((level, msg) -> logOutput += msg);
-		ModelParameters params = new ModelParameters()
-				.setNGpuLayers(43)
-				.setEmbedding(true);
-		model = new LlamaModel(ModelResolver.getPathToITModel(), params);
+		model = new LlamaModel(
+				new ModelParameters()
+						.setModelFilePath("models/mistral-7b-instruct-v0.2.Q2_K.gguf")
+						.setModelUrl("https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q2_K.gguf")
+						.setNGpuLayers(43)
+						.setEmbedding(true)
+		);
 	}
 
 	@AfterClass
 	public static void tearDown() {
-		if(model != null) {
+		if (model != null) {
 			model.close();
 		}
-	}
-
-	@Test
-	public void testLogOutput() {
-		Assert.assertFalse(logOutput.isEmpty());
 	}
 
 	@Test
 	public void testGenerateAnswer() {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters()
+		InferenceParameters params = new InferenceParameters(prefix)
 				.setTemperature(0.95f)
-				.setAntiPrompt("\"\"\"")
+				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
 				.setLogitBias(logitBias)
 				.setSeed(42);
 
 		int generated = 0;
-		for (LlamaModel.Output ignored : model.generate(prefix, params)) {
+		for (LlamaModel.Output ignored : model.generate(params)) {
 			generated++;
 		}
 		Assert.assertTrue(generated > 0 && generated <= nPredict);
@@ -60,15 +56,17 @@ public class LlamaModelIT {
 	public void testGenerateInfill() {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters()
+		InferenceParameters params = new InferenceParameters("")
+				.setInputPrefix(prefix)
+				.setInputSuffix(suffix)
 				.setTemperature(0.95f)
-				.setAntiPrompt("\"\"\"")
+				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
 				.setLogitBias(logitBias)
 				.setSeed(42);
 
 		int generated = 0;
-		for (LlamaModel.Output ignored : model.generate(prefix, suffix, params)) {
+		for (LlamaModel.Output ignored : model.generate(params)) {
 			generated++;
 		}
 		Assert.assertTrue(generated > 0 && generated <= nPredict);
@@ -76,11 +74,11 @@ public class LlamaModelIT {
 
 	@Test
 	public void testGenerateGrammar() {
-		InferenceParameters params = new InferenceParameters()
+		InferenceParameters params = new InferenceParameters("")
 				.setGrammar("root ::= (\"a\" | \"b\")+")
 				.setNPredict(nPredict);
 		StringBuilder sb = new StringBuilder();
-		for (LlamaModel.Output output : model.generate("", params)) {
+		for (LlamaModel.Output output : model.generate(params)) {
 			sb.append(output);
 		}
 		String output = sb.toString();
@@ -94,14 +92,14 @@ public class LlamaModelIT {
 	public void testCompleteAnswer() {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters()
+		InferenceParameters params = new InferenceParameters(prefix)
 				.setTemperature(0.95f)
-				.setAntiPrompt("\"\"\"")
+				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
 				.setLogitBias(logitBias)
 				.setSeed(42);
 
-		String output = model.complete(prefix, params);
+		String output = model.complete(params);
 		Assert.assertFalse(output.isEmpty());
 	}
 
@@ -109,23 +107,25 @@ public class LlamaModelIT {
 	public void testCompleteInfillCustom() {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters()
+		InferenceParameters params = new InferenceParameters("")
+				.setInputPrefix(prefix)
+				.setInputSuffix(suffix)
 				.setTemperature(0.95f)
-				.setAntiPrompt("\"\"\"")
+				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
 				.setLogitBias(logitBias)
 				.setSeed(42);
 
-		String output = model.complete(prefix, suffix, params);
+		String output = model.complete(params);
 		Assert.assertFalse(output.isEmpty());
 	}
 
 	@Test
 	public void testCompleteGrammar() {
-		InferenceParameters params = new InferenceParameters()
+		InferenceParameters params = new InferenceParameters("")
 				.setGrammar("root ::= (\"a\" | \"b\")+")
 				.setNPredict(nPredict);
-		String output = model.complete("", params);
+		String output = model.complete(params);
 		Assert.assertTrue(output.matches("[ab]+"));
 		int generated = model.encode(output).length;
 		Assert.assertTrue(generated > 0 && generated <= nPredict);
@@ -145,5 +145,4 @@ public class LlamaModelIT {
 		// the llama tokenizer adds a space before the prompt
 		Assert.assertEquals(" " + prompt, decoded);
 	}
-
 }
