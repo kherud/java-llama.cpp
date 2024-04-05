@@ -27,18 +27,14 @@ enum error_type {
 
 extern bool server_log_json;
 
-#ifndef SERVER_VERBOSE
-#define SERVER_VERBOSE 1
-#endif
-
-#if SERVER_VERBOSE != 1
-#define LOG_VERBOSE(MSG, ...)
-#else
+#if SERVER_VERBOSE
 #define LOG_VERBOSE(MSG, ...)                                            \
     do                                                                   \
     {                                                                    \
 		server_log("VERB", __func__, __LINE__, MSG, __VA_ARGS__);        \
     } while (0)
+#else
+#define LOG_VERBOSE(MSG, ...)
 #endif
 
 #define LOG_ERROR(  MSG, ...) server_log("ERR",  __func__, __LINE__, MSG, __VA_ARGS__)
