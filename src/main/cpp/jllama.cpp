@@ -249,7 +249,7 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     gpt_params params;
     server_params sparams;
 
-    server_context ctx_server;
+    server_context *ctx_server = new server_context();
 
     std::string c_params = parse_jstring(env, jparams);
     json json_params = json::parse(c_params);
@@ -257,7 +257,7 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
 
     if (!sparams.system_prompt.empty())
     {
-        ctx_server.system_prompt_set(sparams.system_prompt);
+        ctx_server->system_prompt_set(sparams.system_prompt);
     }
 
     if (params.model_alias == "unknown")
@@ -280,7 +280,7 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     std::atomic<server_state> state{SERVER_STATE_LOADING_MODEL};
 
     // load the model
-    if (!ctx_server.load_model(params))
+    if (!ctx_server->load_model(params))
     {
         state.store(SERVER_STATE_ERROR);
         env->ThrowNew(c_llama_error, "could not load model from given file path");
@@ -288,18 +288,18 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     }
     else
     {
-        ctx_server.init();
+        ctx_server->init();
         state.store(SERVER_STATE_READY);
     }
 
     LOG_INFO("model loaded", {});
 
-    const auto model_meta = ctx_server.model_meta();
+    const auto model_meta = ctx_server->model_meta();
 
     // if a custom chat template is not supplied, we will use the one that comes with the model (if any)
     if (sparams.chat_template.empty())
     {
-        if (!ctx_server.validate_model_chat_template())
+        if (!ctx_server->validate_model_chat_template())
         {
             LOG_ERROR("The chat template that comes with this model is not yet supported, falling back to chatml. This "
                       "may cause the model to output suboptimal responses",
@@ -316,7 +316,7 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
         chat.push_back({{"role", "assistant"}, {"content", "Hi there"}});
         chat.push_back({{"role", "user"}, {"content", "How are you?"}});
 
-        const std::string chat_example = format_chat(ctx_server.model, sparams.chat_template, chat);
+        const std::string chat_example = format_chat(ctx_server->model, sparams.chat_template, chat);
 
         LOG_INFO("chat template", {
                                       {"chat_example", chat_example},
@@ -324,19 +324,19 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
                                   });
     }
 
-    ctx_server.queue_tasks.on_new_task(
-        std::bind(&server_context::process_single_task, &ctx_server, std::placeholders::_1));
-    ctx_server.queue_tasks.on_finish_multitask(
-        std::bind(&server_context::on_finish_multitask, &ctx_server, std::placeholders::_1));
-    ctx_server.queue_tasks.on_update_slots(std::bind(&server_context::update_slots, &ctx_server));
-    ctx_server.queue_results.on_multitask_update(std::bind(&server_queue::update_multitask, &ctx_server.queue_tasks,
-                                                           std::placeholders::_1, std::placeholders::_2,
-                                                           std::placeholders::_3));
+    ctx_server->queue_tasks.on_new_task(
+        std::bind(&server_context::process_single_task, ctx_server, std::placeholders::_1));
+    ctx_server->queue_tasks.on_finish_multitask(
+        std::bind(&server_context::on_finish_multitask, ctx_server, std::placeholders::_1));
+    ctx_server->queue_tasks.on_update_slots(std::bind(&server_context::update_slots, ctx_server));
+    ctx_server->queue_results.on_multitask_update(std::bind(&server_queue::update_multitask, &ctx_server->queue_tasks,
+                                                            std::placeholders::_1, std::placeholders::_2,
+                                                            std::placeholders::_3));
 
-    std::thread t([&]() { ctx_server.queue_tasks.start_loop(); });
+    std::thread t([ctx_server]() { ctx_server->queue_tasks.start_loop(); });
     t.detach();
 
-    env->SetLongField(obj, f_model_pointer, reinterpret_cast<jlong>(&ctx_server));
+    env->SetLongField(obj, f_model_pointer, reinterpret_cast<jlong>(ctx_server));
 }
 
 // JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_newAnswerIterator(JNIEnv *env, jobject obj, jstring prompt,
@@ -474,26 +474,23 @@ JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getAnswer(JNIEnv *e
     json_params["prompt"] = parse_jstring(env, jprompt);
 
     const int id_task = ctx_server->queue_tasks.get_new_id();
-
     ctx_server->queue_results.add_waiting_task_id(id_task);
-
-    std::cout << "E" << std::endl;
-
     ctx_server->request_completion(id_task, -1, json_params, false, false);
 
-    std::cout << "F" << std::endl;
-
     server_task_result result = ctx_server->queue_results.recv(id_task);
-    std::string response = result.data.get<std::string>();
 
-    if (result.error || !result.stop)
+    if (!result.error && result.stop)
     {
+        std::string response = result.data["content"].get<std::string>();
+        ctx_server->queue_results.remove_waiting_task_id(id_task);
+        return parse_jbytes(env, response);
+    }
+    else
+    {
+        std::string response = result.data["message"].get<std::string>();
         env->ThrowNew(c_llama_error, response.c_str());
         return nullptr;
     }
-    ctx_server->queue_results.remove_waiting_task_id(id_task);
-
-    return parse_jbytes(env, response);
 }
 //
 // JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getInfill(JNIEnv *env, jobject obj, jstring prefix,
