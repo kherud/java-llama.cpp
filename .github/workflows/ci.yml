@@ -65,8 +65,7 @@ jobs:
       - name: Build libraries
         shell: cmd
         run: |
-          mvn compile
-          .github\build.bat -DLLAMA_CURL=ON
+          mvn compile && .github\build.bat -DLLAMA_CURL=ON
       - name: Run tests
         shell: cmd
         run: mvn verify
