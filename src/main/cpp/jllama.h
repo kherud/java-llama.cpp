@@ -25,35 +25,27 @@ JNIEXPORT jintArray JNICALL Java_de_kherud_llama_LlamaModel_encode
 
 /*
  * Class:     de_kherud_llama_LlamaModel
- * Method:    setLogger
- * Signature: (Ljava/util/function/BiConsumer;)V
- */
-JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_setLogger
-  (JNIEnv *, jclass, jobject);
-
-/*
- * Class:     de_kherud_llama_LlamaModel
  * Method:    loadModel
- * Signature: (Ljava/lang/String;Lde/kherud/llama/ModelParameters;)V
+ * Signature: (Ljava/lang/String;)V
  */
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel
-  (JNIEnv *, jobject, jstring, jobject);
+  (JNIEnv *, jobject, jstring);
 
 /*
  * Class:     de_kherud_llama_LlamaModel
  * Method:    newAnswerIterator
- * Signature: (Ljava/lang/String;Lde/kherud/llama/InferenceParameters;)V
+ * Signature: (Ljava/lang/String;Ljava/lang/String;)V
  */
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_newAnswerIterator
-  (JNIEnv *, jobject, jstring, jobject);
+  (JNIEnv *, jobject, jstring, jstring);
 
 /*
  * Class:     de_kherud_llama_LlamaModel
  * Method:    newInfillIterator
- * Signature: (Ljava/lang/String;Ljava/lang/String;Lde/kherud/llama/InferenceParameters;)V
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
  */
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_newInfillIterator
-  (JNIEnv *, jobject, jstring, jstring, jobject);
+  (JNIEnv *, jobject, jstring, jstring, jstring);
 
 /*
  * Class:     de_kherud_llama_LlamaModel
@@ -66,18 +58,18 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_getNext
 /*
  * Class:     de_kherud_llama_LlamaModel
  * Method:    getAnswer
- * Signature: (Ljava/lang/String;Lde/kherud/llama/InferenceParameters;)[B
+ * Signature: (Ljava/lang/String;Ljava/lang/String;)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getAnswer
-  (JNIEnv *, jobject, jstring, jobject);
+  (JNIEnv *, jobject, jstring, jstring);
 
 /*
  * Class:     de_kherud_llama_LlamaModel
  * Method:    getInfill
- * Signature: (Ljava/lang/String;Ljava/lang/String;Lde/kherud/llama/InferenceParameters;)[B
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_getInfill
-  (JNIEnv *, jobject, jstring, jstring, jobject);
+  (JNIEnv *, jobject, jstring, jstring, jstring);
 
 /*
  * Class:     de_kherud_llama_LlamaModel
