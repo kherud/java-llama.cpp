@@ -37,3 +37,6 @@ src/main/resources/**/*.dylib
 src/main/resources/**/*.dll
 src/main/resources/**/*.metal
 src/test/resources/**/*.gbnf
+
+**/*.etag
+**/*.lastModified
