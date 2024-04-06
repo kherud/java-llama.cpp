@@ -21,6 +21,7 @@ FetchContent_MakeAvailable(json)
 #################### curl ####################
 
 if(LLAMA_CURL)
+	set(CMAKE_FIND_DEBUG_MODE ON)
     FetchContent_Declare(
         curl
         GIT_REPOSITORY https://github.com/curl/curl.git
@@ -28,8 +29,8 @@ if(LLAMA_CURL)
     )
     FetchContent_MakeAvailable(curl)
 
-    set(CURL_ROOT "${curl_SOURCE_DIR}" CACHE PATH "Internally fetched curl source directory")
-    list(APPEND CMAKE_LIBRARY_PATH "${curl_BINARY_DIR}/lib")
+	set(CURL_ROOT "${curl_SOURCE_DIR}" CACHE PATH "Internally fetched curl source directory")
+	find_library(CURL NAMES curl HINTS ${curl_BINARY_DIR}/lib)
 endif()
 
 #################### llama.cpp ####################
@@ -105,10 +106,11 @@ endif()
 add_library(jllama SHARED src/main/cpp/jllama.cpp src/main/cpp/server.hpp src/main/cpp/utils.hpp)
 
 target_include_directories(jllama PRIVATE src/main/cpp ${JNI_INCLUDE_DIRS})
-target_link_libraries(jllama PRIVATE common llama nlohmann_json ${LLAMA_EXTRA_LIBS})
 if(LLAMA_CURL)
+	add_dependencies(common CURL::libcurl)
     target_link_libraries(jllama PRIVATE CURL::libcurl)
 endif()
+target_link_libraries(jllama PRIVATE common llama nlohmann_json ${LLAMA_EXTRA_LIBS})
 target_compile_features(jllama PRIVATE cxx_std_11)
 
 target_compile_definitions(jllama PRIVATE
