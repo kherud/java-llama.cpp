@@ -69,10 +69,15 @@ jobs:
           java-version: '11'
       - name: Build libraries
         run: |
+          dir
+          dir curl
+          dir curl\build
+          dir curl\build\lib
+          dir curl\build\lib\Release
           mvn compile
           .github\build.bat `
             -DLLAMA_CURL=ON `
-            -DCURL_LIBRARY=curl\build\lib\Release\libcurl_imp.lib `
+            -DCURL_LIBRARY=${{ github.workspace }}\curl\build\lib\Release\libcurl_imp.lib `
             -DCURL_INCLUDE_DIR=curl\include
       - name: Run tests
         run: mvn test
