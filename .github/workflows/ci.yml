@@ -15,10 +15,6 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
-      - name: Install libcurl
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev
       - name: Build libraries
         shell: bash
         # cmake should figure out OS and ARCH automatically when running build.sh (but we need mvn compile for it)
@@ -38,9 +34,6 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
-      - name: Install libcurl
-        run: |
-          brew install curl
       - name: Build libraries
         shell: bash
         run: |
@@ -59,9 +52,6 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
-      - name: Install libcurl
-        run: |
-          choco install curl
       - name: Build libraries
         shell: cmd
         run: |

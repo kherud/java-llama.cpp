@@ -2,21 +2,12 @@ cmake_minimum_required(VERSION 3.12)
 
 project(jllama CXX)
 
+include(FetchContent)
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_SHARED_LIBS ON)
 
 option(LLAMA_VERBOSE	"llama: verbose output"		OFF)
-
-#################### llama.cpp ####################
-
-include(FetchContent)
-FetchContent_Declare(
-	llama.cpp
-	GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-	GIT_TAG        b2589
-)
-FetchContent_MakeAvailable(llama.cpp)
-
 
 #################### json ####################
 
@@ -26,6 +17,26 @@ FetchContent_Declare(
 	GIT_TAG        v3.11.3
 )
 FetchContent_MakeAvailable(json)
+
+#################### curl ####################
+
+if(LLAMA_CURL)
+    FetchContent_Declare(
+        curl
+        GIT_REPOSITORY https://github.com/curl/curl.git
+        GIT_TAG        curl-8_7_1
+    )
+    FetchContent_MakeAvailable(curl)
+endif()
+
+#################### llama.cpp ####################
+
+FetchContent_Declare(
+	llama.cpp
+	GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
+	GIT_TAG        b2589
+)
+FetchContent_MakeAvailable(llama.cpp)
 
 #################### jllama ####################
 
@@ -92,6 +103,9 @@ add_library(jllama SHARED src/main/cpp/jllama.cpp src/main/cpp/server.hpp src/ma
 
 target_include_directories(jllama PRIVATE src/main/cpp ${JNI_INCLUDE_DIRS})
 target_link_libraries(jllama PRIVATE common llama nlohmann_json ${LLAMA_EXTRA_LIBS})
+if(LLAMA_CURL)
+    target_link_libraries(jllama PRIVATE CURL::libcurl)
+endif()
 target_compile_features(jllama PRIVATE cxx_std_11)
 
 target_compile_definitions(jllama PRIVATE
