@@ -109,6 +109,7 @@ else()
 endif()
 
 if (LLAMA_METAL)
-    # copy ggml-metal.metal to shared library directory
+    # copy ggml-common.h and ggml-metal.metal to bin directory
+    configure_file(${llama.cpp_SOURCE_DIR}/ggml-common.h    ${JLLAMA_DIR}/ggml-common.h    COPYONLY)
     configure_file(${llama.cpp_SOURCE_DIR}/ggml-metal.metal ${JLLAMA_DIR}/ggml-metal.metal COPYONLY)
 endif()
