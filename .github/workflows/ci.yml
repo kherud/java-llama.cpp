@@ -72,7 +72,7 @@ jobs:
           mvn compile
           .github\build.bat `
             -DLLAMA_CURL=ON `
-            -DCURL_LIBRARY=curl\build\lib\Release\libcurl.dll `
+            -DCURL_LIBRARY=curl\build\lib\Release\libcurl_imp.lib `
             -DCURL_INCLUDE_DIR=curl\include
       - name: Run tests
         run: mvn test
