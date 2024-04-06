@@ -3,6 +3,8 @@
 
 name: Continuous Integration
 on: [ "pull_request", "workflow_dispatch" ]
+env:
+  CURL_RELEASE: 'curl-8_7_1'
 jobs:
 
   # don't split build and test jobs to keep the workflow simple
@@ -46,8 +48,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
-          repository: 'https://github.com/curl/curl'
-          ref: 'curl-8_7_1'
+          repository: 'curl/curl'
+          ref: ${{ env.CURL_RELEASE }}
           path: 'curl'
       - name: Build curl
         run: cd curl && ..\.github\build.bat
