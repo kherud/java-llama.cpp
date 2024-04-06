@@ -13,6 +13,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: 'curl/curl'
+          ref: ${{ env.CURL_RELEASE }}
+          path: 'curl'
+      - name: Build curl
+        run: cd curl && ../.github/build.sh
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
@@ -21,7 +28,10 @@ jobs:
         # cmake should figure out OS and ARCH automatically when running build.sh (but we need mvn compile for it)
         run: |
           mvn compile
-          .github/build.sh -DLLAMA_CURL=ON
+          .github/build.sh \
+            -DLLAMA_CURL=ON \
+            -DCURL_LIBRARY=curl/build/lib/libcurl.so \
+            -DCURL_INCLUDE_DIR=curl/include
       - name: Run tests
         run: mvn test
 
@@ -59,10 +69,10 @@ jobs:
           java-version: '11'
       - name: Build libraries
         run: |
-          mvn compile && 
-          .github\build.bat ^
-            -DLLAMA_CURL=ON ^
-            -DCURL_LIBRARY=curl\build\lib\Release\libcurl.dll ^
+          mvn compile
+          .github\build.bat `
+            -DLLAMA_CURL=ON `
+            -DCURL_LIBRARY=curl\build\lib\Release\libcurl.dll `
             -DCURL_INCLUDE_DIR=curl\include
       - name: Run tests
         run: mvn test
