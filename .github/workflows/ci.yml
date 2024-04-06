@@ -16,13 +16,11 @@ jobs:
           distribution: 'zulu'
           java-version: '11'
       - name: Build libraries
-        shell: bash
         # cmake should figure out OS and ARCH automatically when running build.sh (but we need mvn compile for it)
         run: |
           mvn compile
           .github/build.sh -DLLAMA_CURL=ON
       - name: Run tests
-        shell: bash
         run: mvn test
 
   build-and-test-macos:
@@ -35,12 +33,10 @@ jobs:
           distribution: 'zulu'
           java-version: '11'
       - name: Build libraries
-        shell: bash
         run: |
           mvn compile
           .github/build.sh -DLLAMA_CURL=ON -DLLAMA_METAL_EMBED_LIBRARY=ON
       - name: Run tests
-        shell: bash
         run: mvn test
 
   build-and-test-windows:
@@ -48,14 +44,23 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: 'https://github.com/curl/curl'
+          ref: 'curl-8_7_1'
+          path: 'curl'
+      - name: Build curl
+        run: cd curl && ..\.github\build.bat
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '11'
       - name: Build libraries
-        shell: cmd
         run: |
-          mvn compile && .github\build.bat -DLLAMA_CURL=ON
+          mvn compile && 
+          .github\build.bat ^
+            -DLLAMA_CURL=ON ^
+            -DCURL_LIBRARY=curl\build\lib\Release\libcurl.dll ^
+            -DCURL_INCLUDE_DIR=curl\include
       - name: Run tests
-        shell: cmd
         run: mvn test
