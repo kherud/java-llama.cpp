@@ -959,7 +959,7 @@ elseif (CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64" OR CMAKE_GENERATOR_PLATFORM_LW
     if (MSVC)
         # instruction set detection for MSVC only
         if (LLAMA_NATIVE)
-            include(cmake/FindSIMD.cmake)
+            include(${llama.cpp_SOURCE_DIR}/cmake/FindSIMD.cmake)
         endif ()
         if (LLAMA_AVX512)
             list(APPEND ARCH_FLAGS /arch:AVX512)
