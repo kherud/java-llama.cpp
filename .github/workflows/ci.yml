@@ -3,8 +3,6 @@
 
 name: Continuous Integration
 on: [ "pull_request", "workflow_dispatch" ]
-env:
-  CURL_RELEASE: 'curl-8_7_1'
 jobs:
 
   # don't split build and test jobs to keep the workflow simple
@@ -13,25 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: 'curl/curl'
-          ref: ${{ env.CURL_RELEASE }}
-          path: 'curl'
-      - name: Build curl
-        run: cd curl && ../.github/build.sh
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '11'
+      - name: Install curl
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev
       - name: Build libraries
         # cmake should figure out OS and ARCH automatically when running build.sh (but we need mvn compile for it)
         run: |
           mvn compile
-          .github/build.sh \
-            -DLLAMA_CURL=ON \
-            -DCURL_LIBRARY=curl/build/lib/libcurl.so \
-            -DCURL_INCLUDE_DIR=curl/include
+          .github/build.sh -DLLAMA_CURL=ON
       - name: Run tests
         run: mvn test
 
@@ -56,28 +48,18 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with:
-          repository: 'curl/curl'
-          ref: ${{ env.CURL_RELEASE }}
-          path: 'curl'
-      - name: Build curl
-        run: cd curl && ..\.github\build.bat
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '11'
+      - name: Install curl
+        run: |
+          git clone https://github.com/Microsoft/vcpkg.git
+          .\vcpkg\bootstrap-vcpkg.bat
+          .\vcpkg\vcpkg install curl
       - name: Build libraries
         run: |
-          dir
-          dir curl
-          dir curl\build
-          dir curl\build\lib
-          dir curl\build\lib\Release
           mvn compile
-          .github\build.bat `
-            -DLLAMA_CURL=ON `
-            -DCURL_LIBRARY=${{ github.workspace }}\curl\build\lib\Release\libcurl_imp.lib `
-            -DCURL_INCLUDE_DIR=curl\include
+          .github\build.bat -DLLAMA_CURL=ON
       - name: Run tests
         run: mvn test
