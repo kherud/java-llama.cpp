@@ -27,6 +27,9 @@ if(LLAMA_CURL)
         GIT_TAG        curl-8_7_1
     )
     FetchContent_MakeAvailable(curl)
+
+    set(CURL_ROOT "${curl_SOURCE_DIR}" CACHE PATH "Internally fetched curl source directory")
+    set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} "${curl_BINARY_DIR}/lib")
 endif()
 
 #################### llama.cpp ####################
