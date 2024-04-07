@@ -1,5 +1,5 @@
 ![Java 11+](https://img.shields.io/badge/Java-11%2B-informational)
-![llama.cpp b2589](https://img.shields.io/badge/llama.cpp-%23b2589-informational)
+![llama.cpp b2619](https://img.shields.io/badge/llama.cpp-%23b2619-informational)
 
 # Java Bindings for [llama.cpp](https://github.com/ggerganov/llama.cpp)
 
@@ -7,6 +7,15 @@ The main goal of llama.cpp is to run the LLaMA model using 4-bit integer quantiz
 This repository provides Java bindings for the C++ library.
 
 **You are welcome to contribute**
+
+1. [Quick Start](#quick-start)  
+    1.1 [No Setup required](#no-setup-required)   
+    1.2 [Setup required](#setup-required)
+2. [Documentation](#documentation)  
+    2.1 [Example](#example)  
+    2.2 [Inference](#inference)  
+    2.3 [Infilling](#infilling)  
+3. [Android](#importing-in-android)
 
 ## Quick Start
 
@@ -22,16 +31,6 @@ Access this library via Maven:
 
 There are multiple [examples](src/test/java/examples):
 
-```bash
-mvn exec:java -Dexec.mainClass="examples.MainExample"
-```
-
-You can also run some integration tests, which will automatically download a model to the `models` directory:
-
-```bash
-mvn verify
-```
-
 ### No Setup required
 
 We support CPU inference for the following platforms out of the box:
@@ -45,7 +44,7 @@ If any of these match your platform, you can include the Maven dependency and ge
 ### Setup required
 
 If none of the above listed platforms matches yours, currently you have to compile the library yourself (also if you 
-want GPU acceleration, see below). More support is planned soon.
+want GPU acceleration, see below).
 
 This requires:
 
@@ -64,7 +63,9 @@ echo $JAVA_HOME # for linux/macos
 echo %JAVA_HOME% # for windows
 ```
 
-Then, run the following commands in the directory of this repository (java-llama.cpp):
+Then, checkout [llama.cpp](https://github.com/ggerganov/llama.cpp) to know which build arguments to use (e.g. for CUDA support).
+Finally, you have to run following commands in the directory of this repository (java-llama.cpp).
+Remember to add your build arguments in the fourth line (`cmake ..`):
 
 ```shell
 mvn compile
@@ -73,6 +74,9 @@ cd build
 cmake .. # add any other arguments for your backend
 cmake --build . --config Release
 ```
+
+> [!TIP]
+> Use `-DLLAMA_CURL=ON` to download models via Java code using `ModelParameters#setModelUrl(String)`.
 
 All required files will be put in a resources directory matching your platform, which will appear in the cmake output. For example something like:
 
@@ -91,7 +95,7 @@ as a Maven dependency, see below how to set the necessary paths in order for Jav
 
 ### Custom llama.cpp Setup (GPU acceleration)
 
-This repository provides default support for CPU based inference. You can compile `llama.cpp` any way you want, however.
+This repository provides default support for CPU based inference. You can compile `llama.cpp` any way you want, however (see [Setup Required](#setup-required)).
 In order to use your self-compiled library, set either of the [JVM options](https://www.jetbrains.com/help/idea/tuning-the-ide.html#configure-jvm-options):
 
 - `de.kherud.llama.lib.path`, for example `-Dde.kherud.llama.lib.path=/directory/containing/lib`
@@ -116,60 +120,6 @@ Look for the shared library in `build`.
 
 > [!IMPORTANT]
 > If you are running MacOS with Metal, you have to put the file `ggml-metal.metal` from `build/bin` in the same directory as the shared library.
-
-### Importing in Android
-
-You can use this library in Android project.
-1. Add java-llama.cpp as a submodule in your android `app` project directory
-```shell
-git submodule add https://github.com/kherud/java-llama.cpp 
-```
-2. Declare the library as a source in your build.gradle
-```gradle
-android {
-    val jllamaLib = file("java-llama.cpp")
-
-    // Execute "mvn compile" if folder target/ doesn't exist at ./java-llama.cpp/
-    if (!file("$jllamaLib/target").exists()) {
-        exec {
-            commandLine = listOf("mvn", "compile")
-            workingDir = file("java-llama.cpp/")
-        }
-    }
-
-    ...
-    defaultConfig {
-	...
-        externalNativeBuild {
-            cmake {
-		// Add an flags if needed
-                cppFlags += ""
-                arguments += ""
-            }
-        }
-    }
-
-    // Declare c++ sources
-    externalNativeBuild {
-        cmake {
-            path = file("$jllamaLib/CMakeLists.txt")
-            version = "3.22.1"
-        }
-    }
-
-    // Declare java sources
-    sourceSets {
-        named("main") {
-            // Add source directory for java-llama.cpp
-            java.srcDir("$jllamaLib/src/main/java")
-        }
-    }
-}
-```
-3. Exclude `de.kherud.llama` in proguard-rules.pro
-```proguard
-keep class de.kherud.llama.** { *; }
-```
 
 ## Documentation
 
@@ -268,4 +218,58 @@ InferenceParameters inferParams = new InferenceParameters("")
 try (LlamaModel model = new LlamaModel(modelParams)) {
     model.generate(inferParams);
 }
+```
+
+## Importing in Android
+
+You can use this library in Android project.
+1. Add java-llama.cpp as a submodule in your android `app` project directory
+```shell
+git submodule add https://github.com/kherud/java-llama.cpp 
+```
+2. Declare the library as a source in your build.gradle
+```gradle
+android {
+    val jllamaLib = file("java-llama.cpp")
+
+    // Execute "mvn compile" if folder target/ doesn't exist at ./java-llama.cpp/
+    if (!file("$jllamaLib/target").exists()) {
+        exec {
+            commandLine = listOf("mvn", "compile")
+            workingDir = file("java-llama.cpp/")
+        }
+    }
+
+    ...
+    defaultConfig {
+	...
+        externalNativeBuild {
+            cmake {
+		// Add an flags if needed
+                cppFlags += ""
+                arguments += ""
+            }
+        }
+    }
+
+    // Declare c++ sources
+    externalNativeBuild {
+        cmake {
+            path = file("$jllamaLib/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
+
+    // Declare java sources
+    sourceSets {
+        named("main") {
+            // Add source directory for java-llama.cpp
+            java.srcDir("$jllamaLib/src/main/java")
+        }
+    }
+}
+```
+3. Exclude `de.kherud.llama` in proguard-rules.pro
+```proguard
+keep class de.kherud.llama.** { *; }
 ```
