@@ -2422,7 +2422,8 @@ static void server_params_parse(json jparams, server_params &sparams, gpt_params
     params.use_mmap = json_value(jparams, "use_mmap", default_params.use_mmap);
     params.use_mlock = json_value(jparams, "use_mlock", default_params.use_mlock);
     params.no_kv_offload = json_value(jparams, "no_kv_offload", default_params.no_kv_offload);
-    server_log_json = json_value(jparams, "log_format", "json") == "json";
+    server_log_json = !jparams.contains("log_format") || jparams["log_format"] == "json";
+    sparams.system_prompt = json_value(jparams, "system_prompt", default_sparams.system_prompt);
 
     if (jparams.contains("n_gpu_layers"))
     {
@@ -2477,20 +2478,4 @@ static void server_params_parse(json jparams, server_params &sparams, gpt_params
         LOG_WARNING("llama.cpp was compiled without CUDA. It is not possible to set a main GPU.", {});
 #endif
     }
-
-	if (jparams.contains("system_prompt_file")) {
-		std::ifstream file(jparams["system_prompt_file"]);
-		if (!file) {
-			fprintf(stderr, "error: failed to open file '%s'\n", argv[i]);
-		}
-		else {
-			std::string system_prompt;
-			std::copy(
-				std::istreambuf_iterator<char>(file),
-				std::istreambuf_iterator<char>(),
-				std::back_inserter(system_prompt)
-			);
-			sparams.system_prompt = system_prompt;
-		}
-	}
 }

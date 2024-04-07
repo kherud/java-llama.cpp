@@ -66,7 +66,7 @@ public final class ModelParameters extends JsonParameters {
 	private static final String PARAM_USE_MMAP = "use_mmap";
 	private static final String PARAM_USE_MLOCK = "use_mlock";
 	private static final String PARAM_NO_KV_OFFLOAD = "no_kv_offload";
-	private static final String PARAM_SYSTEM_PROMPT_FILE = "system_prompt_file";
+	private static final String PARAM_SYSTEM_PROMPT = "system_prompt";
 	private static final String PARAM_LOG_FORMAT = "log_format";
 
 	/**
@@ -567,10 +567,10 @@ public final class ModelParameters extends JsonParameters {
 	}
 
 	/**
-	 * Set a file path to load a system prompt from
+	 * Set a system prompt to use
 	 */
-	public ModelParameters setSystemPromptFile(String systemPromptFile) {
-		parameters.put(PARAM_SYSTEM_PROMPT_FILE, systemPromptFile);
+	public ModelParameters setSystemPrompt(String systemPrompt) {
+		parameters.put(PARAM_SYSTEM_PROMPT, systemPrompt);
 		return this;
 	}
 
