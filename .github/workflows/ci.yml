@@ -28,23 +28,24 @@ jobs:
       - name: Run tests
         run: mvn test
 
-  build-and-test-macos:
-    name: macos-latest
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '11'
-      - name: Download model
-        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
-      - name: Build libraries
-        run: |
-          mvn compile
-          .github/build.sh -DLLAMA_METAL_EMBED_LIBRARY=ON -DLLAMA_NATIVE=OFF
-      - name: Run tests
-        run: mvn test
+# disabled for now, we don't have access to a macos arm64 runner and testing on x86_64 doesn't work
+#  build-and-test-macos:
+#    name: macos-latest
+#    runs-on: macos-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: actions/setup-java@v4
+#        with:
+#          distribution: 'zulu'
+#          java-version: '11'
+#      - name: Download model
+#        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
+#      - name: Build libraries
+#        run: |
+#          mvn compile
+#          .github/build.sh -DLLAMA_METAL_EMBED_LIBRARY=ON
+#      - name: Run tests
+#        run: mvn test
 
   build-and-test-windows:
     name: windows-latest
