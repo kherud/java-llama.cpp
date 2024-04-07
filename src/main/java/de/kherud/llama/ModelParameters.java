@@ -327,7 +327,7 @@ public final class ModelParameters extends JsonParameters {
 	}
 
 	/**
-	 * Set the KV cache defragmentation threshold (default: -1.0, < 0 - disabled)
+	 * Set the KV cache defragmentation threshold (default: -1.0, &lt; 0 - disabled)
 	 */
 	public ModelParameters setDefragmentationThreshold(float defragThold) {
 		parameters.put(PARAM_DEFRAG_THOLD, String.valueOf(defragThold));

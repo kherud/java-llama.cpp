@@ -228,7 +228,7 @@ public final class InferenceParameters extends JsonParameters {
 	}
 
 	/**
-	 * Set the RNG seed (default: -1, use random seed for < 0)
+	 * Set the RNG seed (default: -1, use random seed for &lt; 0)
 	 */
 	public InferenceParameters setSeed(int seed) {
 		parameters.put(PARAM_SEED, String.valueOf(seed));
