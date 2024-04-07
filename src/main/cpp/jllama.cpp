@@ -252,10 +252,13 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     json json_params = json::parse(c_params);
     server_params_parse(json_params, sparams, params);
 
-    if (json_value(json_params, "disable_log", false)) {
-    	log_disable();
-    } else {
-    	log_enable();
+    if (json_value(json_params, "disable_log", false))
+    {
+        log_disable();
+    }
+    else
+    {
+        log_enable();
     }
 
     if (!sparams.system_prompt.empty())
@@ -411,12 +414,14 @@ JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env,
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
     server_context *ctx_server = reinterpret_cast<server_context *>(server_handle);
 
-    if (!ctx_server->params.embedding) {
-		env->ThrowNew(c_llama_error, "model was not loaded with embedding support (see ModelParameters#setEmbedding(boolean))");
-		return nullptr;
+    if (!ctx_server->params.embedding)
+    {
+        env->ThrowNew(c_llama_error,
+                      "model was not loaded with embedding support (see ModelParameters#setEmbedding(boolean))");
+        return nullptr;
     }
 
-	const std::string prompt = parse_jstring(env, jprompt);
+    const std::string prompt = parse_jstring(env, jprompt);
 
     const int id_task = ctx_server->queue_tasks.get_new_id();
     ctx_server->queue_results.add_waiting_task_id(id_task);
@@ -432,7 +437,7 @@ JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env,
     }
     else
     {
-    	std::cout << result.data << std::endl;
+        std::cout << result.data << std::endl;
         std::vector<float> embedding = result.data["embedding"].get<std::vector<float>>();
 
         jfloatArray j_embedding = env->NewFloatArray(embedding.size());
