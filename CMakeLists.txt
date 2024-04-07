@@ -23,7 +23,7 @@ FetchContent_MakeAvailable(json)
 FetchContent_Declare(
 	llama.cpp
 	GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-	GIT_TAG        b2589
+	GIT_TAG        b2619
 )
 FetchContent_MakeAvailable(llama.cpp)
 
@@ -108,8 +108,7 @@ else()
 	)
 endif()
 
-if (LLAMA_METAL)
+if (LLAMA_METAL AND NOT )
     # copy ggml-common.h and ggml-metal.metal to bin directory
-    configure_file(${llama.cpp_SOURCE_DIR}/ggml-common.h    ${JLLAMA_DIR}/ggml-common.h    COPYONLY)
     configure_file(${llama.cpp_SOURCE_DIR}/ggml-metal.metal ${JLLAMA_DIR}/ggml-metal.metal COPYONLY)
 endif()
