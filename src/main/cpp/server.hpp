@@ -2422,6 +2422,7 @@ static void server_params_parse(json jparams, server_params &sparams, gpt_params
     params.use_mmap = json_value(jparams, "use_mmap", default_params.use_mmap);
     params.use_mlock = json_value(jparams, "use_mlock", default_params.use_mlock);
     params.no_kv_offload = json_value(jparams, "no_kv_offload", default_params.no_kv_offload);
+    server_log_json = json_value(jparams, "log_format", "json") == "json";
 
     if (jparams.contains("n_gpu_layers"))
     {
@@ -2477,105 +2478,19 @@ static void server_params_parse(json jparams, server_params &sparams, gpt_params
 #endif
     }
 
-    // #if SERVER_VERBOSE != 1
-    //		LOG_WARNING("server.cpp is not built with verbose logging.", {});
-    // #else
-    //		server_verbose = true;
-    // #endif
-
-    //    auto system_prompt_file = get_string_field(env, jparams, f_system_prompt_file);
-    //    if (system_prompt_file.length() > 0)
-    //    {
-    //        std::ifstream file(system_prompt_file);
-    //        if (!file)
-    //        {
-    //            fprintf(stderr, "error: failed to open file '%s'\n", argv[i]);
-    //            invalid_param = true;
-    //            break;
-    //        }
-    //        std::string system_prompt;
-    //        std::copy(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(),
-    //                  std::back_inserter(system_prompt));
-    //        sparams.system_prompt = system_prompt;
-    //    }
-
-    //    value = env->GetObjectField(jparams, f_log_format);
-    //    if (value == o_log_format_json)
-    //    {
-    //        server_log_json = true;
-    //    }
-    //    else if (value == o_log_format_text)
-    //    {
-    //        server_log_json = false;
-    //    }
-    //    else
-    //    {
-    //        log_set_target(stdout);
-    //        LOG_INFO("logging to file is disabled.", {});
-    //    }
-
-    //	auto system_prompt_file = get_string_field(env, jparams, f_system_prompt_file);
-    //
-    //	else if (arg == "--chat-template") {
-    //            if (++i >= argc) {
-    //                invalid_param = true;
-    //                break;
-    //            }
-    //            if (!verify_custom_template(argv[i])) {
-    //                fprintf(stderr, "error: the supplied chat template is not supported: %s\n", argv[i]);
-    //                fprintf(stderr, "note: llama.cpp does not use jinja parser, we only support commonly used
-    //                templates\n"); invalid_param = true; break;
-    //            }
-    //            sparams.chat_template = argv[i];
-    //        } else if (arg == "--override-kv") {
-    //            if (++i >= argc) {
-    //                invalid_param = true;
-    //                break;
-    //            }
-    //            char * sep = strchr(argv[i], '=');
-    //            if (sep == nullptr || sep - argv[i] >= 128) {
-    //                fprintf(stderr, "error: Malformed KV override: %s\n", argv[i]);
-    //                invalid_param = true;
-    //                break;
-    //            }
-    //
-    //            struct llama_model_kv_override kvo;
-    //            std::strncpy(kvo.key, argv[i], sep - argv[i]);
-    //            kvo.key[sep - argv[i]] = 0;
-    //            sep++;
-    //            if (strncmp(sep, "int:", 4) == 0) {
-    //                sep += 4;
-    //                kvo.tag = LLAMA_KV_OVERRIDE_TYPE_INT;
-    //                kvo.int_value = std::atol(sep);
-    //            } else if (strncmp(sep, "float:", 6) == 0) {
-    //                sep += 6;
-    //                kvo.tag = LLAMA_KV_OVERRIDE_TYPE_FLOAT;
-    //                kvo.float_value = std::atof(sep);
-    //            } else if (strncmp(sep, "bool:", 5) == 0) {
-    //                sep += 5;
-    //                kvo.tag = LLAMA_KV_OVERRIDE_TYPE_BOOL;
-    //                if (std::strcmp(sep, "true") == 0) {
-    //                    kvo.bool_value = true;
-    //                } else if (std::strcmp(sep, "false") == 0) {
-    //                    kvo.bool_value = false;
-    //                } else {
-    //                    fprintf(stderr, "error: Invalid boolean value for KV override: %s\n", argv[i]);
-    //                    invalid_param = true;
-    //                    break;
-    //                }
-    //            } else {
-    //                fprintf(stderr, "error: Invalid type for KV override: %s\n", argv[i]);
-    //                invalid_param = true;
-    //                break;
-    //            }
-    //            params.kv_overrides.push_back(kvo);
-    //        }
-    //    }
-    //
-
-    if (!params.kv_overrides.empty())
-    {
-        params.kv_overrides.emplace_back();
-        params.kv_overrides.back().key[0] = 0;
-    }
+	if (jparams.contains("system_prompt_file")) {
+		std::ifstream file(jparams["system_prompt_file"]);
+		if (!file) {
+			fprintf(stderr, "error: failed to open file '%s'\n", argv[i]);
+		}
+		else {
+			std::string system_prompt;
+			std::copy(
+				std::istreambuf_iterator<char>(file),
+				std::istreambuf_iterator<char>(),
+				std::back_inserter(system_prompt)
+			);
+			sparams.system_prompt = system_prompt;
+		}
+	}
 }

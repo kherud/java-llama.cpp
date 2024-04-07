@@ -3,6 +3,7 @@ package de.kherud.llama;
 import java.util.Map;
 
 import de.kherud.llama.args.GpuSplitMode;
+import de.kherud.llama.args.LogFormat;
 import de.kherud.llama.args.NumaStrategy;
 import de.kherud.llama.args.PoolingType;
 import de.kherud.llama.args.RopeScalingType;
@@ -65,6 +66,8 @@ public final class ModelParameters extends JsonParameters {
 	private static final String PARAM_USE_MMAP = "use_mmap";
 	private static final String PARAM_USE_MLOCK = "use_mlock";
 	private static final String PARAM_NO_KV_OFFLOAD = "no_kv_offload";
+	private static final String PARAM_SYSTEM_PROMPT_FILE = "system_prompt_file";
+	private static final String PARAM_LOG_FORMAT = "log_format";
 
 	/**
 	 * Set the RNG seed
@@ -560,6 +563,32 @@ public final class ModelParameters extends JsonParameters {
 	 */
 	public ModelParameters setNoKvOffload(boolean noKvOffload) {
 		parameters.put(PARAM_NO_KV_OFFLOAD, String.valueOf(noKvOffload));
+		return this;
+	}
+
+	/**
+	 * Set a file path to load a system prompt from
+	 */
+	public ModelParameters setSystemPromptFile(String systemPromptFile) {
+		parameters.put(PARAM_SYSTEM_PROMPT_FILE, systemPromptFile);
+		return this;
+	}
+
+	/**
+	 * Set which log format to use
+	 */
+	public ModelParameters setLogFormat(LogFormat logFormat) {
+		switch (logFormat) {
+			case NONE:
+				parameters.put(PARAM_LOG_DISABLE, String.valueOf(true));
+				break;
+			case JSON:
+				parameters.put(PARAM_LOG_FORMAT, "json");
+				break;
+			case TEXT:
+				parameters.put(PARAM_LOG_FORMAT, "text");
+				break;
+		}
 		return this;
 	}
 }
