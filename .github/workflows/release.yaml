@@ -8,6 +8,9 @@ on:
         default: 'no'
   release:
     types: [ created ]
+env:
+  MODEL_URL: "https://huggingface.co/afrideva/Llama-160M-Chat-v1-GGUF/resolve/main/llama-160m-chat-v1.q2_k.gguf"
+  MODEL_NAME: "llama-160m-chat-v1.q2_k.gguf"
 jobs:
 
 
@@ -38,7 +41,7 @@ jobs:
       - name: Build libraries
         shell: bash
         run: |
-          .github/dockcross/${{ matrix.target.image }} .github/build.sh "-DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}" -DLLAMA_CURL=ON
+          .github/dockcross/${{ matrix.target.image }} .github/build.sh "-DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}"
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -56,19 +59,19 @@ jobs:
           - {
             os: Mac,
             arch: x86_64,
-            cmake: '-DCMAKE_OSX_ARCHITECTURES=x86_64'
+            cmake: '-DCMAKE_OSX_ARCHITECTURES=x86_64 -DLLAMA_METAL_EMBED_LIBRARY=ON'
           }
           - {
             os: Mac,
             arch: aarch64,
-            cmake: '-DCMAKE_OSX_ARCHITECTURES=arm64 -DLLAMA_NATIVE=OFF'
+            cmake: '-DCMAKE_OSX_ARCHITECTURES=arm64 -DLLAMA_METAL_EMBED_LIBRARY=ON'
           }
     steps:
       - uses: actions/checkout@v4
       - name: Build libraries
         shell: bash
         run: |
-          .github/build.sh ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }} -DLLAMA_CURL=ON
+          .github/build.sh ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -108,7 +111,7 @@ jobs:
       - name: Build libraries
         shell: cmd
         run: |
-          .github\build.bat ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }} -DLLAMA_CURL=ON
+          .github\build.bat ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -126,32 +129,34 @@ jobs:
         with:
           name: artifacts
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
+      - name: Download model
+        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '11'
       - name: Run tests
-        shell: bash
         run: mvn test
 
-
-  test-macos:
-    name: Test Mac
-    needs: build-macos-native
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v3
-        with:
-          name: artifacts
-          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '11'
-      - name: Run tests
-        shell: bash
-        run: mvn test
+  # disabled for now, we don't have access to a macos arm64 runner and testing on x86_64 doesn't work
+#  test-macos:
+#    name: Test Mac
+#    needs: build-macos-native
+#    runs-on: macos-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: actions/download-artifact@v3
+#        with:
+#          name: artifacts
+#          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
+#      - name: Download model
+#        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
+#      - uses: actions/setup-java@v4
+#        with:
+#          distribution: 'zulu'
+#          java-version: '11'
+#      - name: Run tests
+#        run: mvn test
 
 
   test-windows:
@@ -164,12 +169,13 @@ jobs:
         with:
           name: artifacts
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
+      - name: Download model
+        run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '11'
       - name: Run tests
-        shell: cmd
         run: mvn test
 
 
