@@ -21,7 +21,6 @@ public class LlamaModelTest {
 		model = new LlamaModel(
 				new ModelParameters()
 						.setModelFilePath("models/llama-160m-chat-v1.q2_k.gguf")
-						.setModelUrl("https://huggingface.co/afrideva/Llama-160M-Chat-v1-GGUF/resolve/main/llama-160m-chat-v1.q2_k.gguf")
 						.setNGpuLayers(43)
 						.setEmbedding(true)
 		);

@@ -16,8 +16,8 @@ public class MainExample {
     public static void main(String... args) throws IOException {
         ModelParameters modelParams = new ModelParameters()
 				.setModelFilePath("models/mistral-7b-instruct-v0.2.Q2_K.gguf")
-				.setModelUrl("https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q2_K.gguf")
-                .setNGpuLayers(43);
+                .setNGpuLayers(43)
+				.setDisableLog(true);
         String system = "This is a conversation between User and Llama, a friendly chatbot.\n" +
                 "Llama is helpful, kind, honest, good at writing, and never fails to answer any " +
                 "requests immediately and with precision.\n\n" +
