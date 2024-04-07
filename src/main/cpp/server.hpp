@@ -50,15 +50,16 @@ enum server_task_type
     SERVER_TASK_TYPE_METRICS
 };
 
-struct server_task {
-    int id        = -1; // to be filled by server_queue
-    int id_multi  = -1;
+struct server_task
+{
+    int id = -1; // to be filled by server_queue
+    int id_multi = -1;
     int id_target = -1;
 
     server_task_type type;
     json data;
 
-    bool infill    = false;
+    bool infill = false;
     bool embedding = false;
 };
 
@@ -81,14 +82,16 @@ struct server_task_multi
     std::vector<server_task_result> results;
 };
 
-struct slot_params {
-    bool stream       = true;
+struct slot_params
+{
+    bool stream = true;
     bool cache_prompt = false; // remember the prompt to avoid reprocessing all prompt
 
-    uint32_t seed      = -1; // RNG seed
-    int32_t  n_keep    =  0; // number of tokens to keep from initial prompt
-    int32_t  n_discard =  0; // number of tokens after n_keep that may be discarded when shifting context, 0 defaults to half
-    int32_t  n_predict = -1; // new tokens to predict
+    uint32_t seed = -1; // RNG seed
+    int32_t n_keep = 0; // number of tokens to keep from initial prompt
+    int32_t n_discard =
+        0; // number of tokens after n_keep that may be discarded when shifting context, 0 defaults to half
+    int32_t n_predict = -1; // new tokens to predict
 
     std::vector<std::string> antiprompt;
 
@@ -869,207 +872,247 @@ struct server_context
         return last_used;
     }
 
-    bool launch_slot_with_task(server_slot & slot, const server_task & task) {
-		slot_params default_params;
-		llama_sampling_params default_sparams;
-		auto & data = task.data;
+    bool launch_slot_with_task(server_slot &slot, const server_task &task)
+    {
+        slot_params default_params;
+        llama_sampling_params default_sparams;
+        auto &data = task.data;
 
-		slot.oaicompat = false;
-		slot.oaicompat_model = "";
+        slot.oaicompat = false;
+        slot.oaicompat_model = "";
 
-		slot.params.stream             = json_value(data, "stream",            false);
-		slot.params.cache_prompt       = json_value(data, "cache_prompt",      false);
-		slot.params.n_predict          = json_value(data, "n_predict",         default_params.n_predict);
-		slot.sparams.top_k             = json_value(data, "top_k",             default_sparams.top_k);
-		slot.sparams.top_p             = json_value(data, "top_p",             default_sparams.top_p);
-		slot.sparams.min_p             = json_value(data, "min_p",             default_sparams.min_p);
-		slot.sparams.tfs_z             = json_value(data, "tfs_z",             default_sparams.tfs_z);
-		slot.sparams.typical_p         = json_value(data, "typical_p",         default_sparams.typical_p);
-		slot.sparams.temp              = json_value(data, "temperature",       default_sparams.temp);
-		slot.sparams.dynatemp_range    = json_value(data, "dynatemp_range",    default_sparams.dynatemp_range);
-		slot.sparams.dynatemp_exponent = json_value(data, "dynatemp_exponent", default_sparams.dynatemp_exponent);
-		slot.sparams.penalty_last_n    = json_value(data, "repeat_last_n",     default_sparams.penalty_last_n);
-		slot.sparams.penalty_repeat    = json_value(data, "repeat_penalty",    default_sparams.penalty_repeat);
-		slot.sparams.penalty_freq      = json_value(data, "frequency_penalty", default_sparams.penalty_freq);
-		slot.sparams.penalty_present   = json_value(data, "presence_penalty",  default_sparams.penalty_present);
-		slot.sparams.mirostat          = json_value(data, "mirostat",          default_sparams.mirostat);
-		slot.sparams.mirostat_tau      = json_value(data, "mirostat_tau",      default_sparams.mirostat_tau);
-		slot.sparams.mirostat_eta      = json_value(data, "mirostat_eta",      default_sparams.mirostat_eta);
-		slot.sparams.penalize_nl       = json_value(data, "penalize_nl",       default_sparams.penalize_nl);
-		slot.params.n_keep             = json_value(data, "n_keep",            slot.params.n_keep);
-		slot.params.n_discard          = json_value(data, "n_discard",         default_params.n_discard);
-		slot.params.seed               = json_value(data, "seed",              default_params.seed);
-		slot.sparams.n_probs           = json_value(data, "n_probs",           default_sparams.n_probs);
-		slot.sparams.min_keep          = json_value(data, "min_keep",          default_sparams.min_keep);
-		slot.sparams.grammar           = json_value(data, "grammar",           default_sparams.grammar);
+        slot.params.stream = json_value(data, "stream", false);
+        slot.params.cache_prompt = json_value(data, "cache_prompt", false);
+        slot.params.n_predict = json_value(data, "n_predict", default_params.n_predict);
+        slot.sparams.top_k = json_value(data, "top_k", default_sparams.top_k);
+        slot.sparams.top_p = json_value(data, "top_p", default_sparams.top_p);
+        slot.sparams.min_p = json_value(data, "min_p", default_sparams.min_p);
+        slot.sparams.tfs_z = json_value(data, "tfs_z", default_sparams.tfs_z);
+        slot.sparams.typical_p = json_value(data, "typical_p", default_sparams.typical_p);
+        slot.sparams.temp = json_value(data, "temperature", default_sparams.temp);
+        slot.sparams.dynatemp_range = json_value(data, "dynatemp_range", default_sparams.dynatemp_range);
+        slot.sparams.dynatemp_exponent = json_value(data, "dynatemp_exponent", default_sparams.dynatemp_exponent);
+        slot.sparams.penalty_last_n = json_value(data, "repeat_last_n", default_sparams.penalty_last_n);
+        slot.sparams.penalty_repeat = json_value(data, "repeat_penalty", default_sparams.penalty_repeat);
+        slot.sparams.penalty_freq = json_value(data, "frequency_penalty", default_sparams.penalty_freq);
+        slot.sparams.penalty_present = json_value(data, "presence_penalty", default_sparams.penalty_present);
+        slot.sparams.mirostat = json_value(data, "mirostat", default_sparams.mirostat);
+        slot.sparams.mirostat_tau = json_value(data, "mirostat_tau", default_sparams.mirostat_tau);
+        slot.sparams.mirostat_eta = json_value(data, "mirostat_eta", default_sparams.mirostat_eta);
+        slot.sparams.penalize_nl = json_value(data, "penalize_nl", default_sparams.penalize_nl);
+        slot.params.n_keep = json_value(data, "n_keep", slot.params.n_keep);
+        slot.params.n_discard = json_value(data, "n_discard", default_params.n_discard);
+        slot.params.seed = json_value(data, "seed", default_params.seed);
+        slot.sparams.n_probs = json_value(data, "n_probs", default_sparams.n_probs);
+        slot.sparams.min_keep = json_value(data, "min_keep", default_sparams.min_keep);
+        slot.sparams.grammar = json_value(data, "grammar", default_sparams.grammar);
 
-		if (slot.params.cache_prompt && slot.ga_n != 1) {
-			LOG_WARNING("cache_prompt is not supported with group-attention", {});
-			slot.params.cache_prompt = false;
-		}
+        if (slot.params.cache_prompt && slot.ga_n != 1)
+        {
+            LOG_WARNING("cache_prompt is not supported with group-attention", {});
+            slot.params.cache_prompt = false;
+        }
 
-		if (slot.n_predict > 0 && slot.params.n_predict > slot.n_predict) {
-			// Might be better to reject the request with a 400 ?
-			LOG_WARNING("Max tokens to predict exceeds server configuration", {
-				{"params.n_predict", slot.params.n_predict},
-				{"slot.n_predict",   slot.n_predict},
-			});
-			slot.params.n_predict = slot.n_predict;
-		}
+        if (slot.n_predict > 0 && slot.params.n_predict > slot.n_predict)
+        {
+            // Might be better to reject the request with a 400 ?
+            LOG_WARNING("Max tokens to predict exceeds server configuration",
+                        {
+                            {"params.n_predict", slot.params.n_predict},
+                            {"slot.n_predict", slot.n_predict},
+                        });
+            slot.params.n_predict = slot.n_predict;
+        }
 
-		// infill
-		slot.params.input_prefix = json_value(data, "input_prefix", default_params.input_prefix);
-		slot.params.input_suffix = json_value(data, "input_suffix", default_params.input_suffix);
+        // infill
+        slot.params.input_prefix = json_value(data, "input_prefix", default_params.input_prefix);
+        slot.params.input_suffix = json_value(data, "input_suffix", default_params.input_suffix);
 
-		// get prompt
-		{
-			const auto & prompt = data.find("prompt");
-			if (prompt == data.end()) {
-				send_error(task, "Either \"prompt\" or \"messages\" must be provided", ERROR_TYPE_INVALID_REQUEST);
-				return false;
-			} else {
-				slot.prompt = *prompt;
-			}
-			if (slot.prompt.is_array() && slot.prompt.size() == 0) {
-				send_error(task, "\"prompt\" cannot be an empty array", ERROR_TYPE_INVALID_REQUEST);
-				return false;
-			}
-		}
+        // get prompt
+        {
+            const auto &prompt = data.find("prompt");
+            if (prompt == data.end())
+            {
+                send_error(task, "Either \"prompt\" or \"messages\" must be provided", ERROR_TYPE_INVALID_REQUEST);
+                return false;
+            }
+            else
+            {
+                slot.prompt = *prompt;
+            }
+            if (slot.prompt.is_array() && slot.prompt.size() == 0)
+            {
+                send_error(task, "\"prompt\" cannot be an empty array", ERROR_TYPE_INVALID_REQUEST);
+                return false;
+            }
+        }
 
-		// penalize user-provided tokens
-		{
-			slot.sparams.penalty_prompt_tokens.clear();
-			slot.sparams.use_penalty_prompt_tokens = false;
+        // penalize user-provided tokens
+        {
+            slot.sparams.penalty_prompt_tokens.clear();
+            slot.sparams.use_penalty_prompt_tokens = false;
 
-			const auto & penalty_prompt = data.find("penalty_prompt");
+            const auto &penalty_prompt = data.find("penalty_prompt");
 
-			if (penalty_prompt != data.end()) {
-				if (penalty_prompt->is_string()) {
-					const auto penalty_prompt_string = penalty_prompt->get<std::string>();
-					slot.sparams.penalty_prompt_tokens = llama_tokenize(model, penalty_prompt_string, false);
+            if (penalty_prompt != data.end())
+            {
+                if (penalty_prompt->is_string())
+                {
+                    const auto penalty_prompt_string = penalty_prompt->get<std::string>();
+                    slot.sparams.penalty_prompt_tokens = llama_tokenize(model, penalty_prompt_string, false);
 
-					if (slot.params.n_predict > 0) {
-						slot.sparams.penalty_prompt_tokens.reserve(slot.sparams.penalty_prompt_tokens.size() + slot.params.n_predict);
-					}
-					slot.sparams.use_penalty_prompt_tokens = true;
+                    if (slot.params.n_predict > 0)
+                    {
+                        slot.sparams.penalty_prompt_tokens.reserve(slot.sparams.penalty_prompt_tokens.size() +
+                                                                   slot.params.n_predict);
+                    }
+                    slot.sparams.use_penalty_prompt_tokens = true;
 
-					LOG_VERBOSE("penalty_prompt_tokens", {
-						{"id_slot", slot.id},
-						{"tokens",  slot.sparams.penalty_prompt_tokens},
-					});
-				}
-				else if (penalty_prompt->is_array()) {
-					const auto n_tokens = penalty_prompt->size();
-					slot.sparams.penalty_prompt_tokens.reserve(n_tokens + std::max(0, slot.params.n_predict));
+                    LOG_VERBOSE("penalty_prompt_tokens", {
+                                                             {"id_slot", slot.id},
+                                                             {"tokens", slot.sparams.penalty_prompt_tokens},
+                                                         });
+                }
+                else if (penalty_prompt->is_array())
+                {
+                    const auto n_tokens = penalty_prompt->size();
+                    slot.sparams.penalty_prompt_tokens.reserve(n_tokens + std::max(0, slot.params.n_predict));
 
-					const int n_vocab = llama_n_vocab(model);
-					for (const auto & penalty_token : *penalty_prompt) {
-						if (penalty_token.is_number_integer()) {
-							const auto tok = penalty_token.get<llama_token>();
-							if (tok >= 0 && tok < n_vocab) {
-								slot.sparams.penalty_prompt_tokens.push_back(tok);
-							}
-						}
-					}
-					slot.sparams.use_penalty_prompt_tokens = true;
+                    const int n_vocab = llama_n_vocab(model);
+                    for (const auto &penalty_token : *penalty_prompt)
+                    {
+                        if (penalty_token.is_number_integer())
+                        {
+                            const auto tok = penalty_token.get<llama_token>();
+                            if (tok >= 0 && tok < n_vocab)
+                            {
+                                slot.sparams.penalty_prompt_tokens.push_back(tok);
+                            }
+                        }
+                    }
+                    slot.sparams.use_penalty_prompt_tokens = true;
 
-					LOG_VERBOSE("penalty_prompt_tokens", {
-						{"id_slot", slot.id},
-						{"tokens",  slot.sparams.penalty_prompt_tokens},
-					});
-				}
-			}
-		}
+                    LOG_VERBOSE("penalty_prompt_tokens", {
+                                                             {"id_slot", slot.id},
+                                                             {"tokens", slot.sparams.penalty_prompt_tokens},
+                                                         });
+                }
+            }
+        }
 
-		{
-			slot.sparams.logit_bias.clear();
+        {
+            slot.sparams.logit_bias.clear();
 
-			if (json_value(data, "ignore_eos", false)) {
-				slot.sparams.logit_bias[llama_token_eos(model)] = -INFINITY;
-			}
+            if (json_value(data, "ignore_eos", false))
+            {
+                slot.sparams.logit_bias[llama_token_eos(model)] = -INFINITY;
+            }
 
-			const auto & logit_bias = data.find("logit_bias");
-			if (logit_bias != data.end() && logit_bias->is_array()) {
-				const int n_vocab = llama_n_vocab(model);
-				for (const auto & el : *logit_bias) {
-					// TODO: we may want to throw errors here, in case "el" is incorrect
-					if (el.is_array() && el.size() == 2) {
-						float bias;
-						if (el[1].is_number()) {
-							bias = el[1].get<float>();
-						} else if (el[1].is_boolean() && !el[1].get<bool>()) {
-							bias = -INFINITY;
-						} else {
-							continue;
-						}
+            const auto &logit_bias = data.find("logit_bias");
+            if (logit_bias != data.end() && logit_bias->is_array())
+            {
+                const int n_vocab = llama_n_vocab(model);
+                for (const auto &el : *logit_bias)
+                {
+                    // TODO: we may want to throw errors here, in case "el" is incorrect
+                    if (el.is_array() && el.size() == 2)
+                    {
+                        float bias;
+                        if (el[1].is_number())
+                        {
+                            bias = el[1].get<float>();
+                        }
+                        else if (el[1].is_boolean() && !el[1].get<bool>())
+                        {
+                            bias = -INFINITY;
+                        }
+                        else
+                        {
+                            continue;
+                        }
 
-						if (el[0].is_number_integer()) {
-							llama_token tok = el[0].get<llama_token>();
-							if (tok >= 0 && tok < n_vocab) {
-								slot.sparams.logit_bias[tok] = bias;
-							}
-						} else if (el[0].is_string()) {
-							auto toks = llama_tokenize(model, el[0].get<std::string>(), false);
-							for (auto tok : toks) {
-								slot.sparams.logit_bias[tok] = bias;
-							}
-						}
-					}
-				}
-			}
-		}
+                        if (el[0].is_number_integer())
+                        {
+                            llama_token tok = el[0].get<llama_token>();
+                            if (tok >= 0 && tok < n_vocab)
+                            {
+                                slot.sparams.logit_bias[tok] = bias;
+                            }
+                        }
+                        else if (el[0].is_string())
+                        {
+                            auto toks = llama_tokenize(model, el[0].get<std::string>(), false);
+                            for (auto tok : toks)
+                            {
+                                slot.sparams.logit_bias[tok] = bias;
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
-		{
-			slot.params.antiprompt.clear();
+        {
+            slot.params.antiprompt.clear();
 
-			const auto & stop = data.find("stop");
-			if (stop != data.end() && stop->is_array()) {
-				for (const auto & word : *stop) {
-					if (!word.empty()) {
-						slot.params.antiprompt.push_back(word);
-					}
-				}
-			}
-		}
+            const auto &stop = data.find("stop");
+            if (stop != data.end() && stop->is_array())
+            {
+                for (const auto &word : *stop)
+                {
+                    if (!word.empty())
+                    {
+                        slot.params.antiprompt.push_back(word);
+                    }
+                }
+            }
+        }
 
-		{
-			const auto & samplers_sequence = data.find("samplers");
-			if (samplers_sequence != data.end() && samplers_sequence->is_array()) {
-				std::vector<std::string> sampler_names;
-				for (const auto & sampler_name : *samplers_sequence) {
-					if (sampler_name.is_string()) {
-						sampler_names.emplace_back(sampler_name);
-					}
-				}
-				slot.sparams.samplers_sequence = sampler_types_from_names(sampler_names, false);
-			} else {
-				slot.sparams.samplers_sequence = default_sparams.samplers_sequence;
-			}
-		}
+        {
+            const auto &samplers_sequence = data.find("samplers");
+            if (samplers_sequence != data.end() && samplers_sequence->is_array())
+            {
+                std::vector<std::string> sampler_names;
+                for (const auto &sampler_name : *samplers_sequence)
+                {
+                    if (sampler_name.is_string())
+                    {
+                        sampler_names.emplace_back(sampler_name);
+                    }
+                }
+                slot.sparams.samplers_sequence = sampler_types_from_names(sampler_names, false);
+            }
+            else
+            {
+                slot.sparams.samplers_sequence = default_sparams.samplers_sequence;
+            }
+        }
 
-		{
-			if (slot.ctx_sampling != nullptr) {
-				llama_sampling_free(slot.ctx_sampling);
-			}
-			slot.ctx_sampling = llama_sampling_init(slot.sparams);
-			if (slot.ctx_sampling == nullptr) {
-				// for now, the only error that may happen here is invalid grammar
-				send_error(task, "Failed to parse grammar", ERROR_TYPE_INVALID_REQUEST);
-				return false;
-			}
-			llama_set_rng_seed(ctx, slot.params.seed);
-		}
+        {
+            if (slot.ctx_sampling != nullptr)
+            {
+                llama_sampling_free(slot.ctx_sampling);
+            }
+            slot.ctx_sampling = llama_sampling_init(slot.sparams);
+            if (slot.ctx_sampling == nullptr)
+            {
+                // for now, the only error that may happen here is invalid grammar
+                send_error(task, "Failed to parse grammar", ERROR_TYPE_INVALID_REQUEST);
+                return false;
+            }
+            llama_set_rng_seed(ctx, slot.params.seed);
+        }
 
-		slot.command = SLOT_COMMAND_LOAD_PROMPT;
-		slot.prompt_tokens.clear();
+        slot.command = SLOT_COMMAND_LOAD_PROMPT;
+        slot.prompt_tokens.clear();
 
-		LOG_INFO("slot is processing task", {
-			{"id_slot", slot.id},
-			{"id_task", slot.id_task},
-		});
+        LOG_INFO("slot is processing task", {
+                                                {"id_slot", slot.id},
+                                                {"id_task", slot.id_task},
+                                            });
 
-		return true;
-	}
+        return true;
+    }
 
     void kv_cache_clear()
     {
@@ -2323,145 +2366,153 @@ static void server_params_parse(json jparams, server_params &sparams, gpt_params
     gpt_params default_params;
     server_params default_sparams;
 
-	params.seed = json_value(jparams, "seed", default_params.seed);
-	params.n_threads = json_value(jparams, "n_threads", default_params.n_threads);
-	params.n_threads_draft = json_value(jparams, "n_threads_draft", default_params.n_threads_draft);
-	params.n_threads_batch = json_value(jparams, "n_threads_batch", default_params.n_threads_batch);
-	params.n_threads_batch_draft = json_value(jparams, "n_threads_batch_draft", default_params.n_threads_batch_draft);
-	params.n_predict = json_value(jparams, "n_predict", default_params.n_predict);
-	params.n_ctx = json_value(jparams, "n_ctx", default_params.n_ctx);
-	params.n_batch = json_value(jparams, "n_batch", default_params.n_batch);
-	params.n_ubatch = json_value(jparams, "n_ubatch", default_params.n_ubatch);
-	params.n_keep = json_value(jparams, "n_keep", default_params.n_keep);
-	params.n_draft = json_value(jparams, "n_draft", default_params.n_draft);
-	params.n_chunks = json_value(jparams, "n_chunks", default_params.n_chunks);
-	params.n_parallel = json_value(jparams, "n_parallel", default_params.n_parallel);
-	params.n_sequences = json_value(jparams, "n_sequences", default_params.n_sequences);
-	params.p_split = json_value(jparams, "p_split", default_params.p_split);
-	params.n_beams = json_value(jparams, "n_beams", default_params.n_beams);
-	params.grp_attn_n = json_value(jparams, "grp_attn_n", default_params.grp_attn_n);
-	params.grp_attn_w = json_value(jparams, "grp_attn_w", default_params.grp_attn_w);
-	params.n_print = json_value(jparams, "n_print", default_params.n_print);
-	params.rope_freq_base = json_value(jparams, "rope_freq_base", default_params.rope_freq_base);
-	params.rope_freq_scale = json_value(jparams, "rope_freq_scale", default_params.rope_freq_scale);
-	params.yarn_ext_factor = json_value(jparams, "yarn_ext_factor", default_params.yarn_ext_factor);
-	params.yarn_attn_factor = json_value(jparams, "yarn_attn_factor", default_params.yarn_attn_factor);
-	params.yarn_beta_fast = json_value(jparams, "yarn_beta_fast", default_params.yarn_beta_fast);
-	params.yarn_beta_slow = json_value(jparams, "yarn_beta_slow", default_params.yarn_beta_slow);
-	params.yarn_orig_ctx = json_value(jparams, "yarn_orig_ctx", default_params.yarn_orig_ctx);
-	params.defrag_thold = json_value(jparams, "defrag_thold", default_params.defrag_thold);
-	params.numa = json_value(jparams, "numa", default_params.numa);
-	params.rope_scaling_type = json_value(jparams, "rope_scaling_type", default_params.rope_scaling_type);
-	params.pooling_type = json_value(jparams, "pooling_type", default_params.pooling_type);
-	params.model = json_value(jparams, "model", default_params.model);
-	params.model_draft = json_value(jparams, "model_draft", default_params.model_draft);
-	params.model_alias = json_value(jparams, "model_alias", default_params.model_alias);
-	params.model_url = json_value(jparams, "model_url", default_params.model_url);
-	params.hf_repo = json_value(jparams, "hf_repo", default_params.hf_repo);
-	params.hf_file = json_value(jparams, "hf_file", default_params.hf_file);
-	params.prompt = json_value(jparams, "prompt", default_params.prompt);
-	params.prompt_file = json_value(jparams, "prompt_file", default_params.prompt_file);
-	params.path_prompt_cache = json_value(jparams, "path_prompt_cache", default_params.path_prompt_cache);
-	params.input_prefix = json_value(jparams, "input_prefix", default_params.input_prefix);
-	params.input_suffix = json_value(jparams, "input_suffix", default_params.input_suffix);
-	params.antiprompt = json_value(jparams, "antiprompt", default_params.antiprompt);
-	params.logdir = json_value(jparams, "logdir", default_params.logdir);
-	params.lookup_cache_static = json_value(jparams, "lookup_cache_static", default_params.lookup_cache_static);
-	params.lookup_cache_dynamic = json_value(jparams, "lookup_cache_dynamic", default_params.lookup_cache_dynamic);
-	params.logits_file = json_value(jparams, "logits_file", default_params.logits_file);
-	params.lora_adapter = json_value(jparams, "lora_adapter", default_params.lora_adapter);
-	params.lora_base = json_value(jparams, "lora_base", default_params.lora_base);
-	params.embedding = json_value(jparams, "embedding", default_params.embedding);
-	params.escape = json_value(jparams, "escape", default_params.escape);
-	params.cont_batching = json_value(jparams, "cont_batching", default_params.cont_batching);
-	params.input_prefix_bos = json_value(jparams, "input_prefix_bos", default_params.input_prefix_bos);
-	params.ignore_eos = json_value(jparams, "ignore_eos", default_params.ignore_eos);
-	params.use_mmap = json_value(jparams, "use_mmap", default_params.use_mmap);
-	params.use_mlock = json_value(jparams, "use_mlock", default_params.use_mlock);
-	params.no_kv_offload = json_value(jparams, "no_kv_offload", default_params.no_kv_offload);
+    params.seed = json_value(jparams, "seed", default_params.seed);
+    params.n_threads = json_value(jparams, "n_threads", default_params.n_threads);
+    params.n_threads_draft = json_value(jparams, "n_threads_draft", default_params.n_threads_draft);
+    params.n_threads_batch = json_value(jparams, "n_threads_batch", default_params.n_threads_batch);
+    params.n_threads_batch_draft = json_value(jparams, "n_threads_batch_draft", default_params.n_threads_batch_draft);
+    params.n_predict = json_value(jparams, "n_predict", default_params.n_predict);
+    params.n_ctx = json_value(jparams, "n_ctx", default_params.n_ctx);
+    params.n_batch = json_value(jparams, "n_batch", default_params.n_batch);
+    params.n_ubatch = json_value(jparams, "n_ubatch", default_params.n_ubatch);
+    params.n_keep = json_value(jparams, "n_keep", default_params.n_keep);
+    params.n_draft = json_value(jparams, "n_draft", default_params.n_draft);
+    params.n_chunks = json_value(jparams, "n_chunks", default_params.n_chunks);
+    params.n_parallel = json_value(jparams, "n_parallel", default_params.n_parallel);
+    params.n_sequences = json_value(jparams, "n_sequences", default_params.n_sequences);
+    params.p_split = json_value(jparams, "p_split", default_params.p_split);
+    params.n_beams = json_value(jparams, "n_beams", default_params.n_beams);
+    params.grp_attn_n = json_value(jparams, "grp_attn_n", default_params.grp_attn_n);
+    params.grp_attn_w = json_value(jparams, "grp_attn_w", default_params.grp_attn_w);
+    params.n_print = json_value(jparams, "n_print", default_params.n_print);
+    params.rope_freq_base = json_value(jparams, "rope_freq_base", default_params.rope_freq_base);
+    params.rope_freq_scale = json_value(jparams, "rope_freq_scale", default_params.rope_freq_scale);
+    params.yarn_ext_factor = json_value(jparams, "yarn_ext_factor", default_params.yarn_ext_factor);
+    params.yarn_attn_factor = json_value(jparams, "yarn_attn_factor", default_params.yarn_attn_factor);
+    params.yarn_beta_fast = json_value(jparams, "yarn_beta_fast", default_params.yarn_beta_fast);
+    params.yarn_beta_slow = json_value(jparams, "yarn_beta_slow", default_params.yarn_beta_slow);
+    params.yarn_orig_ctx = json_value(jparams, "yarn_orig_ctx", default_params.yarn_orig_ctx);
+    params.defrag_thold = json_value(jparams, "defrag_thold", default_params.defrag_thold);
+    params.numa = json_value(jparams, "numa", default_params.numa);
+    params.rope_scaling_type = json_value(jparams, "rope_scaling_type", default_params.rope_scaling_type);
+    params.pooling_type = json_value(jparams, "pooling_type", default_params.pooling_type);
+    params.model = json_value(jparams, "model", default_params.model);
+    params.model_draft = json_value(jparams, "model_draft", default_params.model_draft);
+    params.model_alias = json_value(jparams, "model_alias", default_params.model_alias);
+    params.model_url = json_value(jparams, "model_url", default_params.model_url);
+    params.hf_repo = json_value(jparams, "hf_repo", default_params.hf_repo);
+    params.hf_file = json_value(jparams, "hf_file", default_params.hf_file);
+    params.prompt = json_value(jparams, "prompt", default_params.prompt);
+    params.prompt_file = json_value(jparams, "prompt_file", default_params.prompt_file);
+    params.path_prompt_cache = json_value(jparams, "path_prompt_cache", default_params.path_prompt_cache);
+    params.input_prefix = json_value(jparams, "input_prefix", default_params.input_prefix);
+    params.input_suffix = json_value(jparams, "input_suffix", default_params.input_suffix);
+    params.antiprompt = json_value(jparams, "antiprompt", default_params.antiprompt);
+    params.logdir = json_value(jparams, "logdir", default_params.logdir);
+    params.lookup_cache_static = json_value(jparams, "lookup_cache_static", default_params.lookup_cache_static);
+    params.lookup_cache_dynamic = json_value(jparams, "lookup_cache_dynamic", default_params.lookup_cache_dynamic);
+    params.logits_file = json_value(jparams, "logits_file", default_params.logits_file);
+    params.lora_adapter = json_value(jparams, "lora_adapter", default_params.lora_adapter);
+    params.lora_base = json_value(jparams, "lora_base", default_params.lora_base);
+    params.embedding = json_value(jparams, "embedding", default_params.embedding);
+    params.escape = json_value(jparams, "escape", default_params.escape);
+    params.cont_batching = json_value(jparams, "cont_batching", default_params.cont_batching);
+    params.input_prefix_bos = json_value(jparams, "input_prefix_bos", default_params.input_prefix_bos);
+    params.ignore_eos = json_value(jparams, "ignore_eos", default_params.ignore_eos);
+    params.use_mmap = json_value(jparams, "use_mmap", default_params.use_mmap);
+    params.use_mlock = json_value(jparams, "use_mlock", default_params.use_mlock);
+    params.no_kv_offload = json_value(jparams, "no_kv_offload", default_params.no_kv_offload);
 
-	if (jparams.contains("n_gpu_layers")) {
-		if (llama_supports_gpu_offload())
-		{
-			params.n_gpu_layers = json_value(jparams, "n_gpu_layers", default_params.n_gpu_layers);
-			params.n_gpu_layers_draft = json_value(jparams, "n_gpu_layers_draft", default_params.n_gpu_layers_draft);
-		}
-		else
-		{
-			LOG_WARNING("Not compiled with GPU offload support, --n-gpu-layers option will be ignored. "
-						"See main README.md for information on enabling GPU BLAS support",
-						{{"n_gpu_layers", params.n_gpu_layers}});
-		}
-	}
+    if (jparams.contains("n_gpu_layers"))
+    {
+        if (llama_supports_gpu_offload())
+        {
+            params.n_gpu_layers = json_value(jparams, "n_gpu_layers", default_params.n_gpu_layers);
+            params.n_gpu_layers_draft = json_value(jparams, "n_gpu_layers_draft", default_params.n_gpu_layers_draft);
+        }
+        else
+        {
+            LOG_WARNING("Not compiled with GPU offload support, --n-gpu-layers option will be ignored. "
+                        "See main README.md for information on enabling GPU BLAS support",
+                        {{"n_gpu_layers", params.n_gpu_layers}});
+        }
+    }
 
-	if (jparams.contains("split_mode")) {
-		params.split_mode = json_value(jparams, "split_mode", default_params.split_mode);
+    if (jparams.contains("split_mode"))
+    {
+        params.split_mode = json_value(jparams, "split_mode", default_params.split_mode);
 #ifndef GGML_USE_CUDA
-		fprintf(stderr, "warning: llama.cpp was compiled without CUDA. Setting the split mode has no effect.\n");
+        fprintf(stderr, "warning: llama.cpp was compiled without CUDA. Setting the split mode has no effect.\n");
 #endif
-	}
+    }
 
-	if (jparams.contains("tensor_split")) {
+    if (jparams.contains("tensor_split"))
+    {
 #if defined(GGML_USE_CUDA) || defined(GGML_USE_SYCL)
-		std::vector<float> tensor_split = jparams["tensor_split"].get<std::vector<float>>();
-		GGML_ASSERT(tensor_split.size() <= llama_max_devices());
+        std::vector<float> tensor_split = jparams["tensor_split"].get<std::vector<float>>();
+        GGML_ASSERT(tensor_split.size() <= llama_max_devices());
 
-		for (size_t i_device = 0; i_device < llama_max_devices(); ++i_device) {
-			if (i_device < tensor_split.size()) {
-				params.tensor_split[i_device] = tensor_split.at(i_device);
-			} else {
-				params.tensor_split[i_device] = 0.0f;
-			}
-		}
+        for (size_t i_device = 0; i_device < llama_max_devices(); ++i_device)
+        {
+            if (i_device < tensor_split.size())
+            {
+                params.tensor_split[i_device] = tensor_split.at(i_device);
+            }
+            else
+            {
+                params.tensor_split[i_device] = 0.0f;
+            }
+        }
 #else
-		LOG_WARNING("llama.cpp was compiled without CUDA. It is not possible to set a tensor split.\n", {});
+        LOG_WARNING("llama.cpp was compiled without CUDA. It is not possible to set a tensor split.\n", {});
 #endif // GGML_USE_CUDA
-	}
+    }
 
-	if (jparams.contains("main_gpu")) {
+    if (jparams.contains("main_gpu"))
+    {
 #if defined(GGML_USE_CUDA) || defined(GGML_USE_SYCL)
-     	params.main_gpu = json_value(jparams, "main_gpu", default_params.main_gpu);
+        params.main_gpu = json_value(jparams, "main_gpu", default_params.main_gpu);
 #else
-		LOG_WARNING("llama.cpp was compiled without CUDA. It is not possible to set a main GPU.", {});
+        LOG_WARNING("llama.cpp was compiled without CUDA. It is not possible to set a main GPU.", {});
 #endif
-	}
+    }
 
-//#if SERVER_VERBOSE != 1
-//		LOG_WARNING("server.cpp is not built with verbose logging.", {});
-//#else
-//		server_verbose = true;
-//#endif
+    // #if SERVER_VERBOSE != 1
+    //		LOG_WARNING("server.cpp is not built with verbose logging.", {});
+    // #else
+    //		server_verbose = true;
+    // #endif
 
-//    auto system_prompt_file = get_string_field(env, jparams, f_system_prompt_file);
-//    if (system_prompt_file.length() > 0)
-//    {
-//        std::ifstream file(system_prompt_file);
-//        if (!file)
-//        {
-//            fprintf(stderr, "error: failed to open file '%s'\n", argv[i]);
-//            invalid_param = true;
-//            break;
-//        }
-//        std::string system_prompt;
-//        std::copy(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(),
-//                  std::back_inserter(system_prompt));
-//        sparams.system_prompt = system_prompt;
-//    }
+    //    auto system_prompt_file = get_string_field(env, jparams, f_system_prompt_file);
+    //    if (system_prompt_file.length() > 0)
+    //    {
+    //        std::ifstream file(system_prompt_file);
+    //        if (!file)
+    //        {
+    //            fprintf(stderr, "error: failed to open file '%s'\n", argv[i]);
+    //            invalid_param = true;
+    //            break;
+    //        }
+    //        std::string system_prompt;
+    //        std::copy(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(),
+    //                  std::back_inserter(system_prompt));
+    //        sparams.system_prompt = system_prompt;
+    //    }
 
-//    value = env->GetObjectField(jparams, f_log_format);
-//    if (value == o_log_format_json)
-//    {
-//        server_log_json = true;
-//    }
-//    else if (value == o_log_format_text)
-//    {
-//        server_log_json = false;
-//    }
-//    else
-//    {
-//        log_set_target(stdout);
-//        LOG_INFO("logging to file is disabled.", {});
-//    }
+    //    value = env->GetObjectField(jparams, f_log_format);
+    //    if (value == o_log_format_json)
+    //    {
+    //        server_log_json = true;
+    //    }
+    //    else if (value == o_log_format_text)
+    //    {
+    //        server_log_json = false;
+    //    }
+    //    else
+    //    {
+    //        log_set_target(stdout);
+    //        LOG_INFO("logging to file is disabled.", {});
+    //    }
 
     //	auto system_prompt_file = get_string_field(env, jparams, f_system_prompt_file);
     //
@@ -2522,8 +2573,9 @@ static void server_params_parse(json jparams, server_params &sparams, gpt_params
     //    }
     //
 
-	if (!params.kv_overrides.empty()) {
-		params.kv_overrides.emplace_back();
-		params.kv_overrides.back().key[0] = 0;
-	}
+    if (!params.kv_overrides.empty())
+    {
+        params.kv_overrides.emplace_back();
+        params.kv_overrides.back().key[0] = 0;
+    }
 }
