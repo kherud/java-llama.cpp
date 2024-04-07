@@ -42,7 +42,7 @@ jobs:
       - name: Build libraries
         run: |
           mvn compile
-          .github/build.sh
+          .github/build.sh -DLLAMA_METAL_EMBED_LIBRARY=ON
       - name: Run tests
         run: mvn test
 
