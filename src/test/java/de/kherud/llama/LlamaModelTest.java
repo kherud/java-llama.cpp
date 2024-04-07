@@ -42,7 +42,7 @@ public class LlamaModelTest {
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
-				.setLogitBias(logitBias);
+				.setTokenIdBias(logitBias);
 
 		int generated = 0;
 		for (LlamaModel.Output ignored : model.generate(params)) {
@@ -62,7 +62,7 @@ public class LlamaModelTest {
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
-				.setLogitBias(logitBias)
+				.setTokenIdBias(logitBias)
 				.setSeed(42);
 
 		int generated = 0;
@@ -96,7 +96,7 @@ public class LlamaModelTest {
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
-				.setLogitBias(logitBias)
+				.setTokenIdBias(logitBias)
 				.setSeed(42);
 
 		String output = model.complete(params);
@@ -113,7 +113,7 @@ public class LlamaModelTest {
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
-				.setLogitBias(logitBias)
+				.setTokenIdBias(logitBias)
 				.setSeed(42);
 
 		String output = model.complete(params);

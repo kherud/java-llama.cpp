@@ -1,5 +1,6 @@
 package de.kherud.llama;
 
+import java.util.Collection;
 import java.util.Map;
 
 import de.kherud.llama.args.MiroStat;
@@ -259,7 +260,9 @@ public final class InferenceParameters extends JsonParameters {
 	}
 
 	/**
-	 *
+	 * Override which part of the prompt is penalized for repetition.
+	 * E.g. if original prompt is "Alice: Hello!" and penaltyPrompt is "Hello!", only the latter will be penalized if
+	 * repeated. See <a href="https://github.com/ggerganov/llama.cpp/pull/3727">pull request 3727</a> for more details.
 	 */
 	public InferenceParameters setPenaltyPrompt(String penaltyPrompt) {
 		parameters.put(PARAM_PENALTY_PROMPT, toJsonString(penaltyPrompt));
@@ -267,7 +270,29 @@ public final class InferenceParameters extends JsonParameters {
 	}
 
 	/**
-	 *
+	 * Override which tokens to penalize for repetition.
+	 * E.g. if original prompt is "Alice: Hello!" and penaltyPrompt corresponds to the token ids of "Hello!", only the
+	 * latter will be penalized if repeated.
+	 * See <a href="https://github.com/ggerganov/llama.cpp/pull/3727">pull request 3727</a> for more details.
+	 */
+	public InferenceParameters setPenaltyPrompt(int[] tokens) {
+		if (tokens.length > 0) {
+			StringBuilder builder = new StringBuilder();
+			builder.append("[");
+			for (int i = 0; i < tokens.length; i++) {
+				builder.append(tokens[i]);
+				if (i < tokens.length - 1) {
+					builder.append(", ");
+				}
+			}
+			builder.append("]");
+			parameters.put(PARAM_PENALTY_PROMPT, builder.toString());
+		}
+		return this;
+	}
+
+	/**
+	 * Set whether to ignore end of stream token and continue generating (implies --logit-bias 2-inf)
 	 */
 	public InferenceParameters setIgnoreEos(boolean ignoreEos) {
 		parameters.put(PARAM_IGNORE_EOS, String.valueOf(ignoreEos));
@@ -275,9 +300,16 @@ public final class InferenceParameters extends JsonParameters {
 	}
 
 	/**
-	 *
+	 * Modify the likelihood of tokens appearing in the completion by their id. E.g., <code>Map.of(15043, 1f)</code>
+	 * to increase the  likelihood of token ' Hello', or a negative value to decrease it.
+	 * Note, this method overrides any previous calls to
+	 * <ul>
+	 *     <li>{@link #setTokenBias(Map)}</li>
+	 *     <li>{@link #disableTokens(Collection)}</li>
+	 *     <li>{@link #disableTokenIds(Collection)}}</li>
+	 * </ul>
 	 */
-	public InferenceParameters setLogitBias(Map<Integer, Float> logitBias) {
+	public InferenceParameters setTokenIdBias(Map<Integer, Float> logitBias) {
 		if (!logitBias.isEmpty()) {
 			StringBuilder builder = new StringBuilder();
 			builder.append("[");
@@ -301,7 +333,102 @@ public final class InferenceParameters extends JsonParameters {
 	}
 
 	/**
-	 *
+	 * Set tokens to disable, this corresponds to {@link #setTokenIdBias(Map)} with a value of
+	 * {@link Float#NEGATIVE_INFINITY}.
+	 * Note, this method overrides any previous calls to
+	 * <ul>
+	 *     <li>{@link #setTokenIdBias(Map)}</li>
+	 *     <li>{@link #setTokenBias(Map)}</li>
+	 *     <li>{@link #disableTokens(Collection)}</li>
+	 * </ul>
+	 */
+	public InferenceParameters disableTokenIds(Collection<Integer> tokenIds) {
+		if (!tokenIds.isEmpty()) {
+			StringBuilder builder = new StringBuilder();
+			builder.append("[");
+			int i = 0;
+			for (Integer token : tokenIds) {
+				builder.append("[")
+						.append(token)
+						.append(", ")
+						.append(false)
+						.append("]");
+				if (i++ < tokenIds.size() - 1) {
+					builder.append(", ");
+				}
+			}
+			builder.append("]");
+			parameters.put(PARAM_LOGIT_BIAS, builder.toString());
+		}
+		return this;
+	}
+
+	/**
+	 * Modify the likelihood of tokens appearing in the completion by their id. E.g., <code>Map.of(" Hello", 1f)</code>
+	 * to increase the  likelihood of token id 15043, or a negative value to decrease it.
+	 * Note, this method overrides any previous calls to
+	 * <ul>
+	 *     <li>{@link #setTokenIdBias(Map)}</li>
+	 *     <li>{@link #disableTokens(Collection)}</li>
+	 *     <li>{@link #disableTokenIds(Collection)}}</li>
+	 * </ul>
+	 */
+	public InferenceParameters setTokenBias(Map<String, Float> logitBias) {
+		if (!logitBias.isEmpty()) {
+			StringBuilder builder = new StringBuilder();
+			builder.append("[");
+			int i = 0;
+			for (Map.Entry<String, Float> entry : logitBias.entrySet()) {
+				String key = entry.getKey();
+				Float value = entry.getValue();
+				builder.append("[")
+						.append(toJsonString(key))
+						.append(", ")
+						.append(value)
+						.append("]");
+				if (i++ < logitBias.size() - 1) {
+					builder.append(", ");
+				}
+			}
+			builder.append("]");
+			parameters.put(PARAM_LOGIT_BIAS, builder.toString());
+		}
+		return this;
+	}
+
+	/**
+	 * Set tokens to disable, this corresponds to {@link #setTokenBias(Map)} with a value of
+	 * {@link Float#NEGATIVE_INFINITY}.
+	 * Note, this method overrides any previous calls to
+	 * <ul>
+	 *     <li>{@link #setTokenBias(Map)}</li>
+	 *     <li>{@link #setTokenIdBias(Map)}</li>
+	 *     <li>{@link #disableTokenIds(Collection)}</li>
+	 * </ul>
+	 */
+	public InferenceParameters disableTokens(Collection<String> tokens) {
+		if (!tokens.isEmpty()) {
+			StringBuilder builder = new StringBuilder();
+			builder.append("[");
+			int i = 0;
+			for (String token : tokens) {
+				builder.append("[")
+						.append(toJsonString(token))
+						.append(", ")
+						.append(false)
+						.append("]");
+				if (i++ < tokens.size() - 1) {
+					builder.append(", ");
+				}
+			}
+			builder.append("]");
+			parameters.put(PARAM_LOGIT_BIAS, builder.toString());
+		}
+		return this;
+	}
+
+	/**
+	 * Set strings upon seeing which token generation is stopped
 	 */
 	public InferenceParameters setStopStrings(String... stopStrings) {
 		if (stopStrings.length > 0) {
@@ -320,7 +447,7 @@ public final class InferenceParameters extends JsonParameters {
 	}
 
 	/**
-	 *
+	 * Set which samplers to use for token generation in the given order
 	 */
 	public InferenceParameters setSamplers(Sampler... samplers) {
 		if (samplers.length > 0) {
@@ -329,16 +456,22 @@ public final class InferenceParameters extends JsonParameters {
 			for (int i = 0; i < samplers.length; i++) {
 				switch (samplers[i]) {
 					case TOP_K:
+						builder.append("\"top_k\"");
 						break;
 					case TFS_Z:
+						builder.append("\"tfs_z\"");
 						break;
 					case TYPICAL_P:
+						builder.append("\"typical_p\"");
 						break;
 					case TOP_P:
+						builder.append("\"top_p\"");
 						break;
 					case MIN_P:
+						builder.append("\"min_p\"");
 						break;
 					case TEMPERATURE:
+						builder.append("\"temperature\"");
 						break;
 				}
 				if (i < samplers.length - 1) {
