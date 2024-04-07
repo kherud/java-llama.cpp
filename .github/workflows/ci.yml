@@ -3,6 +3,9 @@
 
 name: Continuous Integration
 on: [ "pull_request", "workflow_dispatch" ]
+env:
+  MODEL_URL: "https://huggingface.co/afrideva/Llama-160M-Chat-v1-GGUF/resolve/main/llama-160m-chat-v1.q2_k.gguf"
+  MODEL_NAME: "llama-160m-chat-v1.q2_k.gguf"
 jobs:
 
   # don't split build and test jobs to keep the workflow simple
@@ -15,15 +18,13 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
-      - name: Install curl
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libcurl4-openssl-dev
+      - name: Download model
+        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
       - name: Build libraries
         # cmake should figure out OS and ARCH automatically when running build.sh (but we need mvn compile for it)
         run: |
           mvn compile
-          .github/build.sh -DLLAMA_CURL=ON
+          .github/build.sh
       - name: Run tests
         run: mvn test
 
@@ -36,10 +37,12 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
+      - name: Download model
+        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
       - name: Build libraries
         run: |
           mvn compile
-          .github/build.sh -DLLAMA_CURL=ON
+          .github/build.sh
       - name: Run tests
         run: mvn test
 
@@ -52,14 +55,11 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
-      - name: Install curl
-        run: |
-          git clone https://github.com/Microsoft/vcpkg.git
-          .\vcpkg\bootstrap-vcpkg.bat
-          .\vcpkg\vcpkg install curl
+      - name: Download model
+        run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
       - name: Build libraries
         run: |
           mvn compile
-          .github\build.bat -DLLAMA_CURL=ON
+          .github\build.bat
       - name: Run tests
         run: mvn test
