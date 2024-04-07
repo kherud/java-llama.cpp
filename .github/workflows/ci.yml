@@ -46,6 +46,20 @@ jobs:
       - name: Run tests
         run: mvn test
 
+  build-macos-arm64:
+    name: macos-latest
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build libraries
+        run: |
+          .github/build.sh -DLLAMA_METAL_EMBED_LIBRARY=ON -DCMAKE_OSX_ARCHITECTURES=arm64 -DOS_NAME=Mac -DOS_ARCH=aarch64
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifacts
+          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
+
   build-and-test-windows:
     name: windows-latest
     runs-on: windows-latest
