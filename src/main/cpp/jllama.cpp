@@ -3,67 +3,88 @@
 #include "json.hpp"
 #include "llama.h"
 #include "server.hpp"
-#include "utils.hpp"
+
+#include <limits>
+#include <stdexcept>
+#include <type_traits>
 
 // We store some references to Java classes and their fields/methods here to speed up things for later and to fail
 // early on if anything can't be found. This happens when the JVM loads the shared library (see `JNI_OnLoad`).
 // The references remain valid throughout the whole life of the shared library, on `JNI_OnUnload` they are released.
 
-JavaVM *g_vm = nullptr;
+namespace
+{
+// JavaVM *g_vm = nullptr;
 
 // classes
-static jclass c_llama_model = 0;
-static jclass c_llama_iterator = 0;
-static jclass c_standard_charsets = 0;
-static jclass c_output = 0;
-static jclass c_string = 0;
-static jclass c_hash_map = 0;
-static jclass c_map = 0;
-static jclass c_set = 0;
-static jclass c_entry = 0;
-static jclass c_iterator = 0;
-static jclass c_integer = 0;
-static jclass c_float = 0;
-static jclass c_biconsumer = 0;
-static jclass c_llama_error = 0;
-static jclass c_error_oom = 0;
+jclass c_llama_model = nullptr;
+jclass c_llama_iterator = nullptr;
+jclass c_standard_charsets = nullptr;
+jclass c_output = nullptr;
+jclass c_string = nullptr;
+jclass c_hash_map = nullptr;
+jclass c_map = nullptr;
+jclass c_set = nullptr;
+jclass c_entry = nullptr;
+jclass c_iterator = nullptr;
+jclass c_integer = nullptr;
+jclass c_float = nullptr;
+jclass c_biconsumer = nullptr;
+jclass c_llama_error = nullptr;
+jclass c_error_oom = nullptr;
 
 // constructors
-static jmethodID cc_output = 0;
-static jmethodID cc_hash_map = 0;
-static jmethodID cc_integer = 0;
-static jmethodID cc_float = 0;
+jmethodID cc_output = nullptr;
+jmethodID cc_hash_map = nullptr;
+jmethodID cc_integer = nullptr;
+jmethodID cc_float = nullptr;
 
 // methods
-static jmethodID m_get_bytes = 0;
-static jmethodID m_entry_set = 0;
-static jmethodID m_set_iterator = 0;
-static jmethodID m_iterator_has_next = 0;
-static jmethodID m_iterator_next = 0;
-static jmethodID m_entry_key = 0;
-static jmethodID m_entry_value = 0;
-static jmethodID m_map_put = 0;
-static jmethodID m_int_value = 0;
-static jmethodID m_float_value = 0;
-static jmethodID m_biconsumer_accept = 0;
+jmethodID m_get_bytes = nullptr;
+jmethodID m_entry_set = nullptr;
+jmethodID m_set_iterator = nullptr;
+jmethodID m_iterator_has_next = nullptr;
+jmethodID m_iterator_next = nullptr;
+jmethodID m_entry_key = nullptr;
+jmethodID m_entry_value = nullptr;
+jmethodID m_map_put = nullptr;
+jmethodID m_int_value = nullptr;
+jmethodID m_float_value = nullptr;
+jmethodID m_biconsumer_accept = nullptr;
 
 // fields
-static jfieldID f_model_pointer = 0;
-static jfieldID f_task_id = 0;
-static jfieldID f_utf_8 = 0;
-static jfieldID f_iter_has_next = 0;
+jfieldID f_model_pointer = nullptr;
+jfieldID f_task_id = nullptr;
+jfieldID f_utf_8 = nullptr;
+jfieldID f_iter_has_next = nullptr;
 
 // objects
-static jobject o_utf_8 = 0;
+jobject o_utf_8 = nullptr;
+
+/**
+ * Safely cast the size of a container to a Java array size
+ */
+template <typename T> jsize cast_jsize(const T &container)
+{
+    static_assert(std::is_integral<decltype(container.size())>::value, "Container must have an integral size type.");
+
+    auto size = container.size();
+    if (size > static_cast<typename std::decay<decltype(size)>::type>(std::numeric_limits<jsize>::max()))
+    {
+        throw std::runtime_error("Container size exceeds maximum size for a Java array");
+    }
+
+    return static_cast<jsize>(size);
+}
 
 /**
  * Convert a Java string to a std::string
  */
-static std::string parse_jstring(JNIEnv *env, jstring java_string)
+std::string parse_jstring(JNIEnv *env, jstring java_string)
 {
-    const jbyteArray string_bytes = (jbyteArray)env->CallObjectMethod(java_string, m_get_bytes, o_utf_8);
+    auto *const string_bytes = (jbyteArray)env->CallObjectMethod(java_string, m_get_bytes, o_utf_8);
 
-    size_t length = (size_t)env->GetArrayLength(string_bytes);
+    auto length = (size_t)env->GetArrayLength(string_bytes);
     jbyte *byte_elements = env->GetByteArrayElements(string_bytes, nullptr);
 
     std::string string = std::string((char *)byte_elements, length);
@@ -79,13 +100,14 @@ static std::string parse_jstring(JNIEnv *env, jstring java_string)
  * but we directly send the bytes and do the conversion in Java. Unfortunately, there isn't a nice/standardized way to
  * do this conversion in C++
  */
-static jbyteArray parse_jbytes(JNIEnv *env, std::string string)
+jbyteArray parse_jbytes(JNIEnv *env, const std::string &string)
 {
-    jsize len = string.size();
-    jbyteArray bytes = env->NewByteArray(len);
-    env->SetByteArrayRegion(bytes, 0, len, reinterpret_cast<const jbyte *>(string.c_str()));
+    jsize length = cast_jsize(string);
+    jbyteArray bytes = env->NewByteArray(length);
+    env->SetByteArrayRegion(bytes, 0, length, reinterpret_cast<const jbyte *>(string.c_str()));
     return bytes;
 }
+} // namespace
 
 /**
  * The VM calls JNI_OnLoad when the native library is loaded (for example, through `System.loadLibrary`).
@@ -95,9 +117,9 @@ static jbyteArray parse_jbytes(JNIEnv *env, std::string string)
  * only requires JNI version `JNI_VERSION_1_1`. If the VM does not recognize the version number returned by
  `JNI_OnLoad`, the VM will unload the library and act as if the library was never loaded.
  */
-JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, __attribute__((unused)) void *reserved)
 {
-    JNIEnv *env = 0;
+    JNIEnv *env = nullptr;
 
     if (JNI_OK != vm->GetEnv((void **)&env, JNI_VERSION_1_1))
     {
@@ -216,12 +238,14 @@ success:
  * Note that `JNI_OnLoad` and `JNI_OnUnload` are two functions optionally supplied by JNI libraries, not exported from
  * the VM.
  */
-JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
+JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, __attribute__((unused)) void *reserved)
 {
-    JNIEnv *env = 0;
+    JNIEnv *env = nullptr;
 
     if (JNI_OK != vm->GetEnv((void **)&env, JNI_VERSION_1_1))
+    {
         return;
+    }
 
     env->DeleteGlobalRef(c_llama_model);
     env->DeleteGlobalRef(c_llama_iterator);
@@ -246,7 +270,7 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     gpt_params params;
     server_params sparams;
 
-    server_context *ctx_server = new server_context();
+    auto *ctx_server = new server_context();
 
     std::string c_params = parse_jstring(env, jparams);
     json json_params = json::parse(c_params);
@@ -292,11 +316,9 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
         env->ThrowNew(c_llama_error, "could not load model from given file path");
         return;
     }
-    else
-    {
-        ctx_server->init();
-        state.store(SERVER_STATE_READY);
-    }
+
+    ctx_server->init();
+    state.store(SERVER_STATE_READY);
 
     LOG_INFO("model loaded", {});
 
@@ -348,7 +370,7 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
 JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv *env, jobject obj, jstring jparams)
 {
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
-    server_context *ctx_server = reinterpret_cast<server_context *>(server_handle);
+    auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
 
     std::string c_params = parse_jstring(env, jparams);
     json json_params = json::parse(c_params);
@@ -364,55 +386,52 @@ JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv 
 JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIEnv *env, jobject obj, jint id_task)
 {
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
-    server_context *ctx_server = reinterpret_cast<server_context *>(server_handle);
+    auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
 
     server_task_result result = ctx_server->queue_results.recv(id_task);
-
-    LOG_VERBOSE("data stream", {{"to_send", result.data}});
 
     if (result.error)
     {
         std::string response = result.data["message"].get<std::string>();
+        ctx_server->queue_results.remove_waiting_task_id(id_task);
         env->ThrowNew(c_llama_error, response.c_str());
         return nullptr;
     }
-    else
-    {
-        std::string response = result.data["content"].get<std::string>();
-        if (result.stop)
-        {
-            ctx_server->queue_results.remove_waiting_task_id(id_task);
-        }
 
-        jobject o_probabilities = env->NewObject(c_hash_map, cc_hash_map);
-        if (result.data.contains("completion_probabilities"))
+    std::string response = result.data["content"].get<std::string>();
+    if (result.stop)
+    {
+        ctx_server->queue_results.remove_waiting_task_id(id_task);
+    }
+
+    jobject o_probabilities = env->NewObject(c_hash_map, cc_hash_map);
+    if (result.data.contains("completion_probabilities"))
+    {
+        auto completion_probabilities = result.data["completion_probabilities"];
+        for (const auto &entry : completion_probabilities)
         {
-            auto completion_probabilities = result.data["completion_probabilities"];
-            for (const auto &entry : completion_probabilities)
+            auto probs = entry["probs"];
+            for (const auto &tp : probs)
             {
-                auto probs = entry["probs"];
-                for (const auto &tp : probs)
-                {
-                    std::string tok_str = tp["tok_str"];
-                    jstring jtok_str = env->NewStringUTF(tok_str.c_str());
-                    float prob = tp["prob"];
-                    jobject jprob = env->NewObject(c_float, cc_float, prob);
-                    env->CallObjectMethod(o_probabilities, m_map_put, jtok_str, jprob);
-                    env->DeleteLocalRef(jtok_str);
-                    env->DeleteLocalRef(jprob);
-                }
+                std::string tok_str = tp["tok_str"];
+                jstring jtok_str = env->NewStringUTF(tok_str.c_str());
+                float prob = tp["prob"];
+                jobject jprob = env->NewObject(c_float, cc_float, prob);
+                env->CallObjectMethod(o_probabilities, m_map_put, jtok_str, jprob);
+                env->DeleteLocalRef(jtok_str);
+                env->DeleteLocalRef(jprob);
             }
         }
-
-        jbyteArray jbytes = parse_jbytes(env, response);
-        return env->NewObject(c_output, cc_output, jbytes, o_probabilities, result.stop);
     }
+
+    jbyteArray jbytes = parse_jbytes(env, response);
+    return env->NewObject(c_output, cc_output, jbytes, o_probabilities, result.stop);
 }
 
 JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env, jobject obj, jstring jprompt)
 {
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
-    server_context *ctx_server = reinterpret_cast<server_context *>(server_handle);
+    auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
 
     if (!ctx_server->params.embedding)
     {
@@ -435,40 +454,39 @@ JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env,
         env->ThrowNew(c_llama_error, response.c_str());
         return nullptr;
     }
-    else
+
+    std::vector<float> embedding = result.data["embedding"].get<std::vector<float>>();
+    jsize embedding_size = cast_jsize(embedding);
+
+    jfloatArray j_embedding = env->NewFloatArray(embedding_size);
+    if (j_embedding == nullptr)
     {
-        std::cout << result.data << std::endl;
-        std::vector<float> embedding = result.data["embedding"].get<std::vector<float>>();
-
-        jfloatArray j_embedding = env->NewFloatArray(embedding.size());
-        if (j_embedding == nullptr)
-        {
-            env->ThrowNew(c_error_oom, "could not allocate embedding");
-            return nullptr;
-        }
-
-        env->SetFloatArrayRegion(j_embedding, 0, embedding.size(), reinterpret_cast<const jfloat *>(embedding.data()));
-
-        return j_embedding;
+        env->ThrowNew(c_error_oom, "could not allocate embedding");
+        return nullptr;
     }
+
+    env->SetFloatArrayRegion(j_embedding, 0, embedding_size, reinterpret_cast<const jfloat *>(embedding.data()));
+
+    return j_embedding;
 }
 
 JNIEXPORT jintArray JNICALL Java_de_kherud_llama_LlamaModel_encode(JNIEnv *env, jobject obj, jstring jprompt)
 {
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
-    server_context *ctx_server = reinterpret_cast<server_context *>(server_handle);
+    auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
 
     const std::string c_prompt = parse_jstring(env, jprompt);
     std::vector<llama_token> tokens = ctx_server->tokenize(c_prompt, false);
+    jsize token_size = cast_jsize(tokens);
 
-    jintArray java_tokens = env->NewIntArray(tokens.size());
+    jintArray java_tokens = env->NewIntArray(token_size);
     if (java_tokens == nullptr)
     {
         env->ThrowNew(c_error_oom, "could not allocate token memory");
         return nullptr;
     }
 
-    env->SetIntArrayRegion(java_tokens, 0, tokens.size(), reinterpret_cast<const jint *>(tokens.data()));
+    env->SetIntArrayRegion(java_tokens, 0, token_size, reinterpret_cast<const jint *>(tokens.data()));
 
     return java_tokens;
 }
@@ -477,7 +495,7 @@ JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_decodeBytes(JNIEnv 
                                                                          jintArray java_tokens)
 {
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
-    server_context *ctx_server = reinterpret_cast<server_context *>(server_handle);
+    auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
 
     jsize length = env->GetArrayLength(java_tokens);
     jint *elements = env->GetIntArrayElements(java_tokens, nullptr);
@@ -492,7 +510,7 @@ JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_decodeBytes(JNIEnv 
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_delete(JNIEnv *env, jobject obj)
 {
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
-    server_context *ctx_server = reinterpret_cast<server_context *>(server_handle);
+    auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
     ctx_server->queue_tasks.terminate();
     // maybe we should keep track how many models were loaded before freeing the backend
     llama_backend_free();

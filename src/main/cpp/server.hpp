@@ -11,7 +11,7 @@
 #include <memory>
 #include <mutex>
 #include <set>
-#include <signal.h>
+#include <csignal>
 #include <thread>
 
 bool server_log_json = true;
@@ -2263,7 +2263,7 @@ struct server_context
                 0, // unused
             };
 
-            const int ret = llama_decode(ctx, batch_view);
+           const int ret = llama_decode(ctx, batch_view);
 
             if (ret != 0)
             {
