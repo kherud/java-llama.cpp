@@ -23,7 +23,7 @@ FetchContent_MakeAvailable(json)
 FetchContent_Declare(
 	llama.cpp
 	GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-	GIT_TAG        b2619
+	GIT_TAG        b2660
 )
 FetchContent_MakeAvailable(llama.cpp)
 
@@ -60,7 +60,7 @@ if(NOT OS_ARCH)
     message(FATAL_ERROR "Could not determine CPU architecture")
 endif()
 
-set(JLLAMA_DIR ${CMAKE_SOURCE_DIR}/src/main/resources/de/kherud/llama/${OS_NAME}/${OS_ARCH})
+set(JLLAMA_DIR ${CMAKE_SOURCE_DIR}/target/lib/${OS_NAME}/${OS_ARCH}/lib)
 message(STATUS "Installing files to ${JLLAMA_DIR}")
 
 # include jni.h and jni_md.h

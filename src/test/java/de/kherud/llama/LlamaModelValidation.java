@@ -8,7 +8,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class LlamaModelTest {
+public class LlamaModelValidation {
 
 	private static final String prefix = "def remove_non_ascii(s: str) -> str:\n    \"\"\" ";
 	private static final String suffix = "\n    return result\n";
