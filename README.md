@@ -6,6 +6,8 @@
 The main goal of llama.cpp is to run the LLaMA model using 4-bit integer quantization on a MacBook.
 This repository provides Java bindings for the C++ library.
 
+This reporitory is fork from [java-llama.cpp](https://github.com/kherud/java-llama.cpp) for [[InZH] Studio](https://www.inzh.fr/) usage.
+
 **You are welcome to contribute**
 
 1. [Quick Start](#quick-start)  
@@ -19,7 +21,9 @@ This repository provides Java bindings for the C++ library.
 
 ## Quick Start
 
-Access this library via Maven:
+This specialized version is not for Maven.
+
+Build localy and access this library via your pom.xml:
 
 ```xml
 <dependency>
