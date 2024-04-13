@@ -4,7 +4,6 @@ project(jllama CXX)
 
 include(FetchContent)
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_SHARED_LIBS ON)
 
 option(LLAMA_VERBOSE	"llama: verbose output"		OFF)
@@ -28,9 +27,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(llama.cpp)
 
 #################### jllama ####################
-
-# todo: Is there a better way to build the library than copy & pasting the build argument cmake definition of llama.cpp?
-include(build-args.cmake)
 
 # find which OS we build for if not set (make sure to run mvn compile first)
 if(NOT DEFINED OS_NAME)
@@ -90,8 +86,9 @@ endif()
 
 add_library(jllama SHARED src/main/cpp/jllama.cpp src/main/cpp/server.hpp src/main/cpp/utils.hpp)
 
+set_target_properties(jllama PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(jllama PRIVATE src/main/cpp ${JNI_INCLUDE_DIRS})
-target_link_libraries(jllama PRIVATE common llama nlohmann_json ${LLAMA_EXTRA_LIBS})
+target_link_libraries(jllama PRIVATE common llama nlohmann_json)
 target_compile_features(jllama PRIVATE cxx_std_11)
 
 target_compile_definitions(jllama PRIVATE
