@@ -4,9 +4,7 @@
 #include "llama.h"
 #include "server.hpp"
 
-#include <limits>
 #include <stdexcept>
-#include <type_traits>
 
 // We store some references to Java classes and their fields/methods here to speed up things for later and to fail
 // early on if anything can't be found. This happens when the JVM loads the shared library (see `JNI_OnLoad`).
@@ -62,22 +60,6 @@ jfieldID f_iter_has_next = nullptr;
 jobject o_utf_8 = nullptr;
 
 /**
- * Safely cast the size of a container to a Java array size
- */
-template <typename T> jsize cast_jsize(const T &container)
-{
-    static_assert(std::is_integral<decltype(container.size())>::value, "Container must have an integral size type.");
-
-    auto size = container.size();
-    if (size > static_cast<typename std::decay<decltype(size)>::type>(std::numeric_limits<jsize>::max()))
-    {
-        throw std::runtime_error("Container size exceeds maximum size for a Java array");
-    }
-
-    return static_cast<jsize>(size);
-}
-
-/**
  * Convert a Java string to a std::string
  */
 std::string parse_jstring(JNIEnv *env, jstring java_string)
@@ -102,7 +84,7 @@ std::string parse_jstring(JNIEnv *env, jstring java_string)
  */
 jbyteArray parse_jbytes(JNIEnv *env, const std::string &string)
 {
-    jsize length = cast_jsize(string);
+    jsize length = string.size(); // NOLINT(*-narrowing-conversions)
     jbyteArray bytes = env->NewByteArray(length);
     env->SetByteArrayRegion(bytes, 0, length, reinterpret_cast<const jbyte *>(string.c_str()));
     return bytes;
@@ -456,7 +438,7 @@ JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env,
     }
 
     std::vector<float> embedding = result.data["embedding"].get<std::vector<float>>();
-    jsize embedding_size = cast_jsize(embedding);
+    jsize embedding_size = embedding.size(); // NOLINT(*-narrowing-conversions)
 
     jfloatArray j_embedding = env->NewFloatArray(embedding_size);
     if (j_embedding == nullptr)
@@ -477,7 +459,7 @@ JNIEXPORT jintArray JNICALL Java_de_kherud_llama_LlamaModel_encode(JNIEnv *env, 
 
     const std::string c_prompt = parse_jstring(env, jprompt);
     std::vector<llama_token> tokens = ctx_server->tokenize(c_prompt, false);
-    jsize token_size = cast_jsize(tokens);
+    jsize token_size = tokens.size(); // NOLINT(*-narrowing-conversions)
 
     jintArray java_tokens = env->NewIntArray(token_size);
     if (java_tokens == nullptr)

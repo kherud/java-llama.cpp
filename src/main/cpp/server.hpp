@@ -1,8 +1,10 @@
+#include "utils.hpp"
+
 #include "common.h"
 #include "grammar-parser.h"
-#include "json.hpp"
 #include "llama.h"
-#include "utils.hpp"
+
+#include "nlohmann/json.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -11,8 +13,10 @@
 #include <memory>
 #include <mutex>
 #include <set>
-#include <csignal>
+#include <signal.h>
 #include <thread>
+
+using json = nlohmann::ordered_json;
 
 bool server_log_json = true;
 
@@ -47,7 +51,10 @@ enum server_task_type
     SERVER_TASK_TYPE_COMPLETION,
     SERVER_TASK_TYPE_CANCEL,
     SERVER_TASK_TYPE_NEXT_RESPONSE,
-    SERVER_TASK_TYPE_METRICS
+    SERVER_TASK_TYPE_METRICS,
+    SERVER_TASK_TYPE_SLOT_SAVE,
+    SERVER_TASK_TYPE_SLOT_RESTORE,
+    SERVER_TASK_TYPE_SLOT_ERASE,
 };
 
 struct server_task
@@ -558,7 +565,7 @@ struct server_queue
         queue_multitasks.push_back(multi);
     }
 
-    // update the remaining subtasks, while appending results to multitask
+    // updatethe remaining subtasks, while appending results to multitask
     void update_multitask(int id_multi, int id_sub, server_task_result &result)
     {
         std::lock_guard<std::mutex> lock(mutex_tasks);
@@ -727,6 +734,7 @@ struct server_context
         n_ctx = llama_n_ctx(ctx);
 
         add_bos_token = llama_should_add_bos_token(model);
+        GGML_ASSERT(llama_add_eos_token(model) != 1);
 
         return true;
     }
@@ -794,7 +802,7 @@ struct server_context
         metrics.init();
     }
 
-    std::vector<llama_token> tokenize(const json &json_prompt, bool add_bos) const
+    std::vector<llama_token> tokenize(const json &json_prompt, bool add_special) const
     {
         // TODO: currently, we tokenize using special tokens by default
         //       this is not always correct (see
@@ -818,7 +826,7 @@ struct server_context
                     std::vector<llama_token> p;
                     if (first)
                     {
-                        p = ::llama_tokenize(ctx, s, add_bos, TMP_FORCE_SPECIAL);
+                        p = ::llama_tokenize(ctx, s, add_special, TMP_FORCE_SPECIAL);
                         first = false;
                     }
                     else
@@ -842,7 +850,7 @@ struct server_context
         else
         {
             auto s = json_prompt.template get<std::string>();
-            prompt_tokens = ::llama_tokenize(ctx, s, add_bos, TMP_FORCE_SPECIAL);
+            prompt_tokens = ::llama_tokenize(ctx, s, add_special, TMP_FORCE_SPECIAL);
         }
 
         return prompt_tokens;
@@ -933,14 +941,13 @@ struct server_context
             const auto &prompt = data.find("prompt");
             if (prompt == data.end())
             {
-                send_error(task, "Either \"prompt\" or \"messages\" must be provided", ERROR_TYPE_INVALID_REQUEST);
+                send_error(task, R"(Either "prompt" or "messages" must be provided)", ERROR_TYPE_INVALID_REQUEST);
                 return false;
             }
-            else
-            {
-                slot.prompt = *prompt;
-            }
-            if (slot.prompt.is_array() && slot.prompt.size() == 0)
+
+            slot.prompt = *prompt;
+
+            if (slot.prompt.is_array() && slot.prompt.empty())
             {
                 send_error(task, "\"prompt\" cannot be an empty array", ERROR_TYPE_INVALID_REQUEST);
                 return false;
@@ -1134,7 +1141,7 @@ struct server_context
 
         if (!system_prompt.empty())
         {
-            system_tokens = ::llama_tokenize(ctx, system_prompt, add_bos_token);
+            system_tokens = ::llama_tokenize(ctx, system_prompt, true);
 
             llama_batch_clear(batch);
 
@@ -1163,7 +1170,7 @@ struct server_context
 
                 if (llama_decode(ctx, batch_view) != 0)
                 {
-                    LOG_TEE("%s: llama_decode() failed\n", __func__);
+                    LOG_ERROR("llama_decode() failed", {});
                     return;
                 }
             }
@@ -1385,7 +1392,11 @@ struct server_context
     void send_error(const int id_task, const int id_multi, const std::string &error,
                     const enum error_type type = ERROR_TYPE_SERVER)
     {
-        LOG_TEE("task %i - error: %s\n", id_task, error.c_str());
+        LOG_ERROR("task error", {
+                                    {"id_multi", id_multi},
+                                    {"id_task", id_task},
+                                    {"error", error},
+                                });
 
         server_task_result res;
         res.id = id_task;
@@ -1505,12 +1516,12 @@ struct server_context
             }
 
             const float *embd = llama_get_embeddings_seq(ctx, batch.seq_id[i][0]);
-            if (embd == NULL)
+            if (embd == nullptr)
             {
                 embd = llama_get_embeddings_ith(ctx, i);
             }
 
-            if (embd == NULL)
+            if (embd == nullptr)
             {
                 LOG_ERROR("failed to get embeddings", {{"token", batch.token[i]}, {"seq_id", batch.seq_id[i][0]}});
 
@@ -1746,6 +1757,103 @@ struct server_context
             queue_results.send(res);
         }
         break;
+        case SERVER_TASK_TYPE_SLOT_SAVE: {
+            int id_slot = task.data["id_slot"];
+            server_slot *slot = get_slot(id_slot);
+            if (slot == nullptr)
+            {
+                send_error(task, "Invalid slot ID", ERROR_TYPE_INVALID_REQUEST);
+                break;
+            }
+
+            const size_t token_count = slot->cache_tokens.size();
+            const int64_t t_start = ggml_time_us();
+
+            std::string filename = task.data["filename"];
+            std::string filepath = task.data["filepath"];
+
+            const size_t nwrite =
+                llama_state_seq_save_file(ctx, filepath.c_str(), slot->id + 1, slot->cache_tokens.data(), token_count);
+
+            const int64_t t_end = ggml_time_us();
+            const double t_save_ms = (t_end - t_start) / 1000.0;
+
+            server_task_result result;
+            result.id = task.id;
+            result.stop = true;
+            result.error = false;
+            result.data = json{{"id_slot", id_slot},
+                               {"filename", filename},
+                               {"n_saved", token_count}, // tokens saved
+                               {"n_written", nwrite},    // bytes written
+                               {"timings", {{"save_ms", t_save_ms}}}};
+            queue_results.send(result);
+        }
+        break;
+        case SERVER_TASK_TYPE_SLOT_RESTORE: {
+            int id_slot = task.data["id_slot"];
+            server_slot *slot = get_slot(id_slot);
+            if (slot == nullptr)
+            {
+                send_error(task, "Invalid slot ID", ERROR_TYPE_INVALID_REQUEST);
+                break;
+            }
+
+            const int64_t t_start = ggml_time_us();
+
+            std::string filename = task.data["filename"];
+            std::string filepath = task.data["filepath"];
+
+            slot->cache_tokens.resize(slot->n_ctx);
+            size_t token_count = 0;
+            size_t nread = llama_state_seq_load_file(ctx, filepath.c_str(), slot->id + 1, slot->cache_tokens.data(),
+                                                     slot->cache_tokens.size(), &token_count);
+            if (nread == 0)
+            {
+                slot->cache_tokens.resize(0);
+                send_error(task, "Unable to restore slot, no available space in KV cache or invalid slot save file",
+                           ERROR_TYPE_INVALID_REQUEST);
+                break;
+            }
+            slot->cache_tokens.resize(token_count);
+
+            const int64_t t_end = ggml_time_us();
+            const double t_restore_ms = (t_end - t_start) / 1000.0;
+
+            server_task_result result;
+            result.id = task.id;
+            result.stop = true;
+            result.error = false;
+            result.data = json{{"id_slot", id_slot},
+                               {"filename", filename},
+                               {"n_restored", token_count}, // tokens restored
+                               {"n_read", nread},           // bytes read
+                               {"timings", {{"restore_ms", t_restore_ms}}}};
+            queue_results.send(result);
+        }
+        break;
+        case SERVER_TASK_TYPE_SLOT_ERASE: {
+            int id_slot = task.data["id_slot"];
+            server_slot *slot = get_slot(id_slot);
+            if (slot == nullptr)
+            {
+                send_error(task, "Invalid slot ID", ERROR_TYPE_INVALID_REQUEST);
+                break;
+            }
+
+            // Erase token cache
+            const size_t n_erased = slot->cache_tokens.size();
+            llama_kv_cache_seq_rm(ctx, slot->id + 1, -1, -1);
+            slot->cache_tokens.clear();
+
+            server_task_result result;
+            result.id = task.id;
+            result.stop = true;
+            result.error = false;
+            result.data = json{{"id_slot", id_slot}, {"n_erased", n_erased}};
+            queue_results.send(result);
+        }
+        break;
         }
     }
 
@@ -1961,8 +2069,7 @@ struct server_context
                         else
                         {
                             prompt_tokens =
-                                tokenize(slot.prompt, system_prompt.empty() &&
-                                                          add_bos_token); // add BOS if there isn't system prompt
+                                tokenize(slot.prompt, system_prompt.empty()); // add BOS if there isn't system prompt
                         }
 
                         slot.n_past = 0;
@@ -2263,14 +2370,19 @@ struct server_context
                 0, // unused
             };
 
-           const int ret = llama_decode(ctx, batch_view);
+            const int ret = llama_decode(ctx, batch_view);
 
             if (ret != 0)
             {
                 if (n_batch == 1 || ret < 0)
                 {
                     // if you get here, it means the KV cache is full - try increasing it via the context size
-                    LOG_TEE("%s : failed to decode the batch, n_batch = %d, ret = %d\n", __func__, n_batch, ret);
+                    LOG_ERROR("failed to decode the batch: KV cache is full - try increasing it via the context size",
+                              {
+                                  {"i", i},
+                                  {"n_batch", ret},
+                                  {"ret", ret},
+                              });
                     for (auto &slot : slots)
                     {
                         slot.state = SLOT_STATE_PROCESSING;
@@ -2281,12 +2393,17 @@ struct server_context
                     break; // break loop of n_batch
                 }
 
-                LOG_TEE("%s : failed to find free space in the KV cache, retrying with smaller n_batch = %d\n",
-                        __func__, n_batch / 2);
-
                 // retry with half the batch size to try to find a free slot in the KV cache
                 n_batch /= 2;
                 i -= n_batch;
+
+                LOG_WARNING("failed to find free space in the KV cache, retrying with smaller batch size - try "
+                            "increasing it via the context size or enable defragmentation",
+                            {
+                                {"i", i},
+                                {"n_batch", n_batch},
+                                {"ret", ret},
+                            });
 
                 continue; // continue loop of n_batch
             }
@@ -2443,6 +2560,7 @@ static void server_params_parse(json jparams, server_params &sparams, gpt_params
     if (jparams.contains("split_mode"))
     {
         params.split_mode = json_value(jparams, "split_mode", default_params.split_mode);
+// todo: the definition checks here currently don't work due to cmake visibility reasons
 #ifndef GGML_USE_CUDA
         fprintf(stderr, "warning: llama.cpp was compiled without CUDA. Setting the split mode has no effect.\n");
 #endif
