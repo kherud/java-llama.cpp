@@ -20,7 +20,8 @@ public class LlamaModelTest {
 	public static void setup() {
 		model = new LlamaModel(
 				new ModelParameters()
-						.setModelFilePath("models/llama-160m-chat-v1.q2_k.gguf")
+						.setModelFilePath("models/codellama-7b.Q2_K.gguf")
+						.setModelUrl("https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf")
 						.setNGpuLayers(43)
 						.setEmbedding(true)
 		);
@@ -45,6 +46,7 @@ public class LlamaModelTest {
 
 		int generated = 0;
 		for (LlamaModel.Output ignored : model.generate(params)) {
+			System.out.println(ignored);
 			generated++;
 		}
 		// todo: currently, after generating nPredict tokens, there is an additional empty output
@@ -53,6 +55,14 @@ public class LlamaModelTest {
 
 	@Test
 	public void testGenerateInfill() {
+		model.close();
+		model = new LlamaModel(
+				new ModelParameters()
+						.setModelFilePath("models/mistral-7b-instruct-v0.2.Q2_K.gguf")
+						.setModelUrl("https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q2_K.gguf")
+						.setNGpuLayers(43)
+//						.setEmbedding(true)
+		);
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
 		InferenceParameters params = new InferenceParameters("")
@@ -67,6 +77,7 @@ public class LlamaModelTest {
 		int generated = 0;
 		for (LlamaModel.Output ignored : model.generate(params)) {
 			generated++;
+			System.out.println(ignored);
 		}
 		Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
 	}
@@ -133,7 +144,7 @@ public class LlamaModelTest {
 	@Test
 	public void testEmbedding() {
 		float[] embedding = model.embed(prefix);
-		Assert.assertEquals(768, embedding.length);
+		Assert.assertEquals(4096, embedding.length);
 	}
 
 	@Test

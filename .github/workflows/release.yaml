@@ -9,8 +9,8 @@ on:
   release:
     types: [ created ]
 env:
-  MODEL_URL: "https://huggingface.co/afrideva/Llama-160M-Chat-v1-GGUF/resolve/main/llama-160m-chat-v1.q2_k.gguf"
-  MODEL_NAME: "llama-160m-chat-v1.q2_k.gguf"
+  MODEL_URL: "https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf"
+  MODEL_NAME: "codellama-7b.Q2_K.gguf"
 jobs:
 
 
