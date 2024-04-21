@@ -55,14 +55,6 @@ public class LlamaModelTest {
 
 	@Test
 	public void testGenerateInfill() {
-		model.close();
-		model = new LlamaModel(
-				new ModelParameters()
-						.setModelFilePath("models/mistral-7b-instruct-v0.2.Q2_K.gguf")
-						.setModelUrl("https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q2_K.gguf")
-						.setNGpuLayers(43)
-//						.setEmbedding(true)
-		);
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
 		InferenceParameters params = new InferenceParameters("")
