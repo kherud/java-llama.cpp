@@ -21,7 +21,7 @@ public class LlamaModelTest {
 		model = new LlamaModel(
 				new ModelParameters()
 						.setModelFilePath("models/codellama-7b.Q2_K.gguf")
-						.setModelUrl("https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf")
+//						.setModelUrl("https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf")
 						.setNGpuLayers(43)
 						.setEmbedding(true)
 		);
