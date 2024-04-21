@@ -99,7 +99,7 @@ jbyteArray parse_jbytes(JNIEnv *env, const std::string &string)
  * only requires JNI version `JNI_VERSION_1_1`. If the VM does not recognize the version number returned by
  `JNI_OnLoad`, the VM will unload the library and act as if the library was never loaded.
  */
-JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, __attribute__((unused)) void *reserved)
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
     JNIEnv *env = nullptr;
 
@@ -220,7 +220,7 @@ success:
  * Note that `JNI_OnLoad` and `JNI_OnUnload` are two functions optionally supplied by JNI libraries, not exported from
  * the VM.
  */
-JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, __attribute__((unused)) void *reserved)
+JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
 {
     JNIEnv *env = nullptr;
 
