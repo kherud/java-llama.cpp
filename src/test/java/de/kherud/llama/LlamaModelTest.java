@@ -46,7 +46,6 @@ public class LlamaModelTest {
 
 		int generated = 0;
 		for (LlamaModel.Output ignored : model.generate(params)) {
-			System.out.println(ignored);
 			generated++;
 		}
 		// todo: currently, after generating nPredict tokens, there is an additional empty output
@@ -69,7 +68,6 @@ public class LlamaModelTest {
 		int generated = 0;
 		for (LlamaModel.Output ignored : model.generate(params)) {
 			generated++;
-			System.out.println(ignored);
 		}
 		Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
 	}
