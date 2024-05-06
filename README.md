@@ -1,5 +1,5 @@
 ![Java 11+](https://img.shields.io/badge/Java-11%2B-informational)
-![llama.cpp b2702](https://img.shields.io/badge/llama.cpp-%23b2702-informational)
+![llama.cpp b2797](https://img.shields.io/badge/llama.cpp-%23b2797-informational)
 
 # Java Bindings for [llama.cpp](https://github.com/ggerganov/llama.cpp)
 
@@ -18,7 +18,7 @@ This repository provides Java bindings for the C++ library.
 3. [Android](#importing-in-android)
 
 > [!NOTE]
-> Now  with Llama 3 support
+> Now with support for Llama 3, Phi-3, and flash attention
 
 ## Quick Start
 
@@ -28,7 +28,7 @@ Access this library via Maven:
 <dependency>
     <groupId>de.kherud</groupId>
     <artifactId>llama</artifactId>
-    <version>3.0.1</version>
+    <version>3.0.2</version>
 </dependency>
 ```
 

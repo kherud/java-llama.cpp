@@ -61,6 +61,7 @@ public final class ModelParameters extends JsonParameters {
 	private static final String PARAM_LORA_BASE = "lora_base";
 	private static final String PARAM_EMBEDDING = "embedding";
 	private static final String PARAM_CONT_BATCHING = "cont_batching";
+	private static final String PARAM_FLASH_ATTENTION = "flash_attn";
 	private static final String PARAM_INPUT_PREFIX_BOS = "input_prefix_bos";
 	private static final String PARAM_IGNORE_EOS = "ignore_eos";
 	private static final String PARAM_USE_MMAP = "use_mmap";
@@ -523,6 +524,14 @@ public final class ModelParameters extends JsonParameters {
 	 */
 	public ModelParameters setContinuousBatching(boolean contBatching) {
 		parameters.put(PARAM_CONT_BATCHING, String.valueOf(contBatching));
+		return this;
+	}
+
+	/**
+	 * Whether to enable Flash Attention (default: disabled)
+	 */
+	public ModelParameters setFlashAttention(boolean flashAttention) {
+		parameters.put(PARAM_FLASH_ATTENTION, String.valueOf(flashAttention));
 		return this;
 	}
 
