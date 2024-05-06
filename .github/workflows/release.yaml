@@ -51,7 +51,7 @@ jobs:
 
   build-macos-native:
     name: Build ${{ matrix.target.os }}-${{ matrix.target.arch }}
-    runs-on: macos-latest
+    runs-on: ${{ matrix.target.runner }}
     strategy:
       fail-fast: false
       matrix:
@@ -59,11 +59,13 @@ jobs:
           - {
             os: Mac,
             arch: x86_64,
-            cmake: '-DCMAKE_OSX_ARCHITECTURES=x86_64 -DLLAMA_METAL_EMBED_LIBRARY=ON'
+            runner: macos-latest,
+            cmake: '-DCMAKE_OSX_ARCHITECTURES=x86_64 -DLLAMA_METAL=OFF'
           }
           - {
             os: Mac,
             arch: aarch64,
+            runner: macos-14,
             cmake: '-DCMAKE_OSX_ARCHITECTURES=arm64 -DLLAMA_METAL_EMBED_LIBRARY=ON'
           }
     steps:
