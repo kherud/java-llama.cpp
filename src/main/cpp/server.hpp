@@ -910,7 +910,7 @@ struct server_context
         slot.sparams.penalize_nl = json_value(data, "penalize_nl", default_sparams.penalize_nl);
         slot.params.n_keep = json_value(data, "n_keep", slot.params.n_keep);
         slot.params.n_discard = json_value(data, "n_discard", default_params.n_discard);
-        slot.params.seed = json_value(data, "seed", default_params.seed);
+        slot.sparams.seed = json_value(data, "seed", default_sparams.seed);
         slot.sparams.n_probs = json_value(data, "n_probs", default_sparams.n_probs);
         slot.sparams.min_keep = json_value(data, "min_keep", default_sparams.min_keep);
         slot.sparams.grammar = json_value(data, "grammar", default_sparams.grammar);
@@ -1209,7 +1209,7 @@ struct server_context
     bool process_token(completion_token_output &result, server_slot &slot)
     {
         // remember which tokens were sampled - used for repetition penalties during sampling
-        const std::string token_str = llama_token_to_piece(ctx, result.tok);
+        const std::string token_str = llama_token_to_piece(ctx, result.tok, false);
         slot.sampled = result.tok;
 
         // search stop word and delete it
@@ -1312,6 +1312,27 @@ struct server_context
             slot.has_next_token = false;
 
             LOG_VERBOSE("eos token found", {});
+        }
+
+        auto n_ctx_train = llama_n_ctx_train(model);
+        if (slot.params.n_predict < 1 && slot.n_predict < 1 && slot.ga_n == 1
+                    && slot.n_prompt_tokens + slot.n_decoded >= n_ctx_train) {
+            LOG_WARNING("n_predict is not set and self-context extend is disabled."
+                        " Limiting generated tokens to n_ctx_train to avoid EOS-less generation infinite loop", {
+                    { "id_slot",              slot.id },
+                    { "params.n_predict",     slot.params.n_predict },
+                    { "slot.n_prompt_tokens", slot.n_prompt_tokens },
+                    { "slot.n_decoded",       slot.n_decoded },
+                    { "slot.n_predict",       slot.n_predict },
+                    { "n_slots",              params.n_parallel },
+                    { "slot.n_ctx",           slot.n_ctx },
+                    { "n_ctx",                n_ctx },
+                    { "n_ctx_train",          n_ctx_train },
+                    { "ga_n",                 slot.ga_n },
+                });
+            slot.truncated      = true;
+            slot.stopped_limit  = true;
+            slot.has_next_token = false; // stop prediction
         }
 
         LOG_VERBOSE("next token", {
@@ -1475,8 +1496,9 @@ struct server_context
             {
                 const std::vector<llama_token> stop_word_toks = llama_tokenize(ctx, slot.stopping_word, false);
 
+                size_t safe_offset = std::min(slot.generated_token_probs.size(), stop_word_toks.size());
                 probs = std::vector<completion_token_output>(slot.generated_token_probs.begin(),
-                                                             slot.generated_token_probs.end() - stop_word_toks.size());
+                                                             slot.generated_token_probs.end() - safe_offset);
             }
             else
             {
@@ -2313,7 +2335,7 @@ struct server_context
                                       });
 
         // process the created batch of tokens
-        for (int32_t i = 0; i < (int32_t)batch.n_tokens; i += n_batch)
+        for (int32_t i = 0; i < batch.n_tokens; i += n_batch)
         {
             const int32_t n_tokens = std::min(n_batch, batch.n_tokens - i);
 
@@ -2534,6 +2556,7 @@ static void server_params_parse(json jparams, server_params &sparams, gpt_params
     params.embedding = json_value(jparams, "embedding", default_params.embedding);
     params.escape = json_value(jparams, "escape", default_params.escape);
     params.cont_batching = json_value(jparams, "cont_batching", default_params.cont_batching);
+    params.flash_attn = json_value(jparams, "flash_attn", default_params.flash_attn);
     params.input_prefix_bos = json_value(jparams, "input_prefix_bos", default_params.input_prefix_bos);
     params.ignore_eos = json_value(jparams, "ignore_eos", default_params.ignore_eos);
     params.use_mmap = json_value(jparams, "use_mmap", default_params.use_mmap);
@@ -2596,4 +2619,6 @@ static void server_params_parse(json jparams, server_params &sparams, gpt_params
         LOG_WARNING("llama.cpp was compiled without CUDA. It is not possible to set a main GPU.", {});
 #endif
     }
+
+    gpt_params_handle_model_default(params);
 }
