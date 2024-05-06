@@ -60,13 +60,13 @@ jobs:
             os: Mac,
             arch: x86_64,
             runner: macos-latest,
-            cmake: '-DCMAKE_OSX_ARCHITECTURES=x86_64 -DLLAMA_METAL=OFF'
+            cmake: '-DLLAMA_METAL=OFF'
           }
           - {
             os: Mac,
             arch: aarch64,
             runner: macos-14,
-            cmake: '-DCMAKE_OSX_ARCHITECTURES=arm64 -DLLAMA_METAL_EMBED_LIBRARY=ON'
+            cmake: '-DLLAMA_METAL_EMBED_LIBRARY=ON'
           }
     steps:
       - uses: actions/checkout@v4
