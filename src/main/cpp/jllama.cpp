@@ -110,9 +110,9 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
     // find classes
     c_llama_model = env->FindClass("de/kherud/llama/LlamaModel");
-    c_llama_iterator = env->FindClass("de/kherud/llama/LlamaModel$LlamaIterator");
+    c_llama_iterator = env->FindClass("de/kherud/llama/LlamaIterator");
     c_standard_charsets = env->FindClass("java/nio/charset/StandardCharsets");
-    c_output = env->FindClass("de/kherud/llama/LlamaModel$Output");
+    c_output = env->FindClass("de/kherud/llama/LlamaOutput");
     c_string = env->FindClass("java/lang/String");
     c_hash_map = env->FindClass("java/util/HashMap");
     c_map = env->FindClass("java/util/Map");
@@ -497,4 +497,12 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_delete(JNIEnv *env, jobje
     // maybe we should keep track how many models were loaded before freeing the backend
     llama_backend_free();
     delete ctx_server;
+}
+
+JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_cancelCompletion(JNIEnv *env, jobject obj, jint id_task)
+{
+    jlong server_handle = env->GetLongField(obj, f_model_pointer);
+    auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
+    ctx_server->request_cancel(id_task);
+    ctx_server->queue_results.remove_waiting_task_id(id_task);
 }

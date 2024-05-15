@@ -132,6 +132,22 @@ public class LlamaModelTest {
 	}
 
 	@Test
+	public void testCancelGenerating() {
+		InferenceParameters params = new InferenceParameters(prefix).setNPredict(nPredict);
+
+		int generated = 0;
+		LlamaIterator iterator = model.generate(params).iterator();
+		while (iterator.hasNext()) {
+			iterator.next();
+			generated++;
+			if (generated == 5) {
+				iterator.cancel();
+			}
+		}
+		Assert.assertEquals(5, generated);
+	}
+
+	@Test
 	public void testEmbedding() {
 		float[] embedding = model.embed(prefix);
 		Assert.assertEquals(4096, embedding.length);
