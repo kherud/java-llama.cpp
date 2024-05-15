@@ -2,6 +2,7 @@ package examples;
 
 import de.kherud.llama.InferenceParameters;
 import de.kherud.llama.LlamaModel;
+import de.kherud.llama.LlamaOutput;
 import de.kherud.llama.ModelParameters;
 
 public class InfillExample {
@@ -18,7 +19,7 @@ public class InfillExample {
 			InferenceParameters inferParams = new InferenceParameters("")
 					.setInputPrefix(prefix)
 					.setInputSuffix(suffix);
-			for (LlamaModel.Output output : model.generate(inferParams)) {
+			for (LlamaOutput output : model.generate(inferParams)) {
 				System.out.print(output);
 			}
 			System.out.print(suffix);

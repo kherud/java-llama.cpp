@@ -45,7 +45,7 @@ public class LlamaModelTest {
 				.setTokenIdBias(logitBias);
 
 		int generated = 0;
-		for (LlamaModel.Output ignored : model.generate(params)) {
+		for (LlamaOutput ignored : model.generate(params)) {
 			generated++;
 		}
 		// todo: currently, after generating nPredict tokens, there is an additional empty output
@@ -66,7 +66,7 @@ public class LlamaModelTest {
 				.setSeed(42);
 
 		int generated = 0;
-		for (LlamaModel.Output ignored : model.generate(params)) {
+		for (LlamaOutput ignored : model.generate(params)) {
 			generated++;
 		}
 		Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
@@ -78,7 +78,7 @@ public class LlamaModelTest {
 				.setGrammar("root ::= (\"a\" | \"b\")+")
 				.setNPredict(nPredict);
 		StringBuilder sb = new StringBuilder();
-		for (LlamaModel.Output output : model.generate(params)) {
+		for (LlamaOutput output : model.generate(params)) {
 			sb.append(output);
 		}
 		String output = sb.toString();

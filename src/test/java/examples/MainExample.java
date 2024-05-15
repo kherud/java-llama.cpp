@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 
 import de.kherud.llama.InferenceParameters;
 import de.kherud.llama.LlamaModel;
+import de.kherud.llama.LlamaOutput;
 import de.kherud.llama.ModelParameters;
 import de.kherud.llama.args.MiroStat;
 
@@ -39,7 +40,7 @@ public class MainExample {
 						.setPenalizeNl(true)
 						.setMiroStat(MiroStat.V2)
 						.setStopStrings("User:");
-                for (LlamaModel.Output output : model.generate(inferParams)) {
+                for (LlamaOutput output : model.generate(inferParams)) {
                     System.out.print(output);
                     prompt += output;
                 }

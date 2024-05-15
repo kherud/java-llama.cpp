@@ -2,11 +2,6 @@ package de.kherud.llama;
 
 import java.lang.annotation.Native;
 import java.nio.charset.StandardCharsets;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.NoSuchElementException;
-
-import org.jetbrains.annotations.NotNull;
 
 /**
  * This class is a wrapper around the llama.cpp functionality.
@@ -54,7 +49,7 @@ public class LlamaModel implements AutoCloseable {
 	public String complete(InferenceParameters parameters) {
 		parameters.setStream(false);
 		int taskId = requestCompletion(parameters.toString());
-		Output output = receiveCompletion(taskId);
+		LlamaOutput output = receiveCompletion(taskId);
 		return output.text;
 	}
 
@@ -64,8 +59,8 @@ public class LlamaModel implements AutoCloseable {
 	 *
 	 * @return iterable LLM outputs
 	 */
-	public Iterable<Output> generate(InferenceParameters parameters) {
-		return () -> new LlamaIterator(parameters);
+	public LlamaIterable generate(InferenceParameters parameters) {
+		return () -> new LlamaIterator(this, parameters);
 	}
 
 	/**
@@ -98,79 +93,22 @@ public class LlamaModel implements AutoCloseable {
 		return new String(bytes, StandardCharsets.UTF_8);
 	}
 
-//	/**
-//	 * Sets a callback for both Java and C++ log messages. Can be set to {@code null} to disable logging.
-//	 *
-//	 * @param callback a method to call for log messages
-//	 */
-//	public static native void setLogger(@Nullable BiConsumer<LogLevel, String> callback);
-
 	@Override
 	public void close() {
 		delete();
 	}
 
 	// don't overload native methods since the C++ function names get nasty
+	native int requestCompletion(String params) throws LlamaException;
+
+	native LlamaOutput receiveCompletion(int taskId) throws LlamaException;
+
+	native void cancelCompletion(int taskId);
+
+	native byte[] decodeBytes(int[] tokens);
+
 	private native void loadModel(String parameters) throws LlamaException;
-
-	private native int requestCompletion(String params) throws LlamaException;
-
-	private native Output receiveCompletion(int taskId) throws LlamaException;
-
-	private native byte[] decodeBytes(int[] tokens);
 
 	private native void delete();
 
-	/**
-	 * A generated output of the LLM. Note that you have to configure {@link InferenceParameters#setNProbs(int)}
-	 * in order for probabilities to be returned.
-	 */
-	public static final class Output {
-
-		@NotNull
-		public final String text;
-		@NotNull
-		public final Map<String, Float> probabilities;
-		private final boolean stop;
-
-		private Output(byte[] generated, @NotNull Map<String, Float> probabilities, boolean stop) {
-			this.text = new String(generated, StandardCharsets.UTF_8);
-			this.probabilities = probabilities;
-			this.stop = stop;
-		}
-
-		@Override
-		public String toString() {
-			return text;
-		}
-	}
-
-	private final class LlamaIterator implements Iterator<Output> {
-
-		private final int taskId;
-
-		@Native
-		@SuppressWarnings("FieldMayBeFinal")
-		private boolean hasNext = true;
-
-		private LlamaIterator(InferenceParameters parameters) {
-			parameters.setStream(true);
-			taskId = requestCompletion(parameters.toString());
-		}
-
-		@Override
-		public boolean hasNext() {
-			return hasNext;
-		}
-
-		@Override
-		public Output next() {
-			if (!hasNext) {
-				throw new NoSuchElementException();
-			}
-			Output output = receiveCompletion(taskId);
-			hasNext = !output.stop;
-			return output;
-		}
-	}
 }

@@ -1,5 +1,6 @@
 package examples;
 
+import de.kherud.llama.LlamaOutput;
 import de.kherud.llama.ModelParameters;
 
 import de.kherud.llama.InferenceParameters;
@@ -16,7 +17,7 @@ public class GrammarExample {
 		InferenceParameters inferParams = new InferenceParameters("")
 				.setGrammar(grammar);
 		try (LlamaModel model = new LlamaModel(modelParams)) {
-			for (LlamaModel.Output output : model.generate(inferParams)) {
+			for (LlamaOutput output : model.generate(inferParams)) {
 				System.out.print(output);
 			}
 		}
