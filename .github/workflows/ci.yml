@@ -28,24 +28,35 @@ jobs:
       - name: Run tests
         run: mvn test
 
-# disabled for now, we don't have access to a macos arm64 runner and testing on x86_64 doesn't work
-#  build-and-test-macos:
-#    name: macos-latest
-#    runs-on: macos-latest
-#    steps:
-#      - uses: actions/checkout@v4
-#      - uses: actions/setup-java@v4
-#        with:
-#          distribution: 'zulu'
-#          java-version: '11'
-#      - name: Download model
-#        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
-#      - name: Build libraries
-#        run: |
-#          mvn compile
-#          .github/build.sh -DLLAMA_METAL_EMBED_LIBRARY=ON
-#      - name: Run tests
-#        run: mvn test
+  build-and-test-macos:
+    name: ${{ matrix.target.runner }}
+    runs-on: ${{ matrix.target.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - {
+            runner: macos-latest,
+            cmake: '-DLLAMA_METAL=OFF'
+          }
+          - {
+            runner: macos-14,
+            cmake: '-DLLAMA_METAL_EMBED_LIBRARY=ON'
+          }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+      - name: Download model
+        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
+      - name: Build libraries
+        run: |
+          mvn compile
+          .github/build.sh ${{ matrix.target.cmake }}
+      - name: Run tests
+        run: mvn test
 
   build-and-test-windows:
     name: windows-latest
