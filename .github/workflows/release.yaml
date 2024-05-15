@@ -50,21 +50,17 @@ jobs:
 
 
   build-macos-native:
-    name: Build ${{ matrix.target.os }}-${{ matrix.target.arch }}
+    name: Build ${{ matrix.target.runner }}
     runs-on: ${{ matrix.target.runner }}
     strategy:
       fail-fast: false
       matrix:
         target:
           - {
-            os: Mac,
-            arch: x86_64,
-            runner: macos-latest,
+            runner: macos-13,
             cmake: '-DLLAMA_METAL=OFF'
           }
           - {
-            os: Mac,
-            arch: aarch64,
             runner: macos-14,
             cmake: '-DLLAMA_METAL_EMBED_LIBRARY=ON'
           }
@@ -73,7 +69,7 @@ jobs:
       - name: Build libraries
         shell: bash
         run: |
-          .github/build.sh ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}
+          .github/build.sh ${{ matrix.target.cmake }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
