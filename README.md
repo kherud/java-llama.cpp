@@ -133,7 +133,7 @@ This is a short example on how to use this library:
 ```java
 public class Example {
 
-	public static void main(String... args) throws IOException {
+    public static void main(String... args) throws IOException {
         ModelParameters modelParams = new ModelParameters()
                 .setModelFilePath("/path/to/model.gguf")
                 .setNGpuLayers(43);
@@ -152,12 +152,12 @@ public class Example {
                 prompt += input;
                 System.out.print("Llama: ");
                 prompt += "\nLlama: ";
-				InferenceParameters inferParams = new InferenceParameters(prompt)
-						.setTemperature(0.7f)
-						.setPenalizeNl(true)
-						.setMirostat(InferenceParameters.MiroStat.V2)
-						.setAntiPrompt("\n");
-                for (String output : model.generate(inferParams)) {
+                InferenceParameters inferParams = new InferenceParameters(prompt)
+                        .setTemperature(0.7f)
+                        .setPenalizeNl(true)
+                        .setMirostat(InferenceParameters.MiroStat.V2)
+                        .setAntiPrompt("\n");
+                for (LlamaOutput output : model.generate(inferParams)) {
                     System.out.print(output);
                     prompt += output;
                 }
@@ -180,7 +180,7 @@ ModelParameters modelParams = new ModelParameters().setModelFilePath("/path/to/m
 InferenceParameters inferParams = new InferenceParameters("Tell me a joke.");
 try (LlamaModel model = new LlamaModel(modelParams)) {
     // Stream a response and access more information about each output.
-    for (String output : model.generate(inferParams)) {
+    for (LlamaOutput output : model.generate(inferParams)) {
         System.out.print(output);
     }
     // Calculate a whole response before returning it.
