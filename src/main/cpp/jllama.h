@@ -25,14 +25,6 @@ JNIEXPORT jintArray JNICALL Java_de_kherud_llama_LlamaModel_encode
 
 /*
  * Class:     de_kherud_llama_LlamaModel
- * Method:    loadModel
- * Signature: (Ljava/lang/String;)V
- */
-JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel
-  (JNIEnv *, jobject, jstring);
-
-/*
- * Class:     de_kherud_llama_LlamaModel
  * Method:    requestCompletion
  * Signature: (Ljava/lang/String;)I
  */
@@ -41,10 +33,18 @@ JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion
 
 /*
  * Class:     de_kherud_llama_LlamaModel
- * Method:    receiveGeneration
- * Signature: (I)Lde/kherud/llama/LlamaModel/Output;
+ * Method:    receiveCompletion
+ * Signature: (I)Lde/kherud/llama/LlamaOutput;
  */
 JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     de_kherud_llama_LlamaModel
+ * Method:    cancelCompletion
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_cancelCompletion
   (JNIEnv *, jobject, jint);
 
 /*
@@ -54,6 +54,14 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion
  */
 JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_decodeBytes
   (JNIEnv *, jobject, jintArray);
+
+/*
+ * Class:     de_kherud_llama_LlamaModel
+ * Method:    loadModel
+ * Signature: (Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel
+  (JNIEnv *, jobject, jstring);
 
 /*
  * Class:     de_kherud_llama_LlamaModel
