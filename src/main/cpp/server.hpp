@@ -714,6 +714,17 @@ struct server_context
             llama_free_model(model);
             model = nullptr;
         }
+
+        // Clear any sampling context
+        for (server_slot &slot : slots)
+        {
+            if (slot.ctx_sampling != nullptr)
+            {
+                llama_sampling_free(slot.ctx_sampling);
+            }
+        }
+
+        llama_batch_free(batch);
     }
 
     bool load_model(const gpt_params &params_)
@@ -1185,16 +1196,12 @@ struct server_context
         system_need_update = false;
     }
 
-    void system_prompt_set(const json &sys_props)
+    bool system_prompt_set(const std::string &sys_prompt)
     {
-        system_prompt = sys_props.value("prompt", "");
-        name_user = sys_props.value("anti_prompt", "");
-        name_assistant = sys_props.value("assistant_name", "");
+        system_prompt = sys_prompt;
 
         LOG_VERBOSE("system prompt process", {
                                                  {"system_prompt", system_prompt},
-                                                 {"name_user", name_user},
-                                                 {"name_assistant", name_assistant},
                                              });
 
         // release all slots
@@ -1204,6 +1211,7 @@ struct server_context
         }
 
         system_need_update = true;
+        return true;
     }
 
     bool process_token(completion_token_output &result, server_slot &slot)
@@ -1315,23 +1323,25 @@ struct server_context
         }
 
         auto n_ctx_train = llama_n_ctx_train(model);
-        if (slot.params.n_predict < 1 && slot.n_predict < 1 && slot.ga_n == 1
-                    && slot.n_prompt_tokens + slot.n_decoded >= n_ctx_train) {
+        if (slot.params.n_predict < 1 && slot.n_predict < 1 && slot.ga_n == 1 &&
+            slot.n_prompt_tokens + slot.n_decoded >= n_ctx_train)
+        {
             LOG_WARNING("n_predict is not set and self-context extend is disabled."
-                        " Limiting generated tokens to n_ctx_train to avoid EOS-less generation infinite loop", {
-                    { "id_slot",              slot.id },
-                    { "params.n_predict",     slot.params.n_predict },
-                    { "slot.n_prompt_tokens", slot.n_prompt_tokens },
-                    { "slot.n_decoded",       slot.n_decoded },
-                    { "slot.n_predict",       slot.n_predict },
-                    { "n_slots",              params.n_parallel },
-                    { "slot.n_ctx",           slot.n_ctx },
-                    { "n_ctx",                n_ctx },
-                    { "n_ctx_train",          n_ctx_train },
-                    { "ga_n",                 slot.ga_n },
-                });
-            slot.truncated      = true;
-            slot.stopped_limit  = true;
+                        " Limiting generated tokens to n_ctx_train to avoid EOS-less generation infinite loop",
+                        {
+                            {"id_slot", slot.id},
+                            {"params.n_predict", slot.params.n_predict},
+                            {"slot.n_prompt_tokens", slot.n_prompt_tokens},
+                            {"slot.n_decoded", slot.n_decoded},
+                            {"slot.n_predict", slot.n_predict},
+                            {"n_slots", params.n_parallel},
+                            {"slot.n_ctx", slot.n_ctx},
+                            {"n_ctx", n_ctx},
+                            {"n_ctx_train", n_ctx_train},
+                            {"ga_n", slot.ga_n},
+                        });
+            slot.truncated = true;
+            slot.stopped_limit = true;
             slot.has_next_token = false; // stop prediction
         }
 
@@ -1642,7 +1652,7 @@ struct server_context
         for (int i = 0; i < prompt_count; i++)
         {
             json subtask_data = multiprompt_task.data;
-            subtask_data["prompt"] = subtask_data["prompt"][i];
+            subtask_data["prompt"] = subtask_data.at("prompt")[i];
 
             // subtasks inherit everything else (infill mode, embedding mode, etc.)
             request_completion(subtask_ids[i], id_multi, subtask_data, multiprompt_task.infill,
@@ -1666,7 +1676,8 @@ struct server_context
 
             if (task.data.contains("system_prompt"))
             {
-                system_prompt_set(task.data["system_prompt"]);
+                std::string sys_prompt = json_value(task.data, "system_prompt", std::string());
+                system_prompt_set(sys_prompt);
 
                 for (server_slot &slot : slots)
                 {
@@ -1780,7 +1791,7 @@ struct server_context
         }
         break;
         case SERVER_TASK_TYPE_SLOT_SAVE: {
-            int id_slot = task.data["id_slot"];
+            int id_slot = task.data.at("id_slot");
             server_slot *slot = get_slot(id_slot);
             if (slot == nullptr)
             {
@@ -1791,8 +1802,8 @@ struct server_context
             const size_t token_count = slot->cache_tokens.size();
             const int64_t t_start = ggml_time_us();
 
-            std::string filename = task.data["filename"];
-            std::string filepath = task.data["filepath"];
+            std::string filename = task.data.at("filename");
+            std::string filepath = task.data.at("filepath");
 
             const size_t nwrite =
                 llama_state_seq_save_file(ctx, filepath.c_str(), slot->id + 1, slot->cache_tokens.data(), token_count);
@@ -1813,7 +1824,7 @@ struct server_context
         }
         break;
         case SERVER_TASK_TYPE_SLOT_RESTORE: {
-            int id_slot = task.data["id_slot"];
+            int id_slot = task.data.at("id_slot");
             server_slot *slot = get_slot(id_slot);
             if (slot == nullptr)
             {
@@ -1823,8 +1834,8 @@ struct server_context
 
             const int64_t t_start = ggml_time_us();
 
-            std::string filename = task.data["filename"];
-            std::string filepath = task.data["filepath"];
+            std::string filename = task.data.at("filename");
+            std::string filepath = task.data.at("filepath");
 
             slot->cache_tokens.resize(slot->n_ctx);
             size_t token_count = 0;
@@ -1855,7 +1866,7 @@ struct server_context
         }
         break;
         case SERVER_TASK_TYPE_SLOT_ERASE: {
-            int id_slot = task.data["id_slot"];
+            int id_slot = task.data.at("id_slot");
             server_slot *slot = get_slot(id_slot);
             if (slot == nullptr)
             {
@@ -2462,16 +2473,37 @@ struct server_context
                 llama_token_data_array cur_p = {slot.ctx_sampling->cur.data(), slot.ctx_sampling->cur.size(), false};
                 result.tok = id;
 
-                const int32_t n_probs = slot.sparams.n_probs;
-                if (slot.sparams.temp <= 0 && n_probs > 0)
+                const size_t n_probs = std::min(cur_p.size, (size_t)slot.sparams.n_probs);
+                if (n_probs > 0)
                 {
-                    // for llama_sample_token_greedy we need to sort candidates
-                    llama_sample_softmax(ctx, &cur_p);
-                }
+                    const size_t n_valid = slot.ctx_sampling->n_valid;
 
-                for (size_t i = 0; i < std::min(cur_p.size, (size_t)n_probs); ++i)
-                {
-                    result.probs.push_back({cur_p.data[i].id, cur_p.data[i].p});
+                    // Make sure at least n_probs top tokens are at the front of the vector:
+                    if (slot.sparams.temp == 0.0f && n_probs > n_valid)
+                    {
+                        llama_sample_top_k(ctx, &cur_p, n_probs, 0);
+                    }
+
+                    if (slot.sparams.temp == 0.0f)
+                    {
+                        // With greedy sampling the probabilities have possibly not been calculated.
+                        for (size_t i = 0; i < n_probs; ++i)
+                        {
+                            result.probs.push_back({cur_p.data[i].id, i == 0 ? 1.0f : 0.0f});
+                        }
+                    }
+                    else
+                    {
+                        for (size_t i = 0; i < n_probs; ++i)
+                        {
+                            result.probs.push_back({
+                                cur_p.data[i].id,
+                                i >= n_valid
+                                    ? 0.0f
+                                    : cur_p.data[i].p // Tokens filtered out due to e.g. top_k have 0 probability.
+                            });
+                        }
+                    }
                 }
 
                 if (!process_token(result, slot))
