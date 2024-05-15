@@ -51,6 +51,7 @@ jobs:
           java-version: '11'
       - name: Build libraries
         run: |
+          uname -a
           mvn compile
           .github/build.sh ${{ matrix.target.cmake }}
       - name: Download model
