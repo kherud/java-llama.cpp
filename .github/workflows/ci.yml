@@ -36,11 +36,11 @@ jobs:
       matrix:
         target:
           - {
-            runner: macos-latest,
+            runner: macos-13,
             cmake: '-DLLAMA_METAL=OFF'
           }
           - {
-            runner: macos-14,
+            runner: macos-latest,
             cmake: '-DLLAMA_METAL_EMBED_LIBRARY=ON -DLLAMA_METAL=OFF'
           }
     steps:
