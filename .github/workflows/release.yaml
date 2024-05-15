@@ -69,6 +69,7 @@ jobs:
       - name: Build libraries
         shell: bash
         run: |
+          mvn compile
           .github/build.sh ${{ matrix.target.cmake }}
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
