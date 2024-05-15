@@ -18,13 +18,13 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
-      - name: Download model
-        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
       - name: Build libraries
         # cmake should figure out OS and ARCH automatically when running build.sh (but we need mvn compile for it)
         run: |
           mvn compile
           .github/build.sh
+      - name: Download model
+        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
       - name: Run tests
         run: mvn test
 
@@ -49,12 +49,12 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
-      - name: Download model
-        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
       - name: Build libraries
         run: |
           mvn compile
           .github/build.sh ${{ matrix.target.cmake }}
+      - name: Download model
+        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
       - name: Run tests
         run: mvn test
 
@@ -67,11 +67,11 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
-      - name: Download model
-        run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
       - name: Build libraries
         run: |
           mvn compile
           .github\build.bat
+      - name: Download model
+        run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
       - name: Run tests
         run: mvn test
