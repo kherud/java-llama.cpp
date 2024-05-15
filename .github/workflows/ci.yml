@@ -40,7 +40,7 @@ jobs:
             cmake: '-DLLAMA_METAL=OFF'
           }
           - {
-            runner: macos-latest,
+            runner: macos-14,
             cmake: '-DLLAMA_METAL_EMBED_LIBRARY=ON -DLLAMA_METAL=OFF'
           }
     steps:
@@ -51,7 +51,6 @@ jobs:
           java-version: '11'
       - name: Build libraries
         run: |
-          uname -a
           mvn compile
           .github/build.sh ${{ matrix.target.cmake }}
       - name: Download model
