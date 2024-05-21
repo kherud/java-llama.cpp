@@ -356,7 +356,20 @@ JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv 
 
     std::string c_params = parse_jstring(env, jparams);
     json json_params = json::parse(c_params);
+
     const bool infill = json_params.contains("input_prefix") || json_params.contains("input_suffix");
+
+    if (json_params.value("use_chat_template", false)) {
+        std::string chat_template = json_params.value("chat_template", "");  // empty string uses default template in model
+        std::string system_prompt = json_params.value("system_prompt", "You are a helpful assistant");
+        std::string user_prompt = json_params["prompt"];
+
+        json chat;
+        chat.push_back({{"role", "system"}, {"content", system_prompt}});
+        chat.push_back({{"role", "user"}, {"content", user_prompt}});
+
+        json_params["prompt"] = format_chat(ctx_server->model, chat_template, chat);
+    }
 
     const int id_task = ctx_server->queue_tasks.get_new_id();
     ctx_server->queue_results.add_waiting_task_id(id_task);
