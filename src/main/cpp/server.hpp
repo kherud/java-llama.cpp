@@ -692,6 +692,8 @@ struct server_context
     std::string name_user; // this should be the antiprompt
     std::string name_assistant;
 
+    std::string chat_template;
+
     // slots / clients
     std::vector<server_slot> slots;
     json default_generation_settings_for_props;
@@ -2596,6 +2598,7 @@ static void server_params_parse(json jparams, server_params &sparams, gpt_params
     params.no_kv_offload = json_value(jparams, "no_kv_offload", default_params.no_kv_offload);
     server_log_json = !jparams.contains("log_format") || jparams["log_format"] == "json";
     sparams.system_prompt = json_value(jparams, "system_prompt", default_sparams.system_prompt);
+    sparams.chat_template = json_value(jparams, "chat_template", default_sparams.chat_template);
 
     if (jparams.contains("n_gpu_layers"))
     {
