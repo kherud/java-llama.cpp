@@ -94,7 +94,6 @@ struct slot_params
     bool stream = true;
     bool cache_prompt = false; // remember the prompt to avoid reprocessing all prompt
 
-    uint32_t seed = -1; // RNG seed
     int32_t n_keep = 0; // number of tokens to keep from initial prompt
     int32_t n_discard =
         0; // number of tokens after n_keep that may be discarded when shifting context, 0 defaults to half
@@ -1100,7 +1099,7 @@ struct server_context
                         sampler_names.emplace_back(sampler_name);
                     }
                 }
-                slot.sparams.samplers_sequence = sampler_types_from_names(sampler_names, false);
+                slot.sparams.samplers_sequence = llama_sampling_types_from_names(sampler_names, false);
             }
             else
             {
@@ -1120,7 +1119,6 @@ struct server_context
                 send_error(task, "Failed to parse grammar", ERROR_TYPE_INVALID_REQUEST);
                 return false;
             }
-            llama_set_rng_seed(ctx, slot.params.seed);
         }
 
         slot.command = SLOT_COMMAND_LOAD_PROMPT;
@@ -1374,13 +1372,13 @@ struct server_context
         samplers_sequence.reserve(slot.sparams.samplers_sequence.size());
         for (const auto &sampler_type : slot.sparams.samplers_sequence)
         {
-            samplers_sequence.emplace_back(sampler_type_to_name_string(sampler_type));
+            samplers_sequence.emplace_back(llama_sampling_type_to_str(sampler_type));
         }
 
         return json{{"n_ctx", slot.n_ctx},
                     {"n_predict", slot.n_predict},
                     {"model", params.model_alias},
-                    {"seed", slot.params.seed},
+                    {"seed", slot.sparams.seed},
                     {"temperature", slot.sparams.temp},
                     {"dynatemp_range", slot.sparams.dynatemp_range},
                     {"dynatemp_exponent", slot.sparams.dynatemp_exponent},
@@ -2143,7 +2141,7 @@ struct server_context
                                 slot.command = SLOT_COMMAND_NONE;
                                 slot.release();
                                 slot.print_timings();
-                                send_final_response(slot);
+                                send_error(slot, "input is too large to process. increase the physical batch size", ERROR_TYPE_SERVER);
                                 continue;
                             }
                         }
