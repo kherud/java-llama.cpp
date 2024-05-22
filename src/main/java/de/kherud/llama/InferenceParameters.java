@@ -46,8 +46,6 @@ public final class InferenceParameters extends JsonParameters {
 	private static final String PARAM_SAMPLERS = "samplers";
 	private static final String PARAM_STREAM = "stream";
 	private static final String PARAM_USE_CHAT_TEMPLATE = "use_chat_template";
-	private static final String PARAM_CHAT_TEMPLATE = "chat_template";
-	private static final String PARAM_SYSTEM_PROMPT = "system_prompt";
 
 	public InferenceParameters(String prompt) {
 		// we always need a prompt
@@ -499,22 +497,5 @@ public final class InferenceParameters extends JsonParameters {
 		parameters.put(PARAM_USE_CHAT_TEMPLATE, String.valueOf(useChatTemplate));
 		return this;
 	}
-
-	/**
-	 * The chat template to use (default: empty)
-	 */
-	public InferenceParameters setChatTemplate(String chatTemplate) {
-		parameters.put(PARAM_CHAT_TEMPLATE, toJsonString(chatTemplate));
-		return this;
-	}
-
-	/**
-	 * Set the system prompt to use for generation (default: empty)
-	 */
-	public InferenceParameters setSystemPrompt(String systemPrompt) {
-		parameters.put(PARAM_SYSTEM_PROMPT, toJsonString(systemPrompt));
-		return this;
-	}
-
 
 }

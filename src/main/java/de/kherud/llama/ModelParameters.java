@@ -69,6 +69,7 @@ public final class ModelParameters extends JsonParameters {
 	private static final String PARAM_NO_KV_OFFLOAD = "no_kv_offload";
 	private static final String PARAM_SYSTEM_PROMPT = "system_prompt";
 	private static final String PARAM_LOG_FORMAT = "log_format";
+	private static final String PARAM_CHAT_TEMPLATE = "chat_template";
 
 	/**
 	 * Set the RNG seed
@@ -579,7 +580,7 @@ public final class ModelParameters extends JsonParameters {
 	 * Set a system prompt to use
 	 */
 	public ModelParameters setSystemPrompt(String systemPrompt) {
-		parameters.put(PARAM_SYSTEM_PROMPT, systemPrompt);
+		parameters.put(PARAM_SYSTEM_PROMPT, toJsonString(systemPrompt));
 		return this;
 	}
 
@@ -600,4 +601,13 @@ public final class ModelParameters extends JsonParameters {
 		}
 		return this;
 	}
+
+	/**
+	 * The chat template to use (default: empty)
+	 */
+	public ModelParameters setChatTemplate(String chatTemplate) {
+		parameters.put(PARAM_CHAT_TEMPLATE, toJsonString(chatTemplate));
+		return this;
+	}
+
 }
