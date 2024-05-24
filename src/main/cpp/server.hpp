@@ -18,8 +18,6 @@
 
 using json = nlohmann::ordered_json;
 
-bool server_log_json = true;
-
 enum stop_type
 {
     STOP_TYPE_FULL,
@@ -2579,7 +2577,6 @@ static void server_params_parse(json jparams, server_params &sparams, gpt_params
     params.input_prefix = json_value(jparams, "input_prefix", default_params.input_prefix);
     params.input_suffix = json_value(jparams, "input_suffix", default_params.input_suffix);
     params.antiprompt = json_value(jparams, "antiprompt", default_params.antiprompt);
-    params.logdir = json_value(jparams, "logdir", default_params.logdir);
     params.lookup_cache_static = json_value(jparams, "lookup_cache_static", default_params.lookup_cache_static);
     params.lookup_cache_dynamic = json_value(jparams, "lookup_cache_dynamic", default_params.lookup_cache_dynamic);
     params.logits_file = json_value(jparams, "logits_file", default_params.logits_file);
@@ -2594,7 +2591,6 @@ static void server_params_parse(json jparams, server_params &sparams, gpt_params
     params.use_mmap = json_value(jparams, "use_mmap", default_params.use_mmap);
     params.use_mlock = json_value(jparams, "use_mlock", default_params.use_mlock);
     params.no_kv_offload = json_value(jparams, "no_kv_offload", default_params.no_kv_offload);
-    server_log_json = !jparams.contains("log_format") || jparams["log_format"] == "json";
     sparams.system_prompt = json_value(jparams, "system_prompt", default_sparams.system_prompt);
     sparams.chat_template = json_value(jparams, "chat_template", default_sparams.chat_template);
 

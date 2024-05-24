@@ -1,9 +1,10 @@
 #include "jllama.h"
 
-#include "nlohmann/json.hpp"
 #include "llama.h"
+#include "nlohmann/json.hpp"
 #include "server.hpp"
 
+#include <functional>
 #include <stdexcept>
 
 // We store some references to Java classes and their fields/methods here to speed up things for later and to fail
@@ -12,7 +13,7 @@
 
 namespace
 {
-// JavaVM *g_vm = nullptr;
+JavaVM* g_vm = nullptr;
 
 // classes
 jclass c_llama_model = nullptr;
@@ -29,6 +30,8 @@ jclass c_integer = nullptr;
 jclass c_float = nullptr;
 jclass c_biconsumer = nullptr;
 jclass c_llama_error = nullptr;
+jclass c_log_level = nullptr;
+jclass c_log_format = nullptr;
 jclass c_error_oom = nullptr;
 
 // constructors
@@ -55,9 +58,22 @@ jfieldID f_model_pointer = nullptr;
 jfieldID f_task_id = nullptr;
 jfieldID f_utf_8 = nullptr;
 jfieldID f_iter_has_next = nullptr;
+jfieldID f_log_level_debug = nullptr;
+jfieldID f_log_level_info = nullptr;
+jfieldID f_log_level_warn = nullptr;
+jfieldID f_log_level_error = nullptr;
+jfieldID f_log_format_json = nullptr;
+jfieldID f_log_format_text = nullptr;
 
 // objects
 jobject o_utf_8 = nullptr;
+jobject o_log_level_debug = nullptr;
+jobject o_log_level_info = nullptr;
+jobject o_log_level_warn = nullptr;
+jobject o_log_level_error = nullptr;
+jobject o_log_format_json = nullptr;
+jobject o_log_format_text = nullptr;
+jobject o_log_callback = nullptr;
 
 /**
  * Convert a Java string to a std::string
@@ -89,7 +105,39 @@ jbyteArray parse_jbytes(JNIEnv *env, const std::string &string)
     env->SetByteArrayRegion(bytes, 0, length, reinterpret_cast<const jbyte *>(string.c_str()));
     return bytes;
 }
+
+/**
+ * Map a llama.cpp log level to its Java enumeration option.
+ */
+jobject log_level_to_jobject(ggml_log_level level)
+{
+    switch (level)
+    {
+    case GGML_LOG_LEVEL_ERROR:
+        return o_log_level_error;
+    case GGML_LOG_LEVEL_WARN:
+        return o_log_level_warn;
+    default: case GGML_LOG_LEVEL_INFO:
+        return o_log_level_info;
+    case GGML_LOG_LEVEL_DEBUG:
+        return o_log_level_debug;
+    }
+}
+
+/**
+ * Returns the JNIEnv of the current thread.
+ */
+JNIEnv* get_jni_env() {
+    JNIEnv* env = nullptr;
+    if (g_vm == nullptr || g_vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
+        throw std::runtime_error("Thread is not attached to the JVM");
+    }
+    return env;
+}
 } // namespace
+
+bool log_json;
+std::function<void(ggml_log_level, const char *, void *)> log_callback;
 
 /**
  * The VM calls JNI_OnLoad when the native library is loaded (for example, through `System.loadLibrary`).
@@ -101,6 +149,7 @@ jbyteArray parse_jbytes(JNIEnv *env, const std::string &string)
  */
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
+    g_vm = vm;
     JNIEnv *env = nullptr;
 
     if (JNI_OK != vm->GetEnv((void **)&env, JNI_VERSION_1_1))
@@ -123,10 +172,13 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     c_float = env->FindClass("java/lang/Float");
     c_biconsumer = env->FindClass("java/util/function/BiConsumer");
     c_llama_error = env->FindClass("de/kherud/llama/LlamaException");
+    c_log_level = env->FindClass("de/kherud/llama/LogLevel");
+    c_log_format = env->FindClass("de/kherud/llama/args/LogFormat");
     c_error_oom = env->FindClass("java/lang/OutOfMemoryError");
 
     if (!(c_llama_model && c_llama_iterator && c_standard_charsets && c_output && c_string && c_hash_map && c_map &&
-          c_set && c_entry && c_iterator && c_integer && c_float && c_biconsumer && c_llama_error && c_error_oom))
+          c_set && c_entry && c_iterator && c_integer && c_float && c_biconsumer && c_llama_error && c_log_level &&
+          c_log_format && c_error_oom))
     {
         goto error;
     }
@@ -145,6 +197,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     c_float = (jclass)env->NewGlobalRef(c_float);
     c_biconsumer = (jclass)env->NewGlobalRef(c_biconsumer);
     c_llama_error = (jclass)env->NewGlobalRef(c_llama_error);
+    c_log_level = (jclass)env->NewGlobalRef(c_log_level);
+    c_log_format = (jclass)env->NewGlobalRef(c_log_format);
     c_error_oom = (jclass)env->NewGlobalRef(c_error_oom);
 
     // find constructors
@@ -182,20 +236,40 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     f_task_id = env->GetFieldID(c_llama_iterator, "taskId", "I");
     f_utf_8 = env->GetStaticFieldID(c_standard_charsets, "UTF_8", "Ljava/nio/charset/Charset;");
     f_iter_has_next = env->GetFieldID(c_llama_iterator, "hasNext", "Z");
+    f_log_level_debug = env->GetStaticFieldID(c_log_level, "DEBUG", "Lde/kherud/llama/LogLevel;");
+    f_log_level_info = env->GetStaticFieldID(c_log_level, "INFO", "Lde/kherud/llama/LogLevel;");
+    f_log_level_warn = env->GetStaticFieldID(c_log_level, "WARN", "Lde/kherud/llama/LogLevel;");
+    f_log_level_error = env->GetStaticFieldID(c_log_level, "ERROR", "Lde/kherud/llama/LogLevel;");
+    f_log_format_json = env->GetStaticFieldID(c_log_format, "JSON", "Lde/kherud/llama/args/LogFormat;");
+    f_log_format_text = env->GetStaticFieldID(c_log_format, "TEXT", "Lde/kherud/llama/args/LogFormat;");
 
-    if (!(f_model_pointer && f_task_id && f_utf_8 && f_iter_has_next))
+    if (!(f_model_pointer && f_task_id && f_utf_8 && f_iter_has_next && f_log_level_debug && f_log_level_info &&
+          f_log_level_warn && f_log_level_error && f_log_format_json && f_log_format_text))
     {
         goto error;
     }
 
     o_utf_8 = env->NewStringUTF("UTF-8");
+    o_log_level_debug = env->GetStaticObjectField(c_log_level, f_log_level_debug);
+    o_log_level_info = env->GetStaticObjectField(c_log_level, f_log_level_info);
+    o_log_level_warn = env->GetStaticObjectField(c_log_level, f_log_level_warn);
+    o_log_level_error = env->GetStaticObjectField(c_log_level, f_log_level_error);
+    o_log_format_json = env->GetStaticObjectField(c_log_format, f_log_format_json);
+    o_log_format_text = env->GetStaticObjectField(c_log_format, f_log_format_text);
 
-    if (!(o_utf_8))
+    if (!(o_utf_8 && o_log_level_debug && o_log_level_info && o_log_level_warn && o_log_level_error &&
+          o_log_format_json && o_log_format_text))
     {
         goto error;
     }
 
-    o_utf_8 = (jclass)env->NewGlobalRef(o_utf_8);
+    o_utf_8 = env->NewGlobalRef(o_utf_8);
+    o_log_level_debug = env->NewGlobalRef(o_log_level_debug);
+    o_log_level_info = env->NewGlobalRef(o_log_level_info);
+    o_log_level_warn = env->NewGlobalRef(o_log_level_warn);
+    o_log_level_error = env->NewGlobalRef(o_log_level_error);
+    o_log_format_json = env->NewGlobalRef(o_log_format_json);
+    o_log_format_text = env->NewGlobalRef(o_log_format_text);
 
     if (env->ExceptionCheck())
     {
@@ -203,13 +277,15 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         goto error;
     }
 
+    llama_backend_init();
+
     goto success;
 
 error:
     return JNI_ERR;
 
 success:
-    return JNI_VERSION_1_2;
+    return JNI_VERSION_1_6;
 }
 
 /**
@@ -224,7 +300,7 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
 {
     JNIEnv *env = nullptr;
 
-    if (JNI_OK != vm->GetEnv((void **)&env, JNI_VERSION_1_1))
+    if (JNI_OK != vm->GetEnv((void **)&env, JNI_VERSION_1_6))
     {
         return;
     }
@@ -242,9 +318,24 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
     env->DeleteGlobalRef(c_float);
     env->DeleteGlobalRef(c_biconsumer);
     env->DeleteGlobalRef(c_llama_error);
+    env->DeleteGlobalRef(c_log_level);
+    env->DeleteGlobalRef(c_log_level);
     env->DeleteGlobalRef(c_error_oom);
 
     env->DeleteGlobalRef(o_utf_8);
+    env->DeleteGlobalRef(o_log_level_debug);
+    env->DeleteGlobalRef(o_log_level_info);
+    env->DeleteGlobalRef(o_log_level_warn);
+    env->DeleteGlobalRef(o_log_level_error);
+    env->DeleteGlobalRef(o_log_format_json);
+    env->DeleteGlobalRef(o_log_format_text);
+
+    if (o_log_callback != nullptr)
+    {
+        env->DeleteGlobalRef(o_log_callback);
+    }
+
+    llama_backend_free();
 }
 
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jobject obj, jstring jparams)
@@ -277,7 +368,6 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
         params.model_alias = params.model;
     }
 
-    llama_backend_init();
     llama_numa_init(params.numa);
 
     LOG_INFO("build info", {{"build", LLAMA_BUILD_NUMBER}, {"commit", LLAMA_COMMIT}});
@@ -344,7 +434,17 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
                                                             std::placeholders::_1, std::placeholders::_2,
                                                             std::placeholders::_3));
 
-    std::thread t([ctx_server]() { ctx_server->queue_tasks.start_loop(); });
+    std::thread t([ctx_server]() {
+        JNIEnv *env;
+        jint res = g_vm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        if (res == JNI_EDETACHED) {
+            res = g_vm->AttachCurrentThread((void**)&env, nullptr);
+            if (res != JNI_OK) {
+                throw std::runtime_error("Failed to attach thread to JVM");
+            }
+        }
+        ctx_server->queue_tasks.start_loop();
+    });
     t.detach();
 
     env->SetLongField(obj, f_model_pointer, reinterpret_cast<jlong>(ctx_server));
@@ -502,8 +602,6 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_delete(JNIEnv *env, jobje
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
     auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
     ctx_server->queue_tasks.terminate();
-    // maybe we should keep track how many models were loaded before freeing the backend
-    llama_backend_free();
     delete ctx_server;
 }
 
@@ -513,4 +611,31 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_cancelCompletion(JNIEnv *
     auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
     ctx_server->request_cancel(id_task);
     ctx_server->queue_results.remove_waiting_task_id(id_task);
+}
+
+JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_setLogger(JNIEnv *env, jclass clazz, jobject log_format,
+                                                                 jobject jcallback)
+{
+    if (o_log_callback != nullptr)
+    {
+        env->DeleteGlobalRef(o_log_callback);
+    }
+
+    log_json = env->IsSameObject(log_format, o_log_format_json);
+
+    if (jcallback == nullptr)
+    {
+        log_callback = nullptr;
+    }
+    else
+    {
+        o_log_callback = env->NewGlobalRef(jcallback);
+        log_callback = [](enum ggml_log_level level, const char *text, void *user_data) {
+            JNIEnv* env = get_jni_env();
+            jstring message = env->NewStringUTF(text);
+            jobject log_level = log_level_to_jobject(level);
+            env->CallVoidMethod(o_log_callback, m_biconsumer_accept, log_level, message);
+            env->DeleteLocalRef(message);
+        };
+    }
 }

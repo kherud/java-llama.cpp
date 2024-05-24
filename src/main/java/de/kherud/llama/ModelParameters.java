@@ -3,7 +3,6 @@ package de.kherud.llama;
 import java.util.Map;
 
 import de.kherud.llama.args.GpuSplitMode;
-import de.kherud.llama.args.LogFormat;
 import de.kherud.llama.args.NumaStrategy;
 import de.kherud.llama.args.PoolingType;
 import de.kherud.llama.args.RopeScalingType;
@@ -53,8 +52,6 @@ public final class ModelParameters extends JsonParameters {
 	private static final String PARAM_MODEL_URL = "model_url";
 	private static final String PARAM_HF_REPO = "hf_repo";
 	private static final String PARAM_HF_FILE = "hf_file";
-	private static final String PARAM_LOGDIR = "logdir";
-	private static final String PARAM_LOG_DISABLE = "disable_log";
 	private static final String PARAM_LOOKUP_CACHE_STATIC = "lookup_cache_static";
 	private static final String PARAM_LOOKUP_CACHE_DYNAMIC = "lookup_cache_dynamic";
 	private static final String PARAM_LORA_ADAPTER = "lora_adapter";
@@ -68,7 +65,6 @@ public final class ModelParameters extends JsonParameters {
 	private static final String PARAM_USE_MLOCK = "use_mlock";
 	private static final String PARAM_NO_KV_OFFLOAD = "no_kv_offload";
 	private static final String PARAM_SYSTEM_PROMPT = "system_prompt";
-	private static final String PARAM_LOG_FORMAT = "log_format";
 	private static final String PARAM_CHAT_TEMPLATE = "chat_template";
 
 	/**
@@ -448,22 +444,6 @@ public final class ModelParameters extends JsonParameters {
 	}
 
 	/**
-	 * Set path under which to save YAML logs (no logging if unset)
-	 */
-	public ModelParameters setLogDirectory(String logdir) {
-		parameters.put(PARAM_LOGDIR, toJsonString(logdir));
-		return this;
-	}
-
-	/**
-	 * Set whether to disable logging
-	 */
-	public ModelParameters setDisableLog(boolean logDisable) {
-		parameters.put(PARAM_LOG_DISABLE, String.valueOf(logDisable));
-		return this;
-	}
-
-	/**
 	 * Set path to static lookup cache to use for lookup decoding (not updated by generation)
 	 */
 	public ModelParameters setLookupCacheStaticFilePath(String lookupCacheStatic) {
@@ -581,24 +561,6 @@ public final class ModelParameters extends JsonParameters {
 	 */
 	public ModelParameters setSystemPrompt(String systemPrompt) {
 		parameters.put(PARAM_SYSTEM_PROMPT, toJsonString(systemPrompt));
-		return this;
-	}
-
-	/**
-	 * Set which log format to use
-	 */
-	public ModelParameters setLogFormat(LogFormat logFormat) {
-		switch (logFormat) {
-			case NONE:
-				parameters.put(PARAM_LOG_DISABLE, String.valueOf(true));
-				break;
-			case JSON:
-				parameters.put(PARAM_LOG_FORMAT, "json");
-				break;
-			case TEXT:
-				parameters.put(PARAM_LOG_FORMAT, "text");
-				break;
-		}
 		return this;
 	}
 
