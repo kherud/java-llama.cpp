@@ -1,7 +1,11 @@
 package de.kherud.llama;
 
+import de.kherud.llama.args.LogFormat;
+import org.jetbrains.annotations.Nullable;
+
 import java.lang.annotation.Native;
 import java.nio.charset.StandardCharsets;
+import java.util.function.BiConsumer;
 
 /**
  * This class is a wrapper around the llama.cpp functionality.
@@ -92,6 +96,17 @@ public class LlamaModel implements AutoCloseable {
 		byte[] bytes = decodeBytes(tokens);
 		return new String(bytes, StandardCharsets.UTF_8);
 	}
+
+	/**
+	 * Sets a callback for native llama.cpp log messages.
+	 * Per default, log messages are written to stdout. To only change the log format but keep logging to stdout,
+	 * the given callback can be <code>null</code>.
+	 * To disable logging, pass an empty callback, i.e., <code>(level, msg) -> {}</code>.
+	 *
+	 * @param format the log format to use
+	 * @param callback a method to call for log messages
+	 */
+	public static native void setLogger(LogFormat format, @Nullable BiConsumer<LogLevel, String> callback);
 
 	@Override
 	public void close() {

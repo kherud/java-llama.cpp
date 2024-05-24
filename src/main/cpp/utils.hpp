@@ -26,23 +26,24 @@ enum error_type
     ERROR_TYPE_NOT_SUPPORTED, // custom error
 };
 
-extern bool server_log_json;
+extern bool log_json;
+extern std::function<void(ggml_log_level, const char *, void *)> log_callback;
 
 #if SERVER_VERBOSE
 #define LOG_VERBOSE(MSG, ...)                                                                                          \
     do                                                                                                                 \
     {                                                                                                                  \
-        server_log("VERB", __func__, __LINE__, MSG, __VA_ARGS__);                                                      \
+        server_log(GGML_LOG_LEVEL_DEBUG, __func__, __LINE__, MSG, __VA_ARGS__);                                        \
     } while (0)
 #else
 #define LOG_VERBOSE(MSG, ...)
 #endif
 
-#define LOG_ERROR(MSG, ...) server_log("ERR", __func__, __LINE__, MSG, __VA_ARGS__)
-#define LOG_WARNING(MSG, ...) server_log("WARN", __func__, __LINE__, MSG, __VA_ARGS__)
-#define LOG_INFO(MSG, ...) server_log("INFO", __func__, __LINE__, MSG, __VA_ARGS__)
+#define LOG_ERROR(MSG, ...) server_log(GGML_LOG_LEVEL_ERROR, __func__, __LINE__, MSG, __VA_ARGS__)
+#define LOG_WARNING(MSG, ...) server_log(GGML_LOG_LEVEL_WARN, __func__, __LINE__, MSG, __VA_ARGS__)
+#define LOG_INFO(MSG, ...) server_log(GGML_LOG_LEVEL_INFO, __func__, __LINE__, MSG, __VA_ARGS__)
 
-static inline void server_log(const char *level, const char *function, int line, const char *message,
+static inline void server_log(ggml_log_level level, const char *function, int line, const char *message,
                               const json &extra);
 
 template <typename T> static T json_value(const json &body, const std::string &key, const T &default_value)
@@ -69,50 +70,76 @@ template <typename T> static T json_value(const json &body, const std::string &k
     }
 }
 
-static inline void server_log(const char *level, const char *function, int line, const char *message, const json &extra)
+static const char * log_level_to_string(ggml_log_level level) {
+    switch (level) {
+        case GGML_LOG_LEVEL_ERROR:
+            return "ERROR";
+        case GGML_LOG_LEVEL_WARN:
+            return "WARN";
+        default: case GGML_LOG_LEVEL_INFO:
+            return "INFO";
+        case GGML_LOG_LEVEL_DEBUG:
+            return "DEBUG";
+    }
+}
+
+static inline void server_log(ggml_log_level level, const char *function, int line, const char *message, const json &extra)
 {
     std::stringstream ss_tid;
     ss_tid << std::this_thread::get_id();
-    json log = json{
-        {"tid", ss_tid.str()},
-        {"timestamp", time(nullptr)},
-    };
 
-    if (server_log_json)
+    if (log_json)
     {
-        log.merge_patch({
-            {"level", level},
+        json log = json{
+            {"msg", message},
+#if SERVER_VERBOSE
+            {"ts", time(nullptr)},
+            {"level", log_level_to_string(level)},
+            {"tid", ss_tid.str()},
             {"function", function},
             {"line", line},
-            {"msg", message},
-        });
+#endif
+        };
 
         if (!extra.empty())
         {
             log.merge_patch(extra);
         }
 
-        printf("%s\n", log.dump(-1, ' ', false, json::error_handler_t::replace).c_str());
+        auto dump = log.dump(-1, ' ', false, json::error_handler_t::replace);
+        if (log_callback == nullptr)
+        {
+            printf("%s\n", dump.c_str());
+        } else {
+            log_callback(level, dump.c_str(), nullptr);
+        }
     }
     else
     {
-        char buf[1024];
-        snprintf(buf, 1024, "%4s [%24s] %s", level, function, message);
+        std::stringstream ss;
+        ss << message;
 
         if (!extra.empty())
         {
-            log.merge_patch(extra);
-        }
-        std::stringstream ss;
-        ss << buf << " |";
-        for (const auto &el : log.items())
-        {
-            const std::string value = el.value().dump(-1, ' ', false, json::error_handler_t::replace);
-            ss << " " << el.key() << "=" << value;
+            for (const auto &el : extra.items())
+            {
+                const std::string value = el.value().dump(-1, ' ', false, json::error_handler_t::replace);
+                ss << " " << el.key() << "=" << value;
+            }
         }
 
+#if SERVER_VERBOSE
+        ss << " | ts " << time(nullptr)
+           << " | tid " << ss_tid.str()
+           << " | " << function << " line " << line;
+#endif
+
         const std::string str = ss.str();
-        printf("%.*s\n", (int)str.size(), str.data());
+        if (log_callback == nullptr) {
+            printf("[%4s] %.*s\n", log_level_to_string(level), (int)str.size(), str.data());
+        } else {
+            log_callback(level, str.c_str(), nullptr);
+        }
     }
     fflush(stdout);
 }
@@ -638,7 +665,7 @@ static json format_embeddings_response_oaicompat(const json &request, const json
 {
     json data = json::array();
     int i = 0;
-    for (auto &elem : embeddings)
+    for (const auto &elem : embeddings)
     {
         data.push_back(
             json{{"embedding", json_value(elem, "embedding", json::array())}, {"index", i++}, {"object", "embedding"}});
