@@ -2139,7 +2139,8 @@ struct server_context
                                 slot.command = SLOT_COMMAND_NONE;
                                 slot.release();
                                 slot.print_timings();
-                                send_error(slot, "input is too large to process. increase the physical batch size", ERROR_TYPE_SERVER);
+                                send_error(slot, "input is too large to process. increase the physical batch size",
+                                           ERROR_TYPE_SERVER);
                                 continue;
                             }
                         }
