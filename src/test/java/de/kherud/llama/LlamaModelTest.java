@@ -1,8 +1,11 @@
 package de.kherud.llama;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.regex.Pattern;
 
+import de.kherud.llama.args.LogFormat;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -18,6 +21,7 @@ public class LlamaModelTest {
 
 	@BeforeClass
 	public static void setup() {
+//		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> System.out.println(level + ": " + msg));
 		model = new LlamaModel(
 				new ModelParameters()
 						.setModelFilePath("models/codellama-7b.Q2_K.gguf")
@@ -160,5 +164,108 @@ public class LlamaModelTest {
 		String decoded = model.decode(encoded);
 		// the llama tokenizer adds a space before the prompt
 		Assert.assertEquals(" " + prompt, decoded);
+	}
+
+	@Test
+	public void testLogText() {
+		List<LogMessage> messages = new ArrayList<>();
+		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> messages.add(new LogMessage(level, msg)));
+
+		InferenceParameters params = new InferenceParameters(prefix)
+				.setNPredict(nPredict)
+				.setSeed(42);
+		model.complete(params);
+
+		Assert.assertFalse(messages.isEmpty());
+
+		Pattern jsonPattern = Pattern.compile("^\\s*[\\[{].*[}\\]]\\s*$");
+		for (LogMessage message : messages) {
+			Assert.assertNotNull(message.level);
+			Assert.assertFalse(jsonPattern.matcher(message.text).matches());
+		}
+	}
+
+	@Test
+	public void testLogJSON() {
+		List<LogMessage> messages = new ArrayList<>();
+		LlamaModel.setLogger(LogFormat.JSON, (level, msg) -> messages.add(new LogMessage(level, msg)));
+
+		InferenceParameters params = new InferenceParameters(prefix)
+				.setNPredict(nPredict)
+				.setSeed(42);
+		model.complete(params);
+
+		Assert.assertFalse(messages.isEmpty());
+
+		Pattern jsonPattern = Pattern.compile("^\\s*[\\[{].*[}\\]]\\s*$");
+		for (LogMessage message : messages) {
+			Assert.assertNotNull(message.level);
+			Assert.assertTrue(jsonPattern.matcher(message.text).matches());
+		}
+	}
+
+	@Test
+	public void testLogStdout() {
+		// Unfortunately, `printf` can't be easily re-directed to Java. This test only works manually, thus.
+		InferenceParameters params = new InferenceParameters(prefix)
+				.setNPredict(nPredict)
+				.setSeed(42);
+
+		System.out.println("########## Log Text ##########");
+		LlamaModel.setLogger(LogFormat.TEXT, null);
+		model.complete(params);
+
+		System.out.println("########## Log JSON ##########");
+		LlamaModel.setLogger(LogFormat.JSON, null);
+		model.complete(params);
+
+		System.out.println("########## Log None ##########");
+		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> {});
+		model.complete(params);
+
+		System.out.println("##############################");
+	}
+
+	private String completeAndReadStdOut() {
+		PrintStream stdOut = System.out;
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		@SuppressWarnings("ImplicitDefaultCharsetUsage") PrintStream printStream = new PrintStream(outputStream);
+		System.setOut(printStream);
+
+		try {
+			InferenceParameters params = new InferenceParameters(prefix)
+					.setNPredict(nPredict)
+					.setSeed(42);
+			model.complete(params);
+		} finally {
+			System.out.flush();
+			System.setOut(stdOut);
+			printStream.close();
+		}
+
+		return outputStream.toString();
+	}
+
+	private List<String> splitLines(String text) {
+		List<String> lines = new ArrayList<>();
+
+		Scanner scanner = new Scanner(text);
+		while (scanner.hasNextLine()) {
+			String line = scanner.nextLine();
+			lines.add(line);
+		}
+		scanner.close();
+
+		return lines;
+	}
+
+	private static final class LogMessage {
+		private final LogLevel level;
+		private final String text;
+
+		private LogMessage(LogLevel level, String text) {
+			this.level = level;
+			this.text = text;
+		}
 	}
 }
