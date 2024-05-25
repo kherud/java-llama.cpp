@@ -223,6 +223,23 @@ try (LlamaModel model = new LlamaModel(modelParams)) {
 }
 ```
 
+### Logging
+
+Per default, logs are written to stdout.
+This can be intercepted via the static method `LlamaModel.setLogger(LogFormat, BiConsumer<LogLevel, String>)`. 
+There is text- and JSON-based logging. The default is JSON.
+To only change the log format while still writing to stdout, `null` can be passed for the callback. 
+Logging can be disabled by passing an empty callback.
+
+```java
+// Re-direct log messages however you like (e.g. to a logging library)
+LlamaModel.setLogger(LogFormat.TEXT, (level, message) -> System.out.println(level.name() + ": " + message));
+// Log to stdout, but change the format
+LlamaModel.setLogger(LogFormat.TEXT, null);
+// Disable logging by passing a no-op
+LlamaModel.setLogger(null, (level, message) -> {});
+```
+
 ## Importing in Android
 
 You can use this library in Android project.
