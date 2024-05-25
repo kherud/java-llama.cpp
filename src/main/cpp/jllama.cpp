@@ -13,7 +13,7 @@
 
 namespace
 {
-JavaVM* g_vm = nullptr;
+JavaVM *g_vm = nullptr;
 
 // classes
 jclass c_llama_model = nullptr;
@@ -117,7 +117,8 @@ jobject log_level_to_jobject(ggml_log_level level)
         return o_log_level_error;
     case GGML_LOG_LEVEL_WARN:
         return o_log_level_warn;
-    default: case GGML_LOG_LEVEL_INFO:
+    default:
+    case GGML_LOG_LEVEL_INFO:
         return o_log_level_info;
     case GGML_LOG_LEVEL_DEBUG:
         return o_log_level_debug;
@@ -127,9 +128,11 @@ jobject log_level_to_jobject(ggml_log_level level)
 /**
  * Returns the JNIEnv of the current thread.
  */
-JNIEnv* get_jni_env() {
-    JNIEnv* env = nullptr;
-    if (g_vm == nullptr || g_vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
+JNIEnv *get_jni_env()
+{
+    JNIEnv *env = nullptr;
+    if (g_vm == nullptr || g_vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK)
+    {
         throw std::runtime_error("Thread is not attached to the JVM");
     }
     return env;
@@ -436,10 +439,12 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
 
     std::thread t([ctx_server]() {
         JNIEnv *env;
-        jint res = g_vm->GetEnv((void**)&env, JNI_VERSION_1_6);
-        if (res == JNI_EDETACHED) {
-            res = g_vm->AttachCurrentThread((void**)&env, nullptr);
-            if (res != JNI_OK) {
+        jint res = g_vm->GetEnv((void **)&env, JNI_VERSION_1_6);
+        if (res == JNI_EDETACHED)
+        {
+            res = g_vm->AttachCurrentThread((void **)&env, nullptr);
+            if (res != JNI_OK)
+            {
                 throw std::runtime_error("Failed to attach thread to JVM");
             }
         }
@@ -459,7 +464,8 @@ JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv 
     json json_params = json::parse(c_params);
     const bool infill = json_params.contains("input_prefix") || json_params.contains("input_suffix");
 
-    if (json_params.value("use_chat_template", false)) {
+    if (json_params.value("use_chat_template", false))
+    {
         json chat;
         chat.push_back({{"role", "system"}, {"content", ctx_server->system_prompt}});
         chat.push_back({{"role", "user"}, {"content", json_params["prompt"]}});
@@ -631,7 +637,7 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_setLogger(JNIEnv *env, jc
     {
         o_log_callback = env->NewGlobalRef(jcallback);
         log_callback = [](enum ggml_log_level level, const char *text, void *user_data) {
-            JNIEnv* env = get_jni_env();
+            JNIEnv *env = get_jni_env();
             jstring message = env->NewStringUTF(text);
             jobject log_level = log_level_to_jobject(level);
             env->CallVoidMethod(o_log_callback, m_biconsumer_accept, log_level, message);

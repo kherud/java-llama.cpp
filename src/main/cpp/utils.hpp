@@ -70,20 +70,24 @@ template <typename T> static T json_value(const json &body, const std::string &k
     }
 }
 
-static const char * log_level_to_string(ggml_log_level level) {
-    switch (level) {
-        case GGML_LOG_LEVEL_ERROR:
-            return "ERROR";
-        case GGML_LOG_LEVEL_WARN:
-            return "WARN";
-        default: case GGML_LOG_LEVEL_INFO:
-            return "INFO";
-        case GGML_LOG_LEVEL_DEBUG:
-            return "DEBUG";
+static const char *log_level_to_string(ggml_log_level level)
+{
+    switch (level)
+    {
+    case GGML_LOG_LEVEL_ERROR:
+        return "ERROR";
+    case GGML_LOG_LEVEL_WARN:
+        return "WARN";
+    default:
+    case GGML_LOG_LEVEL_INFO:
+        return "INFO";
+    case GGML_LOG_LEVEL_DEBUG:
+        return "DEBUG";
     }
 }
 
-static inline void server_log(ggml_log_level level, const char *function, int line, const char *message, const json &extra)
+static inline void server_log(ggml_log_level level, const char *function, int line, const char *message,
+                              const json &extra)
 {
     std::stringstream ss_tid;
     ss_tid << std::this_thread::get_id();
@@ -110,7 +114,9 @@ static inline void server_log(ggml_log_level level, const char *function, int li
         if (log_callback == nullptr)
         {
             printf("%s\n", dump.c_str());
-        } else {
+        }
+        else
+        {
             log_callback(level, dump.c_str(), nullptr);
         }
     }
@@ -135,9 +141,12 @@ static inline void server_log(ggml_log_level level, const char *function, int li
 #endif
 
         const std::string str = ss.str();
-        if (log_callback == nullptr) {
+        if (log_callback == nullptr)
+        {
             printf("[%4s] %.*s\n", log_level_to_string(level), (int)str.size(), str.data());
-        } else {
+        }
+        else
+        {
             log_callback(level, str.c_str(), nullptr);
         }
     }
