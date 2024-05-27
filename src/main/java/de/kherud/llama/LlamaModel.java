@@ -99,8 +99,10 @@ public class LlamaModel implements AutoCloseable {
 
 	/**
 	 * Sets a callback for native llama.cpp log messages.
-	 * Per default, log messages are written to stdout. To only change the log format but keep logging to stdout,
-	 * the given callback can be <code>null</code>.
+	 * Per default, log messages are written in JSON to stdout. Note, that in text mode the callback will be also
+	 * invoked with log messages of the GGML backend, while JSON mode can only access request log messages.
+	 * In JSON mode, GGML messages will still be written to stdout.
+	 * To only change the log format but keep logging to stdout, the given callback can be <code>null</code>.
 	 * To disable logging, pass an empty callback, i.e., <code>(level, msg) -> {}</code>.
 	 *
 	 * @param format the log format to use
