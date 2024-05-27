@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DEFAULT_DOCKCROSS_IMAGE=dockcross/android-arm:20240104-6eda627
+DEFAULT_DOCKCROSS_IMAGE=dockcross/android-arm:20240418-88c04a4
 
 #------------------------------------------------------------------------------
 # Helpers
@@ -268,10 +268,10 @@ exit $run_exit_code
 # This image is not intended to be run manually.
 #
 # To create a dockcross helper script for the
-# dockcross/android-arm:20240104-6eda627 image, run:
+# dockcross/android-arm:20240418-88c04a4 image, run:
 #
-# docker run --rm dockcross/android-arm:20240104-6eda627 > dockcross-android-arm-20240104-6eda627
-# chmod +x dockcross-android-arm-20240104-6eda627
+# docker run --rm dockcross/android-arm:20240418-88c04a4 > dockcross-android-arm-20240418-88c04a4
+# chmod +x dockcross-android-arm-20240418-88c04a4
 #
 # You may then wish to move the dockcross script to your PATH.
 #
