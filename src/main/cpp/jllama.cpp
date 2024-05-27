@@ -137,6 +137,17 @@ JNIEnv *get_jni_env()
     }
     return env;
 }
+
+/**
+ * Invoke the log callback if there is any.
+ */
+void log_callback_trampoline(ggml_log_level level, const char *text, void *user_data)
+{
+    if (log_callback != nullptr)
+    {
+        log_callback(level, text, user_data);
+    }
+}
 } // namespace
 
 bool log_json;
@@ -632,6 +643,7 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_setLogger(JNIEnv *env, jc
     if (jcallback == nullptr)
     {
         log_callback = nullptr;
+        llama_log_set(nullptr, nullptr);
     }
     else
     {
@@ -643,5 +655,9 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_setLogger(JNIEnv *env, jc
             env->CallVoidMethod(o_log_callback, m_biconsumer_accept, log_level, message);
             env->DeleteLocalRef(message);
         };
+        if (!log_json)
+        {
+            llama_log_set(log_callback_trampoline, nullptr);
+        }
     }
 }
