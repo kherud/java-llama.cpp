@@ -1,18 +1,24 @@
 package de.kherud.llama;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
 import java.util.regex.Pattern;
 
-import de.kherud.llama.args.LogFormat;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import de.kherud.llama.args.LogFormat;
+
 public class LlamaModelTest {
 
+	private static final String modelPath = "models/codellama-7b.Q2_K.gguf";
 	private static final String prefix = "def remove_non_ascii(s: str) -> str:\n    \"\"\" ";
 	private static final String suffix = "\n    return result\n";
 	private static final int nPredict = 10;
@@ -24,7 +30,7 @@ public class LlamaModelTest {
 //		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> System.out.println(level + ": " + msg));
 		model = new LlamaModel(
 				new ModelParameters()
-						.setModelFilePath("models/codellama-7b.Q2_K.gguf")
+						.setModelFilePath(modelPath)
 //						.setModelUrl("https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf")
 						.setNGpuLayers(43)
 						.setEmbedding(true)
@@ -167,6 +173,21 @@ public class LlamaModelTest {
 	}
 
 	@Test
+	public void testVocabOnly() {
+		try (LlamaModel model = new LlamaModel(
+				new ModelParameters()
+						.setModelFilePath(modelPath)
+						.setVocabOnly()
+		)) {
+			String prompt = "Hello, world!";
+			int[] encoded = model.encode(prompt);
+			String decoded = model.decode(encoded);
+			Assert.assertEquals(" " + prompt, decoded);
+		}
+
+	}
+
+	@Test
 	public void testLogText() {
 		List<LogMessage> messages = new ArrayList<>();
 		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> messages.add(new LogMessage(level, msg)));
@@ -220,7 +241,8 @@ public class LlamaModelTest {
 		model.complete(params);
 
 		System.out.println("########## Log None ##########");
-		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> {});
+		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> {
+		});
 		model.complete(params);
 
 		System.out.println("##############################");
@@ -237,7 +259,8 @@ public class LlamaModelTest {
 					.setNPredict(nPredict)
 					.setSeed(42);
 			model.complete(params);
-		} finally {
+		}
+		finally {
 			System.out.flush();
 			System.setOut(stdOut);
 			printStream.close();
