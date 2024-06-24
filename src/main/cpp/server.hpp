@@ -726,6 +726,21 @@ struct server_context
         llama_batch_free(batch);
     }
 
+    bool load_tokenizer(const gpt_params &params_)
+    {
+        params = params_;
+
+        llama_model_params model_params = llama_model_default_params();
+        model_params.vocab_only = true;
+        llama_model * model = llama_load_model_from_file(params.model.c_str(), model_params);
+        if (model == nullptr)
+        {
+            LOG_ERROR("unable to load model", {{"model", params.model}});
+            return false;
+        }
+        return true;
+    }
+
     bool load_model(const gpt_params &params_)
     {
         params = params_;
