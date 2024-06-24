@@ -66,6 +66,7 @@ public final class ModelParameters extends JsonParameters {
 	private static final String PARAM_NO_KV_OFFLOAD = "no_kv_offload";
 	private static final String PARAM_SYSTEM_PROMPT = "system_prompt";
 	private static final String PARAM_CHAT_TEMPLATE = "chat_template";
+	private static final String PARAM_VOCAB_ONLY = "vocab_only";
 
 	/**
 	 * Set the RNG seed
@@ -569,6 +570,15 @@ public final class ModelParameters extends JsonParameters {
 	 */
 	public ModelParameters setChatTemplate(String chatTemplate) {
 		parameters.put(PARAM_CHAT_TEMPLATE, toJsonString(chatTemplate));
+		return this;
+	}
+
+	/**
+	 * Whether to only load the vocabulary for tokenization, no weights (default: false).
+	 * Note, that setting this to true will disable most other options.
+	 */
+	public ModelParameters setVocabOnly() {
+		parameters.put(PARAM_VOCAB_ONLY, "true");
 		return this;
 	}
 

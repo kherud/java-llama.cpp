@@ -372,17 +372,22 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
         log_enable();
     }
 
-    if (!sparams.system_prompt.empty())
-    {
-        ctx_server->system_prompt_set(sparams.system_prompt);
-    }
-
     if (params.model_alias == "unknown")
     {
         params.model_alias = params.model;
     }
 
-    llama_numa_init(params.numa);
+    if (json_value(json_params, "vocab_only", false)) {
+        if (!ctx_server->load_tokenizer(params))
+        {
+            env->ThrowNew(c_llama_error, "could not load model from given file path");
+        }
+        else
+        {
+            env->SetLongField(obj, f_model_pointer, reinterpret_cast<jlong>(ctx_server));
+        }
+        return;
+    }
 
     LOG_INFO("build info", {{"build", LLAMA_BUILD_NUMBER}, {"commit", LLAMA_COMMIT}});
 
@@ -392,6 +397,13 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
                                 {"total_threads", std::thread::hardware_concurrency()},
                                 {"system_info", llama_print_system_info()},
                             });
+
+    if (!sparams.system_prompt.empty())
+    {
+        ctx_server->system_prompt_set(sparams.system_prompt);
+    }
+
+    llama_numa_init(params.numa);
 
     std::atomic<server_state> state{SERVER_STATE_LOADING_MODEL};
 
