@@ -32,7 +32,6 @@ public final class ModelParameters extends JsonParameters {
 	private static final String PARAM_SPLIT_MODE = "split_mode";
 	private static final String PARAM_MAIN_GPU = "main_gpu";
 	private static final String PARAM_TENSOR_SPLIT = "tensor_split";
-	private static final String PARAM_N_BEAMS = "n_beams";
 	private static final String PARAM_GRP_ATTN_N = "grp_attn_n";
 	private static final String PARAM_GRP_ATTN_W = "grp_attn_w";
 	private static final String PARAM_ROPE_FREQ_BASE = "rope_freq_base";
@@ -241,14 +240,6 @@ public final class ModelParameters extends JsonParameters {
 			builder.append("]");
 			parameters.put(PARAM_TENSOR_SPLIT, builder.toString());
 		}
-		return this;
-	}
-
-	/**
-	 * Set usage of beam search of given width if non-zero.
-	 */
-	public ModelParameters setNBeams(int nBeams) {
-		parameters.put(PARAM_N_BEAMS, String.valueOf(nBeams));
 		return this;
 	}
 
