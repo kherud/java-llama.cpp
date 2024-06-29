@@ -2551,7 +2551,6 @@ static void server_params_parse(json jparams, server_params &sparams, gpt_params
     params.n_parallel = json_value(jparams, "n_parallel", default_params.n_parallel);
     params.n_sequences = json_value(jparams, "n_sequences", default_params.n_sequences);
     params.p_split = json_value(jparams, "p_split", default_params.p_split);
-    params.n_beams = json_value(jparams, "n_beams", default_params.n_beams);
     params.grp_attn_n = json_value(jparams, "grp_attn_n", default_params.grp_attn_n);
     params.grp_attn_w = json_value(jparams, "grp_attn_w", default_params.grp_attn_w);
     params.n_print = json_value(jparams, "n_print", default_params.n_print);
