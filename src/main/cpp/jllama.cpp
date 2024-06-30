@@ -355,13 +355,12 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jobject obj, jstring jparams)
 {
     gpt_params params;
-    server_params sparams;
 
     auto *ctx_server = new server_context();
 
     std::string c_params = parse_jstring(env, jparams);
     json json_params = json::parse(c_params);
-    server_params_parse(json_params, sparams, params);
+    server_params_parse(json_params, params);
 
     if (json_value(json_params, "disable_log", false))
     {
@@ -372,9 +371,9 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
         log_enable();
     }
 
-    if (!sparams.system_prompt.empty())
+    if (!params.system_prompt.empty())
     {
-        ctx_server->system_prompt_set(sparams.system_prompt);
+        ctx_server->system_prompt_set(params.system_prompt);
     }
 
     if (params.model_alias == "unknown")
@@ -395,6 +394,9 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
 
     std::atomic<server_state> state{SERVER_STATE_LOADING_MODEL};
 
+    // Necessary similarity of prompt for slot selection
+    ctx_server->slot_prompt_similarity = params.slot_prompt_similarity;
+
     // load the model
     if (!ctx_server->load_model(params))
     {
@@ -411,32 +413,36 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     const auto model_meta = ctx_server->model_meta();
 
     // if a custom chat template is not supplied, we will use the one that comes with the model (if any)
-    if (sparams.chat_template.empty())
+    if (params.chat_template.empty())
     {
         if (!ctx_server->validate_model_chat_template())
         {
             LOG_ERROR("The chat template that comes with this model is not yet supported, falling back to chatml. This "
                       "may cause the model to output suboptimal responses",
                       {});
-            sparams.chat_template = "chatml";
+            params.chat_template = "chatml";
         }
     }
-    ctx_server->chat_template = sparams.chat_template;
+
+    // if a custom chat template is not supplied, we will use the one that comes with the model (if any)
+    if (params.chat_template.empty())
+    {
+        if (!ctx_server->validate_model_chat_template())
+        {
+            LOG_ERROR("The chat template that comes with this model is not yet supported, falling back to chatml. This "
+                      "may cause the model to output suboptimal responses",
+                      {});
+            params.chat_template = "chatml";
+        }
+    }
 
     // print sample chat example to make it clear which template is used
     {
-        json chat;
-        chat.push_back({{"role", "system"}, {"content", "You are a helpful assistant"}});
-        chat.push_back({{"role", "user"}, {"content", "Hello"}});
-        chat.push_back({{"role", "assistant"}, {"content", "Hi there"}});
-        chat.push_back({{"role", "user"}, {"content", "How are you?"}});
-
-        const std::string chat_example = format_chat(ctx_server->model, sparams.chat_template, chat);
-
-        LOG_INFO("chat template", {
-                                      {"chat_example", chat_example},
-                                      {"built_in", sparams.chat_template.empty()},
-                                  });
+        LOG_INFO("chat template",
+                 {
+                     {"chat_example", llama_chat_format_example(ctx_server->model, params.chat_template)},
+                     {"built_in", params.chat_template.empty()},
+                 });
     }
 
     ctx_server->queue_tasks.on_new_task(
