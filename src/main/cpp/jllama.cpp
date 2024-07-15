@@ -486,7 +486,7 @@ JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv 
         json chat;
         chat.push_back({{"role", "system"}, {"content", ctx_server->system_prompt}});
         chat.push_back({{"role", "user"}, {"content", json_params["prompt"]}});
-        json_params["prompt"] = format_chat(ctx_server->model, ctx_server->chat_template, chat);
+        json_params["prompt"] = format_chat(ctx_server->model, ctx_server->params.chat_template, chat);
     }
 
     const int id_task = ctx_server->queue_tasks.get_new_id();

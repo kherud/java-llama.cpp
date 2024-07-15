@@ -680,11 +680,6 @@ struct server_context
     std::string system_prompt;
     std::vector<llama_token> system_tokens;
 
-    std::string name_user; // this should be the antiprompt
-    std::string name_assistant;
-
-    std::string chat_template;
-
     // slots / clients
     std::vector<server_slot> slots;
     json default_generation_settings_for_props;
@@ -966,7 +961,7 @@ struct server_context
     {
         slot_params default_params;
         llama_sampling_params default_sparams;
-        auto &data = task.data;
+        const auto &data = task.data;
 
         slot.oaicompat = false;
         slot.oaicompat_model = "";
@@ -1622,12 +1617,12 @@ struct server_context
             }
 
             const float *embd = llama_get_embeddings_seq(ctx, batch.seq_id[i][0]);
-            if (embd == nullptr)
+            if (embd == NULL)
             {
                 embd = llama_get_embeddings_ith(ctx, i);
             }
 
-            if (embd == nullptr)
+            if (embd == NULL)
             {
                 LOG_ERROR("failed to get embeddings", {{"token", batch.token[i]}, {"seq_id", batch.seq_id[i][0]}});
 
@@ -2176,6 +2171,11 @@ struct server_context
         int32_t n_batch = llama_n_batch(ctx);
         int32_t n_ubatch = llama_n_ubatch(ctx);
 
+        // track if this is an embedding or non-embedding batch
+        // if we've added sampled tokens above, we are in non-embedding mode
+        // -1: none, 0: non-embedding, 1: embedding
+        int32_t batch_type = batch.n_tokens > 0 ? 0 : -1;
+
         // next, batch any pending prompts without exceeding n_batch
         if (params.cont_batching || batch.n_tokens == 0)
         {
@@ -2370,6 +2370,17 @@ struct server_context
                         }
                     }
 
+                    // check that we are in the right batch_type, if not defer the slot
+                    bool slot_type = slot.embedding ? 1 : 0;
+                    if (batch_type == -1)
+                    {
+                        batch_type = slot_type;
+                    }
+                    else if (batch_type != slot_type)
+                    {
+                        continue;
+                    }
+
                     // keep only the common part
                     int p0 = (int)system_tokens.size() + slot.n_past;
                     if (!llama_kv_cache_seq_rm(ctx, slot.id + 1, p0, -1))
@@ -2477,6 +2488,9 @@ struct server_context
         LOG_VERBOSE("decoding batch", {
                                           {"n_tokens", batch.n_tokens},
                                       });
+
+        // make sure we're in the right embedding mode
+        llama_set_embeddings(ctx, batch_type == 1);
 
         // process the created batch of tokens
         for (int32_t i = 0; i < batch.n_tokens; i += n_batch)
