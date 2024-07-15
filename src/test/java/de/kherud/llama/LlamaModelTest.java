@@ -1,7 +1,6 @@
 package de.kherud.llama;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -24,6 +23,7 @@ public class LlamaModelTest {
 //		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> System.out.println(level + ": " + msg));
 		model = new LlamaModel(
 				new ModelParameters()
+						.setNCtx(128)
 						.setModelFilePath("models/codellama-7b.Q2_K.gguf")
 //						.setModelUrl("https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf")
 						.setNGpuLayers(43)
