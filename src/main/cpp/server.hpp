@@ -725,7 +725,10 @@ struct server_context
         // dedicate one sequence to the system prompt
         params.n_parallel += 1;
 
-        std::tie(model, ctx) = llama_init_from_gpt_params(params);
+        llama_init_result llama_init = llama_init_from_gpt_params(params);
+
+        model = llama_init.model;
+        ctx = llama_init.context;
         params.n_parallel -= 1; // but be sneaky about it
         if (model == nullptr)
         {
@@ -782,6 +785,8 @@ struct server_context
             slot.ga_i = 0;
             slot.ga_n = ga_n;
             slot.ga_w = ga_w;
+
+            slot.sparams = params.sparams;
 
             slot.reset();
 
@@ -960,15 +965,17 @@ struct server_context
     bool launch_slot_with_task(server_slot &slot, const server_task &task)
     {
         slot_params default_params;
-        llama_sampling_params default_sparams;
-        const auto &data = task.data;
+        // Sampling parameter defaults are loaded from the global server context (but individual requests can still
+        // override them)
+        llama_sampling_params default_sparams = params.sparams;
+        auto &data = task.data;
 
         slot.oaicompat = false;
         slot.oaicompat_model = "";
 
         slot.params.stream = json_value(data, "stream", false);
         slot.params.cache_prompt = json_value(data, "cache_prompt", false);
-        slot.params.n_predict = json_value(data, "n_predict", default_params.n_predict);
+        slot.params.n_predict = json_value(data, "n_predict", json_value(data, "max_tokens", default_params.n_predict));
         slot.sparams.top_k = json_value(data, "top_k", default_sparams.top_k);
         slot.sparams.top_p = json_value(data, "top_p", default_sparams.top_p);
         slot.sparams.min_p = json_value(data, "min_p", default_sparams.min_p);
@@ -1286,7 +1293,7 @@ struct server_context
     bool process_token(completion_token_output &result, server_slot &slot)
     {
         // remember which tokens were sampled - used for repetition penalties during sampling
-        const std::string token_str = llama_token_to_piece(ctx, result.tok, false);
+        const std::string token_str = llama_token_to_piece(ctx, result.tok, params.special);
         slot.sampled = result.tok;
 
         // search stop word and delete it
@@ -2728,7 +2735,6 @@ static void server_params_parse(json jparams, gpt_params &params)
     params.lookup_cache_dynamic = json_value(jparams, "lookup_cache_dynamic", default_params.lookup_cache_dynamic);
     params.logits_file = json_value(jparams, "logits_file", default_params.logits_file);
     params.lora_adapter = json_value(jparams, "lora_adapter", default_params.lora_adapter);
-    params.lora_base = json_value(jparams, "lora_base", default_params.lora_base);
     params.embedding = json_value(jparams, "embedding", default_params.embedding);
     params.escape = json_value(jparams, "escape", default_params.escape);
     params.cont_batching = json_value(jparams, "cont_batching", default_params.cont_batching);

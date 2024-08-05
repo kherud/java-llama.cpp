@@ -24,7 +24,7 @@ FetchContent_MakeAvailable(json)
 FetchContent_Declare(
 	llama.cpp
 	GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-	GIT_TAG        b3398
+	GIT_TAG        b3525
 )
 FetchContent_MakeAvailable(llama.cpp)
 
