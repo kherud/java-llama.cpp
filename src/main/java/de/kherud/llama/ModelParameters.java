@@ -54,7 +54,6 @@ public final class ModelParameters extends JsonParameters {
 	private static final String PARAM_LOOKUP_CACHE_STATIC = "lookup_cache_static";
 	private static final String PARAM_LOOKUP_CACHE_DYNAMIC = "lookup_cache_dynamic";
 	private static final String PARAM_LORA_ADAPTER = "lora_adapter";
-	private static final String PARAM_LORA_BASE = "lora_base";
 	private static final String PARAM_EMBEDDING = "embedding";
 	private static final String PARAM_CONT_BATCHING = "cont_batching";
 	private static final String PARAM_FLASH_ATTENTION = "flash_attn";
@@ -472,14 +471,6 @@ public final class ModelParameters extends JsonParameters {
 			builder.append("}");
 			parameters.put(PARAM_LORA_ADAPTER, builder.toString());
 		}
-		return this;
-	}
-
-	/**
-	 * Set an optional model to use as a base for the layers modified by the LoRA adapter
-	 */
-	public ModelParameters setLoraBase(String loraBase) {
-		parameters.put(PARAM_LORA_BASE, toJsonString(loraBase));
 		return this;
 	}
 
