@@ -42,7 +42,6 @@ public class LlamaModel implements AutoCloseable {
 	 */
 	public LlamaModel(ModelParameters parameters) {
 		loadModel(parameters.toString());
-		System.out.println(ctx);
 	}
 
 	/**

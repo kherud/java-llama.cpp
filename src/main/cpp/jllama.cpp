@@ -358,8 +358,6 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
 
     auto *ctx_server = new server_context();
 
-    std::cout << "New model: " << ctx_server << std::endl;
-
     std::string c_params = parse_jstring(env, jparams);
     json json_params = json::parse(c_params);
     server_params_parse(json_params, params);
@@ -478,7 +476,6 @@ JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv 
 {
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
     auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
-    std::cout << "Request completion: " << ctx_server << std::endl;
 
     std::string c_params = parse_jstring(env, jparams);
     json json_params = json::parse(c_params);
