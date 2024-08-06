@@ -358,6 +358,8 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
 
     auto *ctx_server = new server_context();
 
+    std::cout << "New model: " << ctx_server << std::endl;
+
     std::string c_params = parse_jstring(env, jparams);
     json json_params = json::parse(c_params);
     server_params_parse(json_params, params);
@@ -476,14 +478,11 @@ JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv 
 {
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
     auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
-
-    std::cout << "DEBUG " << 1 << std::endl;
+    std::cout << "Request completion: " << ctx_server << std::endl;
 
     std::string c_params = parse_jstring(env, jparams);
     json json_params = json::parse(c_params);
     const bool infill = json_params.contains("input_prefix") || json_params.contains("input_suffix");
-
-    std::cout << "DEBUG " << 2 << std::endl;
 
     if (json_params.value("use_chat_template", false))
     {
@@ -493,12 +492,8 @@ JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv 
         json_params["prompt"] = format_chat(ctx_server->model, ctx_server->params.chat_template, chat);
     }
 
-    std::cout << "DEBUG " << 3 << std::endl;
-
     const int id_task = ctx_server->queue_tasks.get_new_id();
-    std::cout << "DEBUG " << 4 << std::endl;
     ctx_server->queue_results.add_waiting_task_id(id_task);
-    std::cout << "DEBUG " << 5 << std::endl;
     ctx_server->request_completion(id_task, -1, json_params, infill, false);
 
     return id_task;
@@ -509,7 +504,6 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIE
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
     auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
 
-    std::cout << "DEBUG " << 8 << std::endl;
     server_task_result result = ctx_server->queue_results.recv(id_task);
 
     if (result.error)
@@ -519,14 +513,12 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIE
         env->ThrowNew(c_llama_error, response.c_str());
         return nullptr;
     }
-    std::cout << "DEBUG " << 9 << std::endl;
 
     std::string response = result.data["content"].get<std::string>();
     if (result.stop)
     {
         ctx_server->queue_results.remove_waiting_task_id(id_task);
     }
-    std::cout << "DEBUG " << 10 << std::endl;
 
     jobject o_probabilities = env->NewObject(c_hash_map, cc_hash_map);
     if (result.data.contains("completion_probabilities"))
@@ -547,7 +539,6 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIE
             }
         }
     }
-    std::cout << "DEBUG " << 11 << std::endl;
 
     jbyteArray jbytes = parse_jbytes(env, response);
     return env->NewObject(c_output, cc_output, jbytes, o_probabilities, result.stop);
