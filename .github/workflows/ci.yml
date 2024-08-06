@@ -27,6 +27,11 @@ jobs:
         run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
       - name: Run tests
         run: mvn test
+      - if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          path: ${{ github.workspace }}/hs_err_pid*.log
+          if-no-files-found: warn
 
   build-and-test-macos:
     name: ${{ matrix.target.runner }}
@@ -75,3 +80,8 @@ jobs:
         run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
       - name: Run tests
         run: mvn test
+      - if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          path: ${{ github.workspace }}\hs_err_pid*.log
+          if-no-files-found: warn
