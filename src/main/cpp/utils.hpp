@@ -89,6 +89,7 @@ static const char *log_level_to_string(ggml_log_level level)
 static inline void server_log(ggml_log_level level, const char *function, int line, const char *message,
                               const json &extra)
 {
+    std::cout << "DEBUG LOG " << 1 << std::endl;
     std::stringstream ss_tid;
     ss_tid << std::this_thread::get_id();
 
@@ -119,32 +120,43 @@ static inline void server_log(ggml_log_level level, const char *function, int li
     }
     else
     {
+        std::cout << "DEBUG LOG " << 2 << std::endl;
         std::stringstream ss;
         ss << message;
 
+        std::cout << "DEBUG LOG " << 3 << std::endl;
         if (!extra.empty())
         {
+            std::cout << "DEBUG LOG " << 4 << std::endl;
             for (const auto &el : extra.items())
             {
                 const std::string value = el.value().dump(-1, ' ', false, json::error_handler_t::replace);
                 ss << " " << el.key() << "=" << value;
             }
+            std::cout << "DEBUG LOG " << 5 << std::endl;
         }
 
+        std::cout << "DEBUG LOG " << 6 << std::endl;
 #if SERVER_VERBOSE
         ss << " | ts " << time(nullptr) << " | tid " << ss_tid.str() << " | " << function << " line " << line;
 #endif
 
+        std::cout << "DEBUG LOG " << 7 << std::endl;
         const std::string str = ss.str();
         if (log_callback == nullptr)
         {
+            std::cout << "DEBUG LOG " << 8 << std::endl;
             printf("[%4s] %.*s\n", log_level_to_string(level), (int)str.size(), str.data());
+            std::cout << "DEBUG LOG " << 9 << std::endl;
         }
         else
         {
+            std::cout << "DEBUG LOG " << 10 << std::endl;
             log_callback(level, str.c_str(), nullptr);
+            std::cout << "DEBUG LOG " << 11 << std::endl;
         }
     }
+    std::cout << "DEBUG LOG " << 12 << std::endl;
     fflush(stdout);
 }
 

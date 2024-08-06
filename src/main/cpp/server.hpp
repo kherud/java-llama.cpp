@@ -1661,6 +1661,8 @@ struct server_context
         task.embedding = embedding;
         task.type = SERVER_TASK_TYPE_COMPLETION;
 
+        std::cout << "DEBUG " << 6 << std::endl;
+
         // when a completion task's prompt array is not a singleton, we split it into multiple requests
         // otherwise, it's a single-prompt task, we actually queue it
         // if there's numbers in the prompt array it will be treated as an array of tokens
@@ -1694,6 +1696,8 @@ struct server_context
         {
             queue_tasks.post(task);
         }
+
+        std::cout << "DEBUG " << 7 << std::endl;
     }
 
     void request_cancel(int id_task)
