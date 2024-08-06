@@ -31,7 +31,7 @@ Access this library via Maven:
 </dependency>
 ```
 
-There are multiple [examples](src/test/java/examples):
+There are multiple [examples](src/test/java/examples).
 
 ### No Setup required
 
@@ -83,12 +83,16 @@ Note, that the file names vary between operating systems, e.g., `ggml.dll` on Wi
 
 The application will search in the following order in the following locations:
 
-- In `de.kherud.llama.lib.path`: Use this option if you want a custom location for your shared libraries, i.e., set VM option `-Dde.kherud.llama.lib.path=/path/to/directory`.
-- In `java.library.path`: These are predefined locations for each OS, e.g., `/usr/java/packages/lib:/usr/lib64:/lib64:/lib:/usr/lib` on Linux.
+- In **de.kherud.llama.lib.path**: Use this option if you want a custom location for your shared libraries, i.e., set VM option `-Dde.kherud.llama.lib.path=/path/to/directory`.
+- In **java.library.path**: These are predefined locations for each OS, e.g., `/usr/java/packages/lib:/usr/lib64:/lib64:/lib:/usr/lib` on Linux.
   You can find out the locations using `System.out.println(System.getProperty("java.library.path"))`.
   Use this option if you want to install the shared libraries as system libraries.
-- From the JAR: If any of the libraries weren't found yet, the application will try to use a prebuilt shared library.
+- From the **JAR**: If any of the libraries weren't found yet, the application will try to use a prebuilt shared library.
   This of course only works for the [supported platforms](#no-setup-required) .
+
+Not all libraries have to be in the same location.
+For example, if you already have a llama.cpp and ggml version you can install them as a system library and rely on the jllama library from the JAR.
+This way, you don't have to compile anything. 
 
 ## Documentation
 
