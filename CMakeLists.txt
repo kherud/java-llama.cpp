@@ -5,7 +5,6 @@ project(jllama CXX)
 include(FetchContent)
 
 set(BUILD_SHARED_LIBS ON)
-set(LLAMA_STATIC OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(LLAMA_VERBOSE	"llama: verbose output"		OFF)
@@ -98,11 +97,11 @@ target_compile_definitions(jllama PRIVATE
 )
 
 if(OS_NAME STREQUAL "Windows")
-	set_target_properties(jllama llama PROPERTIES
+	set_target_properties(jllama llama ggml PROPERTIES
 	  RUNTIME_OUTPUT_DIRECTORY_RELEASE ${JLLAMA_DIR}
 	)
 else()
-	set_target_properties(jllama llama PROPERTIES
+	set_target_properties(jllama llama ggml PROPERTIES
 	  LIBRARY_OUTPUT_DIRECTORY ${JLLAMA_DIR}
 	)
 endif()

@@ -62,6 +62,7 @@ class LlamaLoader {
 				System.err.println("'ggml-metal.metal' not found");
 			}
 		}
+		loadNativeLibrary("ggml");
 		loadNativeLibrary("llama");
 		loadNativeLibrary("jllama");
 		extracted = true;
@@ -96,12 +97,7 @@ class LlamaLoader {
 	private static void loadNativeLibrary(String name) {
 		List<String> triedPaths = new LinkedList<>();
 
-		// Try loading library from de.kherud.llama.lib.path library path
-		String nativeLibName = System.getProperty("de.kherud.llama.lib.name");
-		if (nativeLibName == null) {
-			nativeLibName = System.mapLibraryName(name);
-		}
-
+		String nativeLibName = System.mapLibraryName(name);
 		String nativeLibPath = System.getProperty("de.kherud.llama.lib.path");
 		if (nativeLibPath != null) {
 			Path path = Paths.get(nativeLibPath, nativeLibName);
@@ -125,21 +121,7 @@ class LlamaLoader {
 			}
 		}
 
-		// Load the os-dependent library from the jar file
-		nativeLibPath = getNativeResourcePath();
-		if (hasNativeLib(nativeLibPath, nativeLibName)) {
-			// temporary library folder
-			String tempFolder = getTempDir().getAbsolutePath();
-			// Try extracting the library from jar
-			if (extractAndLoadLibraryFile(nativeLibPath, nativeLibName, tempFolder)) {
-				return;
-			}
-			else {
-				triedPaths.add(nativeLibPath);
-			}
-		}
-
-		// As a last resort try from java.library.path
+		// Try to load the library from java.library.path
 		String javaLibraryPath = System.getProperty("java.library.path", "");
 		for (String ldPath : javaLibraryPath.split(File.pathSeparator)) {
 			if (ldPath.isEmpty()) {
@@ -151,6 +133,20 @@ class LlamaLoader {
 			}
 			else {
 				triedPaths.add(ldPath);
+			}
+		}
+
+		// As a last resort try load the os-dependent library from the jar file
+		nativeLibPath = getNativeResourcePath();
+		if (hasNativeLib(nativeLibPath, nativeLibName)) {
+			// temporary library folder
+			String tempFolder = getTempDir().getAbsolutePath();
+			// Try extracting the library from jar
+			if (extractAndLoadLibraryFile(nativeLibPath, nativeLibName, tempFolder)) {
+				return;
+			}
+			else {
+				triedPaths.add(nativeLibPath);
 			}
 		}
 
