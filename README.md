@@ -3,8 +3,7 @@
 
 # Java Bindings for [llama.cpp](https://github.com/ggerganov/llama.cpp)
 
-The main goal of llama.cpp is to run the LLaMA model using 4-bit integer quantization on a MacBook.
-This repository provides Java bindings for the C++ library.
+Inference of Meta's LLaMA model (and others) in pure C/C++.
 
 **You are welcome to contribute**
 
@@ -39,7 +38,7 @@ There are multiple [examples](src/test/java/examples):
 We support CPU inference for the following platforms out of the box:
 
 - Linux x86-64, aarch64
-- MacOS x86-64, aarch64 (M1)
+- MacOS x86-64, aarch64 (M-series)
 - Windows x86-64, x64, arm (32 bit)
 
 If any of these match your platform, you can include the Maven dependency and get started.
@@ -47,82 +46,49 @@ If any of these match your platform, you can include the Maven dependency and ge
 ### Setup required
 
 If none of the above listed platforms matches yours, currently you have to compile the library yourself (also if you 
-want GPU acceleration, see below).
+want GPU acceleration).
 
-This requires:
+This consists of two steps: 1) Compiling the libraries and 2) putting them in the right location.
 
-- Git
-- A C++11 conforming compiler
-- The [cmake](https://www.cmake.org/) build system
-- Java, Maven, and setting [JAVA_HOME](https://www.baeldung.com/java-home-on-windows-7-8-10-mac-os-x-linux)
+##### Library Compilation
 
-Make sure everything works by running
-
-```
-g++ -v  # depending on your compiler
-java -version
-mvn -v
-echo $JAVA_HOME # for linux/macos
-echo %JAVA_HOME% # for windows
-```
-
-Then, checkout [llama.cpp](https://github.com/ggerganov/llama.cpp) to know which build arguments to use (e.g. for CUDA support).
-Finally, you have to run following commands in the directory of this repository (java-llama.cpp).
-Remember to add your build arguments in the fourth line (`cmake ..`):
+First, have a look at [llama.cpp](https://github.com/ggerganov/llama.cpp/blob/master/docs/build.md) to know which build arguments to use (e.g. for CUDA support).
+Any build option of llama.cpp works equivalently for this project.
+You then have to run the following commands in the directory of this repository (java-llama.cpp):
 
 ```shell
-mvn compile
-mkdir build
-cd build
-cmake .. # add any other arguments for your backend
-cmake --build . --config Release
+mvn compile  # don't forget this line
+cmake -B build # add any other arguments for your backend, e.g. -DGGML_CUDA=ON
+cmake --build build --config Release
 ```
 
 > [!TIP]
-> Use `-DLLAMA_CURL=ON` to download models via Java code using `ModelParameters#setModelUrl(String)`.
+> Use `-DGGML_CURL=ON` to download models via Java code using `ModelParameters#setModelUrl(String)`.
 
-All required files will be put in a resources directory matching your platform, which will appear in the cmake output. For example something like:
+All compiled libraries will be put in a resources directory matching your platform, which will appear in the cmake output. For example something like:
 
 ```shell
 --  Installing files to /java-llama.cpp/src/main/resources/de/kherud/llama/Linux/x86_64
 ```
 
-This includes:
+#### Library Location
 
-- Linux: `libllama.so`, `libjllama.so`
-- MacOS: `libllama.dylib`, `libjllama.dylib`, `ggml-metal.metal`
-- Windows: `llama.dll`, `jllama.dll`
+This project has to load three shared libraries:
 
-If you then compile your own JAR from this directory, you are ready to go. Otherwise, if you still want to use the library
-as a Maven dependency, see below how to set the necessary paths in order for Java to find your compiled libraries.
+- ggml
+- llama
+- jllama
 
-### Custom llama.cpp Setup (GPU acceleration)
+Note, that the file names vary between operating systems, e.g., `ggml.dll` on Windows, `libggml.so` on Linux, and `libggml.dylib` on macOS.
 
-This repository provides default support for CPU based inference. You can compile `llama.cpp` any way you want, however (see [Setup Required](#setup-required)).
-In order to use your self-compiled library, set either of the [JVM options](https://www.jetbrains.com/help/idea/tuning-the-ide.html#configure-jvm-options):
+The application will search in the following order in the following locations:
 
-- `de.kherud.llama.lib.path`, for example `-Dde.kherud.llama.lib.path=/directory/containing/lib`
-- `java.library.path`, for example `-Djava.library.path=/directory/containing/lib`
-
-This repository uses [`System#mapLibraryName`](https://docs.oracle.com/javase%2F7%2Fdocs%2Fapi%2F%2F/java/lang/System.html) to determine the name of the shared library for you platform.
-If for any reason your library has a different name, you can set it with
-
-- `de.kherud.llama.lib.name`, for example `-Dde.kherud.llama.lib.name=myname.so`
-
-For compiling `llama.cpp`, refer to the official [readme](https://github.com/ggerganov/llama.cpp#build) for details.
-The library can be built with the `llama.cpp` project:
-
-```shell
-mkdir build
-cd build
-cmake .. -DBUILD_SHARED_LIBS=ON  # add any other arguments for your backend
-cmake --build . --config Release
-```
-
-Look for the shared library in `build`.
-
-> [!IMPORTANT]
-> If you are running MacOS with Metal, you have to put the file `ggml-metal.metal` from `build/bin` in the same directory as the shared library.
+- In `de.kherud.llama.lib.path`: Use this option if you want a custom location for your shared libraries, i.e., set VM option `-Dde.kherud.llama.lib.path=/path/to/directory`.
+- In `java.library.path`: These are predefined locations for each OS, e.g., `/usr/java/packages/lib:/usr/lib64:/lib64:/lib:/usr/lib` on Linux.
+  You can find out the locations using `System.out.println(System.getProperty("java.library.path"))`.
+  Use this option if you want to install the shared libraries as system libraries.
+- From the JAR: If any of the libraries weren't found yet, the application will try to use a prebuilt shared library.
+  This of course only works for the [supported platforms](#no-setup-required) .
 
 ## Documentation
 
