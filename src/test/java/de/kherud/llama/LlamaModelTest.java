@@ -213,7 +213,6 @@ public class LlamaModelTest {
 
 		System.out.println("########## Log Text ##########");
 		LlamaModel.setLogger(LogFormat.TEXT, null);
-		System.out.println("DEBUG: Logger set");
 		model.complete(params);
 
 		System.out.println("########## Log JSON ##########");
