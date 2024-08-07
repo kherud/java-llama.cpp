@@ -179,7 +179,7 @@ jobs:
 
   publish:
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_only == 'no' }}
-    needs: [ test-linux,build-macos-native,test-windows ]
+    needs: [ test-linux,test-macos,build-win-native ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
