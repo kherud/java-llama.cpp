@@ -88,7 +88,7 @@ public class LlamaModelTest {
 		}
 		String output = sb.toString();
 
-		Assert.assertTrue(output.matches("[ab]+"));
+		Assert.assertTrue("'" + output + "' doesn't match [ab]+", output.matches("[ab]+"));
 		int generated = model.encode(output).length;
 		Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
 	}
@@ -131,7 +131,7 @@ public class LlamaModelTest {
 				.setGrammar("root ::= (\"a\" | \"b\")+")
 				.setNPredict(nPredict);
 		String output = model.complete(params);
-		Assert.assertTrue(output + " doesn't match [ab]+", output.matches("[ab]+"));
+		Assert.assertTrue("'" + output + "' doesn't match [ab]+", output.matches("[ab]+"));
 		int generated = model.encode(output).length;
 		Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
 	}
