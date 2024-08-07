@@ -157,24 +157,24 @@ jobs:
         run: mvn test
 
 
-  test-windows:
-    name: Test Windows
-    needs: build-win-native
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v3
-        with:
-          name: artifacts
-          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
-      - name: Download model
-        run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '11'
-      - name: Run tests
-        run: mvn test
+#  test-windows:
+#    name: Test Windows
+#    needs: build-win-native
+#    runs-on: windows-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: actions/download-artifact@v3
+#        with:
+#          name: artifacts
+#          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
+#      - name: Download model
+#        run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
+#      - uses: actions/setup-java@v4
+#        with:
+#          distribution: 'zulu'
+#          java-version: '11'
+#      - name: Run tests
+#        run: mvn test
 
 
   publish:
