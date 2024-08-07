@@ -8,6 +8,7 @@ import de.kherud.llama.args.LogFormat;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class LlamaModelTest {
@@ -204,6 +205,7 @@ public class LlamaModelTest {
 		}
 	}
 
+	@Ignore
 	@Test
 	public void testLogStdout() {
 		// Unfortunately, `printf` can't be easily re-directed to Java. This test only works manually, thus.
