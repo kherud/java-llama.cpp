@@ -137,25 +137,24 @@ jobs:
       - name: Run tests
         run: mvn test
 
-  # disabled for now, we don't have access to a macos arm64 runner and testing on x86_64 doesn't work
-#  test-macos:
-#    name: Test Mac
-#    needs: build-macos-native
-#    runs-on: macos-latest
-#    steps:
-#      - uses: actions/checkout@v4
-#      - uses: actions/download-artifact@v3
-#        with:
-#          name: artifacts
-#          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
-#      - name: Download model
-#        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
-#      - uses: actions/setup-java@v4
-#        with:
-#          distribution: 'zulu'
-#          java-version: '11'
-#      - name: Run tests
-#        run: mvn test
+  test-macos:
+    name: Test Mac
+    needs: build-macos-native
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifacts
+          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
+      - name: Download model
+        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+      - name: Run tests
+        run: mvn test
 
 
   test-windows:
