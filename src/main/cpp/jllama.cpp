@@ -454,22 +454,9 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
                                                             std::placeholders::_1, std::placeholders::_2,
                                                             std::placeholders::_3));
 
-    std::thread t([ctx_server]() {
-        JNIEnv *env;
-        jint res = g_vm->GetEnv((void **)&env, JNI_VERSION_1_6);
-        if (res == JNI_EDETACHED)
-        {
-            res = g_vm->AttachCurrentThread((void **)&env, nullptr);
-            if (res != JNI_OK)
-            {
-                throw std::runtime_error("Failed to attach thread to JVM");
-            }
-        }
-        ctx_server->queue_tasks.start_loop();
-    });
-    t.detach();
-
     env->SetLongField(obj, f_model_pointer, reinterpret_cast<jlong>(ctx_server));
+
+    ctx_server->queue_tasks.start_loop();
 }
 
 JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv *env, jobject obj, jstring jparams)
