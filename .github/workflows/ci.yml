@@ -22,7 +22,7 @@ jobs:
         # cmake should figure out OS and ARCH automatically when running build.sh (but we need mvn compile for it)
         run: |
           mvn compile
-          .github/build.sh
+          .github/build.sh -DLLAMA_VERBOSE=ON
       - name: Download model
         run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
       - name: Run tests
@@ -42,11 +42,11 @@ jobs:
         target:
           - {
             runner: macos-13,
-            cmake: '-DLLAMA_METAL=OFF'
+            cmake: '-DLLAMA_METAL=OFF -DLLAMA_VERBOSE=ON'
           }
           - {
             runner: macos-14,
-            cmake: '-DLLAMA_METAL_EMBED_LIBRARY=ON -DLLAMA_METAL=OFF'
+            cmake: '-DLLAMA_METAL_EMBED_LIBRARY=ON -DLLAMA_METAL=OFF -DLLAMA_VERBOSE=ON'
           }
     steps:
       - uses: actions/checkout@v4
@@ -75,7 +75,7 @@ jobs:
       - name: Build libraries
         run: |
           mvn compile
-          .github\build.bat
+          .github\build.bat -DLLAMA_VERBOSE=ON
       - name: Download model
         run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
       - name: Run tests
