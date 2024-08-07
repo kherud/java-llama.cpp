@@ -1,7 +1,6 @@
 package de.kherud.llama;
 
 import de.kherud.llama.args.LogFormat;
-import org.jetbrains.annotations.Nullable;
 
 import java.lang.annotation.Native;
 import java.nio.charset.StandardCharsets;
@@ -106,9 +105,9 @@ public class LlamaModel implements AutoCloseable {
 	 * To disable logging, pass an empty callback, i.e., <code>(level, msg) -> {}</code>.
 	 *
 	 * @param format the log format to use
-	 * @param callback a method to call for log messages
+	 * @param callback a method to call for log messages (can be set to null)
 	 */
-	public static native void setLogger(LogFormat format, @Nullable BiConsumer<LogLevel, String> callback);
+	public static native void setLogger(LogFormat format, BiConsumer<LogLevel, String> callback);
 
 	@Override
 	public void close() {

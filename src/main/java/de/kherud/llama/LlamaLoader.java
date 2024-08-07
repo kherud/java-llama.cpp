@@ -28,8 +28,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.jetbrains.annotations.Nullable;
-
 /**
  * Set the system properties, de.kherud.llama.lib.path, de.kherud.llama.lib.name, appropriately so that the
  * library can find *.dll, *.dylib and *.so files, according to the current OS (win, linux, mac).
@@ -182,7 +180,6 @@ class LlamaLoader {
 		}
 	}
 
-	@Nullable
 	private static Path extractFile(String sourceDirectory, String fileName, String targetDirectory, boolean addUuid) {
 		String nativeLibraryFilePath = sourceDirectory + "/" + fileName;
 
