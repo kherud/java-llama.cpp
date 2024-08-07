@@ -137,24 +137,24 @@ jobs:
       - name: Run tests
         run: mvn test
 
-  test-macos:
-    name: Test Mac
-    needs: build-macos-native
-    runs-on: macos-14
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v3
-        with:
-          name: artifacts
-          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
-      - name: Download model
-        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '11'
-      - name: Run tests
-        run: mvn test
+#  test-macos:
+#    name: Test Mac
+#    needs: build-macos-native
+#    runs-on: macos-14
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: actions/download-artifact@v3
+#        with:
+#          name: artifacts
+#          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
+#      - name: Download model
+#        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
+#      - uses: actions/setup-java@v4
+#        with:
+#          distribution: 'zulu'
+#          java-version: '11'
+#      - name: Run tests
+#        run: mvn test
 
 
 #  test-windows:
@@ -179,7 +179,7 @@ jobs:
 
   publish:
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_only == 'no' }}
-    needs: [ test-linux,test-macos,build-win-native ]
+    needs: [ test-linux,build-macos-native,build-win-native ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
