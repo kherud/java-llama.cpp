@@ -28,7 +28,6 @@ public class LlamaModel implements AutoCloseable {
 
 	@Native
 	private long ctx;
-	private final Thread modelThread;
 
 	/**
 	 * Load with the given {@link ModelParameters}. Make sure to either set
@@ -42,14 +41,7 @@ public class LlamaModel implements AutoCloseable {
 	 * @throws LlamaException if no model could be loaded from the given file path
 	 */
 	public LlamaModel(ModelParameters parameters) {
-		this.modelThread = new Thread(() -> loadModel(parameters.toString()));
-		this.modelThread.start();
-		try {
-			Thread.sleep(30000);
-		}
-		catch (InterruptedException e) {
-			throw new RuntimeException(e);
-		}
+		loadModel(parameters.toString());
 	}
 
 	/**
