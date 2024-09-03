@@ -60,7 +60,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: artifacts
-          path: ${{ github.workspace }}/src/main/resource*/de/kherud/llama/
+          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
 
 
   build-macos-native:
