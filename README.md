@@ -31,6 +31,17 @@ Access this library via Maven:
 </dependency>
 ```
 
+Bu default the default library artifact is built only with CPU inference support. To enable CUDA, use a `cuda12-linux-x86-64` maven classifier:
+
+```xml
+<dependency>
+    <groupId>de.kherud</groupId>
+    <artifactId>llama</artifactId>
+    <version>3.3.0</version>
+    <classifier>cuda12-linux-x86-64</classifier>
+</dependency>
+```
+
 There are multiple [examples](src/test/java/examples).
 
 ### No Setup required
@@ -100,7 +111,7 @@ This way, you don't have to compile anything.
 
 #### CUDA 
 
-On Linux x86-64 with CUDA 12.1+, the library tries to find your CUDA installation in `java.library.path`. If you have CUDA installed in a non-standard location, then point the `java.library.path` to the directory containing the `libcudart.so.12` library. You can also disable CUDA location auto-detection by setting the parameter `de.kherud.llama.force_cuda` to `true`, e.g. `-Dde.kherud.llama.force_cuda=true`.
+On Linux x86-64 with CUDA 12.1+, the library assumes that your CUDA libraries are findable in `java.library.path`. If you have CUDA installed in a non-standard location, then point the `java.library.path` to the directory containing the `libcudart.so.12` library.
 
 ## Documentation
 
