@@ -31,7 +31,7 @@ jobs:
             os: Linux,
             arch: x86_64_cuda,
             image: dockcross-manylinux_2_28-x64,
-            build: ".github/build_cuda.sh"
+            build: ".github/build_cuda_linux.sh"
           }
           - {
             os: Linux,
