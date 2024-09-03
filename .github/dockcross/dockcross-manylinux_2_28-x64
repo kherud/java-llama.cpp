@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DEFAULT_DOCKCROSS_IMAGE=dockcross/manylinux_2_28-x64:20230601-c2f5366
+DEFAULT_DOCKCROSS_IMAGE=dockcross/manylinux_2_28-x64:20240812-60fa1b0
 
 #------------------------------------------------------------------------------
 # Helpers
@@ -268,10 +268,10 @@ exit $run_exit_code
 # This image is not intended to be run manually.
 #
 # To create a dockcross helper script for the
-# dockcross/manylinux_2_28-x64:20230601-c2f5366 image, run:
+# dockcross/manylinux_2_28-x64:20240812-60fa1b0 image, run:
 #
-# docker run --rm dockcross/manylinux_2_28-x64:20230601-c2f5366 > dockcross-manylinux_2_28-x64-20230601-c2f5366
-# chmod +x dockcross-manylinux_2_28-x64-20230601-c2f5366
+# docker run --rm dockcross/manylinux_2_28-x64:20240812-60fa1b0 > dockcross-manylinux_2_28-x64-20240812-60fa1b0
+# chmod +x dockcross-manylinux_2_28-x64-20240812-60fa1b0
 #
 # You may then wish to move the dockcross script to your PATH.
 #
