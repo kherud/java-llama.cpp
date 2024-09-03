@@ -14,14 +14,14 @@ env:
 jobs:
 
   build-linux-cuda:
-    name: Build Linux x86-64 CUDA12 lib
+    name: Build Linux x86-64 CUDA12
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Build libraries
         shell: bash
         run: |
-          .github/dockcross/dockcross-manylinux_2_28-x64 .github/build_cuda_linux.sh "-DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}"
+          .github/dockcross/dockcross-manylinux_2_28-x64 .github/build_cuda_linux.sh "-DOS_NAME=Linux -DOS_ARCH=x86_64"
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
