@@ -8,6 +8,13 @@
     <includeBaseDirectory>false</includeBaseDirectory>
     <fileSets>
         <fileSet>
+            <directory>${project.build.outputDirectory}</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>**/*.class</include>
+            </includes>
+        </fileSet>
+        <fileSet>
             <directory>src/main/resources_cuda_linux/</directory>
             <outputDirectory>/</outputDirectory>
             <includes>
