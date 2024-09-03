@@ -25,23 +25,32 @@ jobs:
             os: Linux,
             arch: x86_64,
             image: dockcross-manylinux2014-x64,
+            build: ".github/build.sh"
+          }
+          - {
+            os: Linux,
+            arch: x86_64_cuda,
+            image: dockcross-manylinux_2_28-x64,
+            build: ".github/build_cuda.sh"
           }
           - {
             os: Linux,
             arch: aarch64,
             image: dockcross-linux-arm64-lts,
+            build: ".github/build.sh"
           }
           - {
             os: Linux-Android,
             arch: aarch64,
             image: dockcross-android-arm64,
+            build: ".github/build.sh"
           }
     steps:
       - uses: actions/checkout@v4
       - name: Build libraries
         shell: bash
         run: |
-          .github/dockcross/${{ matrix.target.image }} .github/build.sh "-DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}"
+          .github/dockcross/${{ matrix.target.image }} ${{ matrix.target.build}} "-DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}"
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
