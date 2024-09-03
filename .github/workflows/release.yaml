@@ -38,17 +38,17 @@ jobs:
           - {
             os: Linux,
             arch: x86_64,
-            image: dockcross-manylinux2014-x64
+            image: dockcross-manylinux2014-x64,
           }
           - {
             os: Linux,
             arch: aarch64,
-            image: dockcross-linux-arm64-lts
+            image: dockcross-linux-arm64-lts,
           }
           - {
             os: Linux-Android,
             arch: aarch64,
-            image: dockcross-android-arm64
+            image: dockcross-android-arm64,
           }
     steps:
       - uses: actions/checkout@v4
