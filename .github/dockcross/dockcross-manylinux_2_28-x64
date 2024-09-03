@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 DEFAULT_DOCKCROSS_IMAGE=dockcross/manylinux_2_28-x64:20230601-c2f5366
-DEFAULT_DOCKCROSS_IMAGE=jllama-cuda
 
 #------------------------------------------------------------------------------
 # Helpers
