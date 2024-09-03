@@ -41,6 +41,10 @@ We support CPU inference for the following platforms out of the box:
 - MacOS x86-64, aarch64 (M-series)
 - Windows x86-64, x64, arm (32 bit)
 
+For GPU inference, we support:
+
+- Linux x86-64 with CUDA 12.1+
+
 If any of these match your platform, you can include the Maven dependency and get started.
 
 ### Setup required
@@ -93,6 +97,10 @@ The application will search in the following order in the following locations:
 Not all libraries have to be in the same location.
 For example, if you already have a llama.cpp and ggml version you can install them as a system library and rely on the jllama library from the JAR.
 This way, you don't have to compile anything. 
+
+#### CUDA 
+
+On Linux x86-64 with CUDA 12.1+, the library tries to find your CUDA installation in `java.library.path`. If you have CUDA installed in a non-standard location, then point the `java.library.path` to the directory containing the `libcudart.so.12` library. You can also disable CUDA location auto-detection by setting the parameter `de.kherud.llama.force_cuda` to `true`, e.g. `-Dde.kherud.llama.force_cuda=true`.
 
 ## Documentation
 
