@@ -16,7 +16,6 @@
 
 package de.kherud.llama;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,8 +23,6 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.stream.Stream;
-
-import static de.kherud.llama.LlamaLoader.loadNativeLibrary;
 
 /**
  * Provides OS name and architecture name.
@@ -99,35 +96,11 @@ class OSInfo {
 	}
 
 	static String getNativeLibFolderPathForCurrentOS() {
-		String osName = getOSName();
-		if (osName.equals("Linux") && hasLinuxCUDA()) {
-			return osName + "/" + getArchName() + "_cuda";
-		} else {
-			return osName + "/" + getArchName();
-		}
+		return getOSName() + "/" + getArchName();
 	}
 
 	static String getOSName() {
 		return translateOSNameToFolderName(System.getProperty("os.name"));
-	}
-
-	static boolean hasLinuxCUDA() {
-		boolean forceCuda = Boolean.parseBoolean(System.getProperty("de.kherud.llama.force_cuda", "false"));
-		if (forceCuda) {
-			return true;
-		} else {
-			String javaLibraryPath = System.getProperty("java.library.path", "");
-			for (String ldPath : javaLibraryPath.split(File.pathSeparator)) {
-				if (ldPath.isEmpty()) {
-					continue;
-				}
-				Path path = Paths.get(ldPath, "libcudart.so.12");
-				if (loadNativeLibrary(path)) {
-					return true;
-				}
-			}
-			return false;
-		}
 	}
 
 	static boolean isAndroid() {

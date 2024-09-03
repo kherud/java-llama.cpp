@@ -29,7 +29,7 @@ jobs:
           }
           - {
             os: Linux,
-            arch: x86_64_cuda,
+            arch: x86_64,
             image: dockcross-manylinux_2_28-x64,
             build: ".github/build_cuda_linux.sh"
           }
@@ -55,7 +55,9 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: artifacts
-          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
+          path: |
+            ${{ github.workspace }}/src/main/resources/de/kherud/llama/
+            ${{ github.workspace }}/src/main/resources_cuda_linux/de/kherud/llama/
 
 
   build-macos-native:
