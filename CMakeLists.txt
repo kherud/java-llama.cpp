@@ -58,7 +58,7 @@ if(NOT OS_ARCH)
 endif()
 
 if(GGML_CUDA)
-    set(JLLAMA_DIR ${CMAKE_SOURCE_DIR}/src/main/resources_cuda_linux/de/kherud/llama/${OS_NAME}/${OS_ARCH})
+    set(JLLAMA_DIR ${CMAKE_SOURCE_DIR}/src/main/resources_linux_cuda/de/kherud/llama/${OS_NAME}/${OS_ARCH})
     message(STATUS "GPU (CUDA Linux) build - Installing files to ${JLLAMA_DIR}")
 else()
     set(JLLAMA_DIR ${CMAKE_SOURCE_DIR}/src/main/resources/de/kherud/llama/${OS_NAME}/${OS_ARCH})

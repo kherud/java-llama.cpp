@@ -166,7 +166,7 @@ class LlamaLoader {
 	 * @param path path of the native library
 	 * @return true for successfully loading, otherwise false
 	 */
-	public static boolean loadNativeLibrary(Path path) {
+	private static boolean loadNativeLibrary(Path path) {
 		if (!Files.exists(path)) {
 			return false;
 		}
