@@ -27,7 +27,7 @@ Access this library via Maven:
 <dependency>
     <groupId>de.kherud</groupId>
     <artifactId>llama</artifactId>
-    <version>3.4.0</version>
+    <version>3.4.1</version>
 </dependency>
 ```
 
@@ -37,7 +37,7 @@ Bu default the default library artifact is built only with CPU inference support
 <dependency>
     <groupId>de.kherud</groupId>
     <artifactId>llama</artifactId>
-    <version>3.4.0</version>
+    <version>3.4.1</version>
     <classifier>cuda12-linux-x86-64</classifier>
 </dependency>
 ```
