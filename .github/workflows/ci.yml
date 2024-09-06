@@ -28,8 +28,9 @@ jobs:
       - name: Run tests
         run: mvn test
       - if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
+          name: error-log-linux
           path: ${{ github.workspace }}/hs_err_pid*.log
           if-no-files-found: warn
 
@@ -62,6 +63,12 @@ jobs:
         run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
       - name: Run tests
         run: mvn test
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-log-macos
+          path: ${{ github.workspace }}/hs_err_pid*.log
+          if-no-files-found: warn
 
   build-and-test-windows:
     name: windows-latest
@@ -81,7 +88,8 @@ jobs:
       - name: Run tests
         run: mvn test
       - if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
+          name: error-log-windows
           path: ${{ github.workspace }}\hs_err_pid*.log
           if-no-files-found: warn
