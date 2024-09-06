@@ -59,7 +59,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-libraries
+          name: ${{ matrix.target.os }}-${{ matrix.target.arch }}-libraries
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
 
 
@@ -88,7 +88,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: macos-libraries
+          name: ${{ matrix.target.runner }}-libraries
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
 
 
@@ -128,7 +128,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-libraries
+          name: ${{ matrix.target.os }}-${{ matrix.target.arch }}-libraries
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
 
 
@@ -140,7 +140,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: linux-libraries
+          name: Linux-x86_64-libraries
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
       - name: Download model
         run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
@@ -159,7 +159,7 @@ jobs:
 #      - uses: actions/checkout@v4
 #      - uses: actions/download-artifact@v4
 #        with:
-#          name: macos-libraries
+#          name: macos14-libraries
 #          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
 #      - name: Download model
 #        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
@@ -179,7 +179,7 @@ jobs:
 #      - uses: actions/checkout@v4
 #      - uses: actions/download-artifact@v4
 #        with:
-#          name: windows-libraries
+#          name: Windows-x86_64-libraries
 #          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
 #      - name: Download model
 #        run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
