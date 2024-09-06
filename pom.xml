@@ -101,7 +101,7 @@
 							<outputDirectory>${project.build.outputDirectory}_cuda</outputDirectory>
 							<resources>
 								<resource>
-									<directory>${basedir}/src/main/resources_cuda_linux/</directory>
+									<directory>${basedir}/src/main/resources_linux_cuda/</directory>
 									<includes>
 										<include>**/*.*</include>
 									</includes>
