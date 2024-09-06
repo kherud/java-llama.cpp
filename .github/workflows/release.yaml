@@ -23,9 +23,9 @@ jobs:
         run: |
           .github/dockcross/dockcross-manylinux_2_28-x64 .github/build_cuda_linux.sh "-DOS_NAME=Linux -DOS_ARCH=x86_64"
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: artifacts
+          name: linux-libraries-cuda
           path: ${{ github.workspace }}/src/main/resources_linux_cuda/de/kherud/llama/
 
   build-linux-docker:
@@ -57,9 +57,9 @@ jobs:
         run: |
           .github/dockcross/${{ matrix.target.image }} .github/build.sh "-DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}"
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: artifacts
+          name: linux-libraries
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
 
 
@@ -86,9 +86,9 @@ jobs:
           mvn compile
           .github/build.sh ${{ matrix.target.cmake }}
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: artifacts
+          name: macos-libraries
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
 
 
@@ -126,9 +126,9 @@ jobs:
         run: |
           .github\build.bat ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: artifacts
+          name: windows-libraries
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
 
 
@@ -138,9 +138,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: artifacts
+          name: linux-libraries
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
       - name: Download model
         run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
@@ -157,9 +157,9 @@ jobs:
 #    runs-on: macos-14
 #    steps:
 #      - uses: actions/checkout@v4
-#      - uses: actions/download-artifact@v3
+#      - uses: actions/download-artifact@v4
 #        with:
-#          name: artifacts
+#          name: macos-libraries
 #          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
 #      - name: Download model
 #        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
@@ -177,9 +177,9 @@ jobs:
 #    runs-on: windows-latest
 #    steps:
 #      - uses: actions/checkout@v4
-#      - uses: actions/download-artifact@v3
+#      - uses: actions/download-artifact@v4
 #        with:
-#          name: artifacts
+#          name: windows-libraries
 #          path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
 #      - name: Download model
 #        run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
@@ -197,13 +197,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: artifacts
+          pattern: "*-libraries"
+          merge-multiple: true
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: artifacts
+          name: linux-libraries-cuda
           path: ${{ github.workspace }}/src/main/resources_linux_cuda/de/kherud/llama/
       - name: Set up Maven Central Repository
         uses: actions/setup-java@v3
