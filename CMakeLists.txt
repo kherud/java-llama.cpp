@@ -57,8 +57,13 @@ if(NOT OS_ARCH)
     message(FATAL_ERROR "Could not determine CPU architecture")
 endif()
 
-set(JLLAMA_DIR ${CMAKE_SOURCE_DIR}/src/main/resources/de/kherud/llama/${OS_NAME}/${OS_ARCH})
-message(STATUS "Installing files to ${JLLAMA_DIR}")
+if(GGML_CUDA)
+    set(JLLAMA_DIR ${CMAKE_SOURCE_DIR}/src/main/resources_linux_cuda/de/kherud/llama/${OS_NAME}/${OS_ARCH})
+    message(STATUS "GPU (CUDA Linux) build - Installing files to ${JLLAMA_DIR}")
+else()
+    set(JLLAMA_DIR ${CMAKE_SOURCE_DIR}/src/main/resources/de/kherud/llama/${OS_NAME}/${OS_ARCH})
+    message(STATUS "CPU build - Installing files to ${JLLAMA_DIR}")
+endif()
 
 # include jni.h and jni_md.h
 if(NOT DEFINED JNI_INCLUDE_DIRS)

@@ -69,14 +69,49 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.11.0</version>
-				<configuration>
-					<compilerArgs>
-						<arg>-h</arg>
-						<arg>src/main/cpp</arg>
-					</compilerArgs>
-				</configuration>
+				<version>3.13.0</version>
+				<executions>
+					<!-- We have to perform a separate build pass for cuda classifier -->
+					<execution>
+						<id>gpu</id>
+						<phase>compile</phase>
+						<goals><goal>compile</goal></goals>
+						<configuration>
+							<compilerArgs>
+								<arg>-h</arg>
+								<arg>src/main/cpp</arg>
+							</compilerArgs>
+							<outputDirectory>${project.build.outputDirectory}_cuda</outputDirectory>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
+			<plugin>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.3.1</version>
+				<executions>
+					<!-- Copy custom cuda libs to the output directory -->
+					<execution>
+						<id>copy-resources</id>
+						<phase>process-classes</phase>
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.build.outputDirectory}_cuda</outputDirectory>
+							<resources>
+								<resource>
+									<directory>${basedir}/src/main/resources_linux_cuda/</directory>
+									<includes>
+										<include>**/*.*</include>
+									</includes>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
 		</plugins>
 	</build>
 
@@ -133,6 +168,25 @@
 								<goals>
 									<goal>sign</goal>
 								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-jar-plugin</artifactId>
+						<version>3.4.2</version>
+						<executions>
+							<!-- Pick class files AND libs from custom output directory -->
+							<execution>
+								<id>cuda</id>
+								<phase>package</phase>
+								<goals>
+									<goal>jar</goal>
+								</goals>
+								<configuration>
+									<classifier>cuda12-linux-x86-64</classifier>
+									<classesDirectory>${project.build.outputDirectory}_cuda</classesDirectory>
+								</configuration>
 							</execution>
 						</executions>
 					</plugin>
