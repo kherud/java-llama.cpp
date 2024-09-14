@@ -386,8 +386,8 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     LOG_INFO("build info", {{"build", LLAMA_BUILD_NUMBER}, {"commit", LLAMA_COMMIT}});
 
     LOG_INFO("system info", {
-                                {"n_threads", params.n_threads},
-                                {"n_threads_batch", params.n_threads_batch},
+                                {"n_threads",       params.cpuparams.n_threads},
+                                {"n_threads_batch", params.cpuparams_batch.n_threads},
                                 {"total_threads", std::thread::hardware_concurrency()},
                                 {"system_info", llama_print_system_info()},
                             });
@@ -445,14 +445,10 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
                  });
     }
 
-    ctx_server->queue_tasks.on_new_task(
-        std::bind(&server_context::process_single_task, ctx_server, std::placeholders::_1));
-    ctx_server->queue_tasks.on_finish_multitask(
-        std::bind(&server_context::on_finish_multitask, ctx_server, std::placeholders::_1));
-    ctx_server->queue_tasks.on_update_slots(std::bind(&server_context::update_slots, ctx_server));
-    ctx_server->queue_results.on_multitask_update(std::bind(&server_queue::update_multitask, &ctx_server->queue_tasks,
-                                                            std::placeholders::_1, std::placeholders::_2,
-                                                            std::placeholders::_3));
+    ctx_server->queue_tasks.on_new_task(std::bind(
+        &server_context::process_single_task, ctx_server, std::placeholders::_1));
+    ctx_server->queue_tasks.on_update_slots(std::bind(
+        &server_context::update_slots, ctx_server));
 
     std::thread t([ctx_server]() {
         JNIEnv *env;
@@ -479,7 +475,11 @@ JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv 
 
     std::string c_params = parse_jstring(env, jparams);
     json json_params = json::parse(c_params);
-    const bool infill = json_params.contains("input_prefix") || json_params.contains("input_suffix");
+
+    server_task_cmpl_type cmpl_type = SERVER_TASK_CMPL_TYPE_NORMAL;
+    if (json_params.contains("input_prefix") || json_params.contains("input_suffix")) {
+        cmpl_type = SERVER_TASK_CMPL_TYPE_INFILL;
+    }
 
     if (json_params.value("use_chat_template", false))
     {
@@ -489,11 +489,18 @@ JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv 
         json_params["prompt"] = format_chat(ctx_server->model, ctx_server->params.chat_template, chat);
     }
 
-    const int id_task = ctx_server->queue_tasks.get_new_id();
-    ctx_server->queue_results.add_waiting_task_id(id_task);
-    ctx_server->request_completion(id_task, -1, json_params, infill, false);
+    std::vector<server_task> tasks = ctx_server->create_tasks_cmpl(json_params, cmpl_type);
+    ctx_server->queue_results.add_waiting_tasks(tasks);
+    ctx_server->queue_tasks.post(tasks);
 
-    return id_task;
+    const auto task_ids = server_task::get_list_id(tasks);
+
+    if (task_ids.size() != 1) {
+        env->ThrowNew(c_llama_error, "multitasking currently not supported");
+        return 0;
+    }
+
+    return *task_ids.begin();
 }
 
 JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIEnv *env, jobject obj, jint id_task)
@@ -555,20 +562,36 @@ JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env,
 
     const std::string prompt = parse_jstring(env, jprompt);
 
-    const int id_task = ctx_server->queue_tasks.get_new_id();
-    ctx_server->queue_results.add_waiting_task_id(id_task);
-    ctx_server->request_completion(id_task, -1, {{"prompt", prompt}}, false, true);
+    std::vector<server_task> tasks = ctx_server->create_tasks_cmpl({{"prompt", prompt}}, SERVER_TASK_CMPL_TYPE_EMBEDDING);
+    ctx_server->queue_results.add_waiting_tasks(tasks);
+    ctx_server->queue_tasks.post(tasks);
 
-    server_task_result result = ctx_server->queue_results.recv(id_task);
-    ctx_server->queue_results.remove_waiting_task_id(id_task);
-    if (result.error)
+    std::unordered_set<int> task_ids = server_task::get_list_id(tasks);
+
+    json responses = json::array();
+
+    json error = nullptr;
+    ctx_server->receive_cmpl_results(task_ids, [&](std::vector<server_task_result> & results) {
+        for (const auto & res : results) {
+            responses.push_back(res.data);
+        }
+    }, [&](const json& error_data) {
+                     error = error_data;
+                });
+
+    if (error != nullptr)
     {
-        std::string response = result.data["message"].get<std::string>();
+        std::string response = error["message"].get<std::string>();
         env->ThrowNew(c_llama_error, response.c_str());
         return nullptr;
     }
 
-    std::vector<float> embedding = result.data["embedding"].get<std::vector<float>>();
+    if (responses.size() != 1) {
+        env->ThrowNew(c_llama_error, "could not compute embedding");
+        return nullptr;
+    }
+
+    std::vector<float> embedding = responses[0]["embedding"].get<std::vector<float>>();
     jsize embedding_size = embedding.size(); // NOLINT(*-narrowing-conversions)
 
     jfloatArray j_embedding = env->NewFloatArray(embedding_size);
