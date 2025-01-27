@@ -1,5 +1,6 @@
 #include "jllama.h"
 
+#include "log.h"
 #include "llama.h"
 #include "nlohmann/json.hpp"
 #include "server.hpp"
@@ -354,7 +355,8 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
 
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jobject obj, jstring jparams)
 {
-    gpt_params params;
+    common_params params;
+    common_init();
 
     auto *ctx_server = new server_context();
 
@@ -364,16 +366,16 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
 
     if (json_value(json_params, "disable_log", false))
     {
-        log_disable();
+        common_log_disable();
     }
     else
     {
         log_enable();
     }
 
-    if (!params.system_prompt.empty())
+    if (!params.prompt.empty())
     {
-        ctx_server->system_prompt_set(params.system_prompt);
+        ctx_server->system_prompt_set(params.prompt);
     }
 
     if (params.model_alias == "unknown")
@@ -383,14 +385,10 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
 
     llama_numa_init(params.numa);
 
-    LOG_INFO("build info", {{"build", LLAMA_BUILD_NUMBER}, {"commit", LLAMA_COMMIT}});
-
-    LOG_INFO("system info", {
-                                {"n_threads",       params.cpuparams.n_threads},
-                                {"n_threads_batch", params.cpuparams_batch.n_threads},
-                                {"total_threads", std::thread::hardware_concurrency()},
-                                {"system_info", llama_print_system_info()},
-                            });
+    LOG_INF("system info: n_threads = %d, n_threads_batch = %d, total_threads = %d\n", params.cpuparams.n_threads, params.cpuparams_batch.n_threads, std::thread::hardware_concurrency());
+    LOG_INF("\n");
+    LOG_INF("%s\n", common_params_get_system_info(params).c_str());
+    LOG_INF("\n");
 
     std::atomic<server_state> state{SERVER_STATE_LOADING_MODEL};
 
@@ -417,9 +415,8 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     {
         if (!ctx_server->validate_model_chat_template())
         {
-            LOG_ERROR("The chat template that comes with this model is not yet supported, falling back to chatml. This "
-                      "may cause the model to output suboptimal responses",
-                      {});
+            LOG_ERR("%s", "The chat template that comes with this model is not yet supported, falling back to chatml. This "
+                      "may cause the model to output suboptimal responses");
             params.chat_template = "chatml";
         }
     }
