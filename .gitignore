@@ -1,6 +1,7 @@
 .idea
 target
 build
+cmake-build-*
 .DS_Store
 .directory
 .vscode
