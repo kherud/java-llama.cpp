@@ -13,7 +13,7 @@ public class GrammarExample {
 				"expr  ::= term ([-+*/] term)*\n" +
 				"term  ::= [0-9]";
 		ModelParameters modelParams = new ModelParameters()
-				.setModelFilePath("models/mistral-7b-instruct-v0.2.Q2_K.gguf");
+				.setModel("models/mistral-7b-instruct-v0.2.Q2_K.gguf");
 		InferenceParameters inferParams = new InferenceParameters("")
 				.setGrammar(grammar);
 		try (LlamaModel model = new LlamaModel(modelParams)) {
