@@ -66,10 +66,10 @@ JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_decodeBytes
 /*
  * Class:     de_kherud_llama_LlamaModel
  * Method:    loadModel
- * Signature: (Ljava/lang/String;)V
+ * Signature: ([Ljava/lang/String;)V
  */
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel
-  (JNIEnv *, jobject, jstring);
+  (JNIEnv *, jobject, jobjectArray);
 
 /*
  * Class:     de_kherud_llama_LlamaModel
