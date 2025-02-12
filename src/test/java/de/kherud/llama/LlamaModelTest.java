@@ -15,7 +15,7 @@ public class LlamaModelTest {
 
 	private static final String prefix = "def remove_non_ascii(s: str) -> str:\n    \"\"\" ";
 	private static final String suffix = "\n    return result\n";
-	private static final int nPredict = 1024;
+	private static final int nPredict = 10;
 
 	private static LlamaModel model;
 
@@ -24,9 +24,8 @@ public class LlamaModelTest {
 //		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> System.out.println(level + ": " + msg));
 		model = new LlamaModel(
 				new ModelParameters()
-//						.setCtxSize(128)
-						.setModel("/Users/vrao/Work/ml/llm_models/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf")
-//						.setModelUrl("https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf")
+						.setCtxSize(128)
+						.setModelUrl("https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf")
 						.setGpuLayers(43)
 						.enableEmbedding().enableLogTimestamps().enableLogPrefix()
 		);
@@ -43,7 +42,7 @@ public class LlamaModelTest {
 	public void testGenerateAnswer() {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters(prefix)
+		InferenceParameters params = new InferenceParameters("<|User|> " + prefix +" <|Assistant|> ")
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
@@ -62,8 +61,8 @@ public class LlamaModelTest {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
 		InferenceParameters params = new InferenceParameters("")
-				.setInputPrefix(prefix)
-				.setInputSuffix(suffix)
+				.setInputPrefix("<|User|> " + prefix + " <|Assistant|> ")
+				.setInputSuffix(suffix )
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
@@ -97,7 +96,7 @@ public class LlamaModelTest {
 	public void testCompleteAnswer() {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters(prefix)
+		InferenceParameters params = new InferenceParameters("<|User|> " + prefix +" <|Assistant|> ")
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
@@ -113,7 +112,7 @@ public class LlamaModelTest {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
 		InferenceParameters params = new InferenceParameters("")
-				.setInputPrefix(prefix)
+				.setInputPrefix("<|User|> " + prefix +" <|Assistant|> ")
 				.setInputSuffix(suffix)
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
@@ -138,7 +137,7 @@ public class LlamaModelTest {
 
 	@Test
 	public void testCancelGenerating() {
-		InferenceParameters params = new InferenceParameters(prefix).setNPredict(nPredict);
+		InferenceParameters params = new InferenceParameters("<|User|> " + prefix +" <|Assistant|> ").setNPredict(nPredict);
 
 		int generated = 0;
 		LlamaIterator iterator = model.generate(params).iterator();
@@ -172,7 +171,7 @@ public class LlamaModelTest {
 		List<LogMessage> messages = new ArrayList<>();
 		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> messages.add(new LogMessage(level, msg)));
 
-		InferenceParameters params = new InferenceParameters(prefix)
+		InferenceParameters params = new InferenceParameters("<|User|> " + prefix +" <|Assistant|> ")
 				.setNPredict(nPredict)
 				.setSeed(42);
 		model.complete(params);
@@ -191,7 +190,7 @@ public class LlamaModelTest {
 		List<LogMessage> messages = new ArrayList<>();
 		LlamaModel.setLogger(LogFormat.JSON, (level, msg) -> messages.add(new LogMessage(level, msg)));
 
-		InferenceParameters params = new InferenceParameters(prefix)
+		InferenceParameters params = new InferenceParameters("<|User|> " + prefix +" <|Assistant|> ")
 				.setNPredict(nPredict)
 				.setSeed(42);
 		model.complete(params);
@@ -208,7 +207,7 @@ public class LlamaModelTest {
 	@Test
 	public void testLogStdout() {
 		// Unfortunately, `printf` can't be easily re-directed to Java. This test only works manually, thus.
-		InferenceParameters params = new InferenceParameters(prefix)
+		InferenceParameters params = new InferenceParameters("<|User|> " + prefix +" <|Assistant|> ")
 				.setNPredict(nPredict)
 				.setSeed(42);
 

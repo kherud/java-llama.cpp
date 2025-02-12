@@ -554,7 +554,7 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIE
     auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
 
     server_task_result_ptr result = ctx_server->queue_results.recv(id_task);
-
+    
     if (result->is_error())
     {
         std::string response = result->to_json()["message"].get<std::string>();
@@ -563,6 +563,9 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIE
         return nullptr;
     }
     const auto out_res = result->to_json();
+    
+
+    
     std::string response = out_res["content"].get<std::string>();
     if (result->is_stop())
     {
@@ -588,9 +591,6 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIE
             }
         }
     }
-
-    ctx_server->queue_results.remove_waiting_task_id(id_task);
-
     jbyteArray jbytes = parse_jbytes(env, response);
     return env->NewObject(c_output, cc_output, jbytes, o_probabilities, result->is_stop());
 }
