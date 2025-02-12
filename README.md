@@ -27,7 +27,7 @@ Access this library via Maven:
 <dependency>
     <groupId>de.kherud</groupId>
     <artifactId>llama</artifactId>
-    <version>3.4.1</version>
+    <version>3.4.2</version>
 </dependency>
 ```
 
@@ -37,7 +37,7 @@ Bu default the default library artifact is built only with CPU inference support
 <dependency>
     <groupId>de.kherud</groupId>
     <artifactId>llama</artifactId>
-    <version>3.4.1</version>
+    <version>3.4.2</version>
     <classifier>cuda12-linux-x86-64</classifier>
 </dependency>
 ```
@@ -78,7 +78,7 @@ cmake --build build --config Release
 ```
 
 > [!TIP]
-> Use `-DGGML_CURL=ON` to download models via Java code using `ModelParameters#setModelUrl(String)`.
+> Use `-DLLAMA_CURL=ON` to download models via Java code using `ModelParameters#setModelUrl(String)`.
 
 All compiled libraries will be put in a resources directory matching your platform, which will appear in the cmake output. For example something like:
 
