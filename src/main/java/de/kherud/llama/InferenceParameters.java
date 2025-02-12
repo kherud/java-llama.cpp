@@ -459,12 +459,6 @@ public final class InferenceParameters extends JsonParameters {
 					case TOP_K:
 						builder.append("\"top_k\"");
 						break;
-					case TFS_Z:
-						builder.append("\"tfs_z\"");
-						break;
-					case TYPICAL_P:
-						builder.append("\"typical_p\"");
-						break;
 					case TOP_P:
 						builder.append("\"top_p\"");
 						break;

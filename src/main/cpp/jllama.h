@@ -7,6 +7,25 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/*
+ * Class:     de_kherud_llama_LlamaModel
+ * Method:    requestEmbedding
+ * Signature: (Ljava/lang/String;)[F
+ */
+JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestEmbedding
+  (JNIEnv *, jobject, jstring);
+
+
+/*
+ * Class:     de_kherud_llama_LlamaModel
+ * Method:    receiveEmbedding
+ * Signature: (Ljava/lang/Int;)[F
+ */
+JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_receiveEmbedding
+  (JNIEnv *, jobject, jint);
+
+
 /*
  * Class:     de_kherud_llama_LlamaModel
  * Method:    embed
@@ -66,10 +85,10 @@ JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_decodeBytes
 /*
  * Class:     de_kherud_llama_LlamaModel
  * Method:    loadModel
- * Signature: (Ljava/lang/String;)V
+ * Signature: ([Ljava/lang/String;)V
  */
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel
-  (JNIEnv *, jobject, jstring);
+  (JNIEnv *, jobject, jobjectArray);
 
 /*
  * Class:     de_kherud_llama_LlamaModel

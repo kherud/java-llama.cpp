@@ -2,10 +2,14 @@ package de.kherud.llama.args;
 
 public enum Sampler {
 
-	TOP_K,
-	TFS_Z,
-	TYPICAL_P,
-	TOP_P,
-	MIN_P,
-	TEMPERATURE
+    DRY,
+    TOP_K,
+    TOP_P,
+    TYP_P,
+    MIN_P,
+    TEMPERATURE,
+    XTC,
+    INFILL,
+    PENALTIES
+
 }
