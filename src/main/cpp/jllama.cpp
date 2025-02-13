@@ -548,6 +548,13 @@ JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv 
     return *task_ids.begin();
 }
 
+JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_releaseTask(JNIEnv *env, jobject obj, jint id_task)
+{
+    jlong server_handle = env->GetLongField(obj, f_model_pointer);
+    auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
+    ctx_server->queue_results.remove_waiting_task_id(id_task);
+}
+
 JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIEnv *env, jobject obj, jint id_task)
 {
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
@@ -721,6 +728,9 @@ JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_decodeBytes(JNIEnv 
 
     return parse_jbytes(env, text);
 }
+
+
+
 
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_delete(JNIEnv *env, jobject obj)
 {

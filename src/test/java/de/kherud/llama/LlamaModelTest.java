@@ -25,7 +25,7 @@ public class LlamaModelTest {
 		model = new LlamaModel(
 				new ModelParameters()
 						.setCtxSize(128)
-						.setModelUrl("https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B-Q2_K.gguf")
+						.setModelUrl("https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf")
 						.setGpuLayers(43)
 						.enableEmbedding().enableLogTimestamps().enableLogPrefix()
 		);
@@ -154,7 +154,7 @@ public class LlamaModelTest {
 	@Test
 	public void testEmbedding() {
 		float[] embedding = model.embed(prefix);
-		Assert.assertEquals(1536, embedding.length);
+		Assert.assertEquals(4096, embedding.length);
 	}
 
 	@Test
@@ -163,7 +163,7 @@ public class LlamaModelTest {
 		int[] encoded = model.encode(prompt);
 		String decoded = model.decode(encoded);
 		// the llama tokenizer adds a space before the prompt
-		Assert.assertEquals(prompt, decoded);
+		Assert.assertEquals(" " +prompt, decoded);
 	}
 
 	@Ignore

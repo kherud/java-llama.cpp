@@ -54,6 +54,7 @@ public class LlamaModel implements AutoCloseable {
 		parameters.setStream(false);
 		int taskId = requestCompletion(parameters.toString());
 		LlamaOutput output = receiveCompletion(taskId);
+		releaseTask(taskId);
 		return output.text;
 	}
 
@@ -129,5 +130,7 @@ public class LlamaModel implements AutoCloseable {
 	private native void loadModel(String... parameters) throws LlamaException;
 
 	private native void delete();
+	
+	private native void releaseTask(int taskId);
 
 }

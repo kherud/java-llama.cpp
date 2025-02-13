@@ -97,6 +97,15 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel
  */
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_delete
   (JNIEnv *, jobject);
+  
+  
+/*
+ * Class:     de_kherud_llama_LlamaModel
+ * Method:    releaseTask
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_releaseTask
+  (JNIEnv *, jobject, jint);  
 
 #ifdef __cplusplus
 }
