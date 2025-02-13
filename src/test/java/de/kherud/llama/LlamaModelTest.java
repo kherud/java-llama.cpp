@@ -25,7 +25,8 @@ public class LlamaModelTest {
 		model = new LlamaModel(
 				new ModelParameters()
 						.setCtxSize(128)
-						.setModelUrl("https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf")
+						.setModel("models/codellama-7b.Q2_K.gguf")
+						//.setModelUrl("https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf")
 						.setGpuLayers(43)
 						.enableEmbedding().enableLogTimestamps().enableLogPrefix()
 		);
