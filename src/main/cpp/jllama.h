@@ -10,24 +10,6 @@ extern "C" {
 
 /*
  * Class:     de_kherud_llama_LlamaModel
- * Method:    requestEmbedding
- * Signature: (Ljava/lang/String;)[F
- */
-JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestEmbedding
-  (JNIEnv *, jobject, jstring);
-
-
-/*
- * Class:     de_kherud_llama_LlamaModel
- * Method:    receiveEmbedding
- * Signature: (Ljava/lang/Int;)[F
- */
-JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_receiveEmbedding
-  (JNIEnv *, jobject, jint);
-
-
-/*
- * Class:     de_kherud_llama_LlamaModel
  * Method:    embed
  * Signature: (Ljava/lang/String;)[F
  */

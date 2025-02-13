@@ -950,5 +950,13 @@ public final class ModelParameters extends CliParameters {
         parameters.put("--model-draft", modelDraft);
         return this;
     }
+    
+    /**
+     * Enable jinja for templating
+     */
+    public ModelParameters enableJinja() {
+        parameters.put("--jinja", null);
+        return this;
+    }
 
 }
