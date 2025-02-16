@@ -18,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install libcurl
+        run: sudo apt-get install -y libcurl4-openssl-dev
       - name: Build libraries
         shell: bash
         run: |
@@ -121,10 +123,12 @@ jobs:
           }
     steps:
       - uses: actions/checkout@v4
+      - name: Install curl
+        run: vcpkg install curl
       - name: Build libraries
         shell: cmd
         run: |
-          .github\build.bat ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }}
+          .github\build.bat ${{ matrix.target.cmake }} -DOS_NAME=${{ matrix.target.os }} -DOS_ARCH=${{ matrix.target.arch }} -DCURL_LIBRARY=C:/vcpkg/packages/curl_x64-windows/lib/libcurl.lib -DCURL_INCLUDE_DIR=C:/vcpkg/packages/curl_x64-windows/include
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

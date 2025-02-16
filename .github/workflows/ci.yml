@@ -18,6 +18,8 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
+      - name: Install libcurl
+        run: sudo apt-get install -y libcurl4-openssl-dev
       - name: Build libraries
         # cmake should figure out OS and ARCH automatically when running build.sh (but we need mvn compile for it)
         run: |
@@ -79,10 +81,12 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
+      - name: Install libcurl
+        run: vcpkg install curl
       - name: Build libraries
         run: |
           mvn compile
-          .github\build.bat -DLLAMA_VERBOSE=ON -DLLAMA_CURL=ON
+          .github\build.bat -DLLAMA_VERBOSE=ON -DLLAMA_CURL=ON -DCURL_LIBRARY=C:/vcpkg/packages/curl_x64-windows/lib/libcurl.lib -DCURL_INCLUDE_DIR=C:/vcpkg/packages/curl_x64-windows/include
       - name: Download model
         run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
       - name: Run tests
