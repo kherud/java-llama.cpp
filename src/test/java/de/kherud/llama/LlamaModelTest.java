@@ -43,7 +43,7 @@ public class LlamaModelTest {
 	public void testGenerateAnswer() {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters("<|User|> " + prefix +" <|Assistant|> ")
+		InferenceParameters params = new InferenceParameters(prefix)
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
@@ -62,7 +62,7 @@ public class LlamaModelTest {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
 		InferenceParameters params = new InferenceParameters("")
-				.setInputPrefix("<|User|> " + prefix + " <|Assistant|> ")
+				.setInputPrefix(prefix)
 				.setInputSuffix(suffix )
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
@@ -97,7 +97,7 @@ public class LlamaModelTest {
 	public void testCompleteAnswer() {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters("<|User|> " + prefix +" <|Assistant|> ")
+		InferenceParameters params = new InferenceParameters(prefix)
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
@@ -113,7 +113,7 @@ public class LlamaModelTest {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
 		InferenceParameters params = new InferenceParameters("")
-				.setInputPrefix("<|User|> " + prefix +" <|Assistant|> ")
+				.setInputPrefix(prefix)
 				.setInputSuffix(suffix)
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
@@ -138,7 +138,7 @@ public class LlamaModelTest {
 
 	@Test
 	public void testCancelGenerating() {
-		InferenceParameters params = new InferenceParameters("<|User|> " + prefix +" <|Assistant|> ").setNPredict(nPredict);
+		InferenceParameters params = new InferenceParameters(prefix).setNPredict(nPredict);
 
 		int generated = 0;
 		LlamaIterator iterator = model.generate(params).iterator();
@@ -172,7 +172,7 @@ public class LlamaModelTest {
 		List<LogMessage> messages = new ArrayList<>();
 		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> messages.add(new LogMessage(level, msg)));
 
-		InferenceParameters params = new InferenceParameters("<|User|> " + prefix +" <|Assistant|> ")
+		InferenceParameters params = new InferenceParameters(prefix)
 				.setNPredict(nPredict)
 				.setSeed(42);
 		model.complete(params);
@@ -191,7 +191,7 @@ public class LlamaModelTest {
 		List<LogMessage> messages = new ArrayList<>();
 		LlamaModel.setLogger(LogFormat.JSON, (level, msg) -> messages.add(new LogMessage(level, msg)));
 
-		InferenceParameters params = new InferenceParameters("<|User|> " + prefix +" <|Assistant|> ")
+		InferenceParameters params = new InferenceParameters(prefix)
 				.setNPredict(nPredict)
 				.setSeed(42);
 		model.complete(params);
@@ -208,7 +208,7 @@ public class LlamaModelTest {
 	@Test
 	public void testLogStdout() {
 		// Unfortunately, `printf` can't be easily re-directed to Java. This test only works manually, thus.
-		InferenceParameters params = new InferenceParameters("<|User|> " + prefix +" <|Assistant|> ")
+		InferenceParameters params = new InferenceParameters(prefix)
 				.setNPredict(nPredict)
 				.setSeed(42);
 
