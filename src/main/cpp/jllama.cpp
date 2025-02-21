@@ -443,23 +443,63 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     LOG_INF("%s: model loaded\n", __func__);
 
     const auto model_meta = ctx_server->model_meta();
+    
+ 	if (!params.speculative.model.empty() || !params.speculative.hf_repo.empty()) {
+    	SRV_INF("loading draft model '%s'\n", params.speculative.model.c_str());
+		auto params_dft = params;
 
-    // if a custom chat template is not supplied, we will use the one that comes with the model (if any)
-    if (params.chat_template.empty())
-    {
-        if (!ctx_server->validate_builtin_chat_template(params.use_jinja))
-        {
-            LOG_WRN("%s: The chat template that comes with this model is not yet supported, falling back to chatml. "
-                    "This may cause the model to output suboptimal responses\n",
-                    __func__);
-            params.chat_template = "chatml";
+		params_dft.devices      = params.speculative.devices;
+		params_dft.hf_file      = params.speculative.hf_file;
+		params_dft.hf_repo      = params.speculative.hf_repo;
+		params_dft.model        = params.speculative.model;
+		params_dft.model_url    = params.speculative.model_url;
+		params_dft.n_ctx        = params.speculative.n_ctx == 0 ? params.n_ctx / params.n_parallel : params.speculative.n_ctx;
+		params_dft.n_gpu_layers = params.speculative.n_gpu_layers;
+		params_dft.n_parallel   = 1;
+
+		common_init_result llama_init_dft = common_init_from_params(params_dft);
+
+		llama_model * model_dft = llama_init_dft.model.get();
+
+		if (model_dft == nullptr) {
+			SRV_ERR("failed to load draft model, '%s'\n", params.speculative.model.c_str());
+		}
+
+		if (!common_speculative_are_compatible(ctx_server->ctx, llama_init_dft.context.get())) {
+			SRV_ERR("the draft model '%s' is not compatible with the target model '%s'\n", params.speculative.model.c_str(), params.model.c_str());
+		}
+
+		const int n_ctx_dft = llama_n_ctx(llama_init_dft.context.get());
+
+            ctx_server->cparams_dft = common_context_params_to_llama(params_dft);
+            ctx_server->cparams_dft.n_batch = n_ctx_dft;
+
+            // force F16 KV cache for the draft model for extra performance
+            ctx_server->cparams_dft.type_k = GGML_TYPE_F16;
+            ctx_server->cparams_dft.type_v = GGML_TYPE_F16;
+
+            // the context is not needed - we will create one for each slot
+            llama_init_dft.context.reset();
         }
-    }
+
+        ctx_server->chat_templates = common_chat_templates_init(ctx_server->model, params.chat_template);
+        try {
+            common_chat_format_example(ctx_server->chat_templates.get(), params.use_jinja);
+        } catch (const std::exception & e) {
+            SRV_WRN("%s: The chat template that comes with this model is not yet supported, falling back to chatml. This may cause the model to output suboptimal responses\n", __func__);
+            ctx_server->chat_templates = common_chat_templates_init(ctx_server->model, "chatml");
+        }
+
+   // print sample chat example to make it clear which template is used
+    LOG_INF("%s: chat template, chat_template: %s, example_format: '%s'\n", __func__,
+        common_chat_templates_source(ctx_server->chat_templates.get()),
+        common_chat_format_example(ctx_server->chat_templates.get(), ctx_server->params_base.use_jinja).c_str());
+        
 
     // print sample chat example to make it clear which template is used
-    LOG_INF("%s: chat template, chat_template: %s, example_format: '%s'\n", __func__,
-            params.chat_template.empty() ? "(built-in)" : params.chat_template.c_str(),
-            common_chat_format_example(*ctx_server->chat_templates.template_default, ctx_server->params_base.use_jinja) .c_str());
+//    LOG_INF("%s: chat template, chat_template: %s, example_format: '%s'\n", __func__,
+  //         common_chat_templates_source(ctx_server->chat_templates.get()),
+    //        common_chat_format_example(*ctx_server->chat_templates.template_default, ctx_server->params_base.use_jinja) .c_str());
 
     ctx_server->queue_tasks.on_new_task(
         std::bind(&server_context::process_single_task, ctx_server, std::placeholders::_1));

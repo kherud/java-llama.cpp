@@ -265,7 +265,7 @@ struct server_task {
         params.speculative.p_min = json_value(data, "speculative.p_min", defaults.speculative.p_min);
 
         params.speculative.n_min = std::min(params.speculative.n_max, params.speculative.n_min);
-        params.speculative.n_min = std::max(params.speculative.n_min, 2);
+        params.speculative.n_min = std::max(params.speculative.n_min, 0);
         params.speculative.n_max = std::max(params.speculative.n_max, 0);
 
         // Use OpenAI API logprobs only if n_probs wasn't provided
@@ -320,9 +320,6 @@ struct server_task {
         }
 
         // process "json_schema" and "grammar"
-        if (data.contains("json_schema") && !data.at("json_schema").is_null() && data.contains("grammar") && !data.at("grammar").is_null()) {
-            throw std::runtime_error("Either \"json_schema\" or \"grammar\" can be specified, but not both");
-        }
         if (data.contains("json_schema") && !data.contains("grammar")) {
             try {
                 auto schema                  = json_value(data, "json_schema", json::object());
@@ -705,7 +702,7 @@ struct server_task_result_cmpl_final : server_task_result {
         return res;
     }
 
-json to_json_oaicompat_chat() {
+    json to_json_oaicompat_chat() {
         std::string finish_reason = "length";
         common_chat_msg msg;
         if (stop == STOP_TYPE_WORD || stop == STOP_TYPE_EOS) {
@@ -983,6 +980,7 @@ struct server_task_result_cmpl_partial : server_task_result {
         return std::vector<json>({ret});
     }
 };
+
 
 struct server_task_result_embd : server_task_result {
     int index = 0;
@@ -1430,7 +1428,6 @@ struct server_slot {
     }
 };
 
-
 struct server_metrics {
     int64_t t_start = 0;
 
@@ -1482,6 +1479,7 @@ struct server_metrics {
         t_tokens_generation       = 0;
     }
 };
+
 
 struct server_queue {
     int id = 0;
@@ -1799,7 +1797,7 @@ struct server_context {
     // Necessary similarity of prompt for slot selection
     float slot_prompt_similarity = 0.0f;
 
-    common_chat_templates chat_templates;
+    common_chat_templates_ptr chat_templates;
 
     ~server_context() {
         // Clear any sampling context
@@ -1883,55 +1881,15 @@ struct server_context {
             llama_init_dft.context.reset();
         }
 
-        if (params_base.chat_template.empty() && !validate_builtin_chat_template(params.use_jinja)) {
+        chat_templates = common_chat_templates_init(model, params_base.chat_template);
+        try {
+            common_chat_format_example(chat_templates.get(), params.use_jinja);
+        } catch (const std::exception & e) {
             SRV_WRN("%s: The chat template that comes with this model is not yet supported, falling back to chatml. This may cause the model to output suboptimal responses\n", __func__);
-            chat_templates = common_chat_templates_from_model(model, "chatml");
-        } else {
-            chat_templates = common_chat_templates_from_model(model, params_base.chat_template);
+            chat_templates = common_chat_templates_init(model, "chatml");
         }
-        GGML_ASSERT(chat_templates.template_default.get() != nullptr);
 
         return true;
-    }
-    
-    bool validate_jinja_templates() const {
-        auto               templates = common_chat_templates_from_model(model, "");
-        common_chat_inputs inputs;
-        inputs.messages = json::array({
-          {
-            { "role", "user" },
-            { "content", "test" },
-          }
-        });
-        GGML_ASSERT(templates.template_default);
-        try {
-            common_chat_params_init(*templates.template_default, inputs);
-            if (templates.template_tool_use) {
-                common_chat_params_init(*templates.template_tool_use, inputs);
-            }
-
-            return true;
-        } catch (const std::exception & e) {
-            SRV_ERR("failed to apply template: %s\n", e.what());
-
-            return false;
-        }
-    }
-    
-
-    bool validate_builtin_chat_template(bool use_jinja) const {
-        llama_chat_message chat[] = {{"user", "test"}};
-
-        if (use_jinja) {
-           return validate_jinja_templates();
-        } else {
-            const char * tmpl = llama_model_chat_template(model, /* name */ nullptr);
-            const int32_t chat_res = llama_chat_apply_template(tmpl, chat, 1, true, nullptr, 0);
-            if (chat_res < 0) {
-                return validate_jinja_templates();
-            }
-            return chat_res > 0;
-        }
     }
 
     void init() {
@@ -2080,8 +2038,8 @@ struct server_context {
 
         if (slot.n_predict > 0 && slot.params.n_predict > slot.n_predict) {
             // Might be better to reject the request with a 400 ?
+            SLT_WRN(slot, "n_predict = %d exceeds server configuration, setting to %d", slot.params.n_predict, slot.n_predict);
             slot.params.n_predict = slot.n_predict;
-            SLT_WRN(slot, "n_predict = %d exceeds server configuration, setting to %d", slot.n_predict, slot.n_predict);
         }
 
         if (slot.params.ignore_eos && has_eos_token) {
@@ -3357,6 +3315,7 @@ struct server_context {
         };
     }
 };
+
 
 static void common_params_handle_model_default(
         std::string & model,
