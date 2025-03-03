@@ -1,6 +1,7 @@
 #include "jllama.h"
 
 #include "llama.h"
+#include "json-schema-to-grammar.h"
 #include "nlohmann/json.hpp"
 #include "server.hpp"
 
@@ -666,4 +667,12 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_setLogger(JNIEnv *env, jc
             llama_log_set(log_callback_trampoline, nullptr);
         }
     }
+}
+
+JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_jsonSchemaToGrammarBytes(JNIEnv *env, jclass clazz, jstring j_schema)
+{
+    const std::string c_schema = parse_jstring(env, j_schema);
+    nlohmann::ordered_json c_schema_json = nlohmann::ordered_json::parse(c_schema);
+    const std::string c_grammar = json_schema_to_grammar(c_schema_json);
+    return parse_jbytes(env, c_grammar);
 }
