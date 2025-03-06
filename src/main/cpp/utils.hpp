@@ -490,6 +490,17 @@ static std::string tokens_to_output_formatted_string(const llama_context * ctx, 
     return out;
 }
 
+//static bool server_sent_event(httplib::DataSink & sink, const char * event, const json & data) {
+//    const std::string str =
+//        std::string(event) + ": " +
+//        data.dump(-1, ' ', false, json::error_handler_t::replace) +
+//        "\n\n"; // required by RFC 8895 - A message is terminated by a blank line (two line terminators in a row).
+//
+//    LOG_DBG("data stream, to_send: %s", str.c_str());
+//
+//    return sink.write(str.c_str(), str.size());
+//}
+
 //
 // OAI utils
 //
@@ -514,8 +525,13 @@ static json oaicompat_completion_params_parse(const json & body) {
         throw std::runtime_error("Only one completion choice is allowed");
     }
 
+    // Handle "echo" field
+    if (json_value(body, "echo", false)) {
+        throw std::runtime_error("Only no echo is supported");
+    }
+
     // Params supported by OAI but unsupported by llama.cpp
-    static const std::vector<std::string> unsupported_params { "best_of", "echo", "suffix" };
+    static const std::vector<std::string> unsupported_params { "best_of", "suffix" };
     for (const auto & param : unsupported_params) {
         if (body.contains(param)) {
             throw std::runtime_error("Unsupported param: " + param);
@@ -578,8 +594,8 @@ static json oaicompat_completion_params_parse(
         if (response_type == "json_object") {
             json_schema = json_value(response_format, "schema", json::object());
         } else if (response_type == "json_schema") {
-            json json_schema = json_value(response_format, "json_schema", json::object());
-            json_schema = json_value(json_schema, "schema", json::object());
+            auto schema_wrapper = json_value(response_format, "json_schema", json::object());
+            json_schema = json_value(schema_wrapper, "schema", json::object());
         } else if (!response_type.empty() && response_type != "text") {
             throw std::runtime_error("response_format type must be one of \"text\" or \"json_object\", but got: " + response_type);
         }
@@ -591,10 +607,11 @@ static json oaicompat_completion_params_parse(
     inputs.tool_choice           = common_chat_tool_choice_parse_oaicompat(json_value(body, "tool_choice", std::string("auto")));
     inputs.json_schema           = json_schema.is_null() ? "" : json_schema.dump();
     inputs.grammar               = grammar;
-    inputs.add_generation_prompt = true;
+    inputs.add_generation_prompt = json_value(body, "add_generation_prompt", true);
     inputs.use_jinja             = use_jinja;
     inputs.parallel_tool_calls   = json_value(body, "parallel_tool_calls", false);
     inputs.extract_reasoning     = reasoning_format != COMMON_REASONING_FORMAT_NONE;
+    inputs.add_generation_prompt = json_value(body, "add_generation_prompt", true);
     if (!inputs.tools.empty() && inputs.tool_choice != COMMON_CHAT_TOOL_CHOICE_NONE && body.contains("grammar")) {
         throw std::runtime_error("Cannot use custom grammar constraints with tools.");
     }
@@ -608,10 +625,7 @@ static json oaicompat_completion_params_parse(
     llama_params["grammar_lazy"]     = chat_params.grammar_lazy;
     auto grammar_triggers = json::array();
     for (const auto & trigger : chat_params.grammar_triggers) {
-        grammar_triggers.push_back({
-            {"word", trigger.word},
-            {"at_start", trigger.at_start},
-        });
+        grammar_triggers.push_back(trigger.to_json<json>());
     }
     llama_params["grammar_triggers"] = grammar_triggers;
     llama_params["preserved_tokens"] = chat_params.preserved_tokens;

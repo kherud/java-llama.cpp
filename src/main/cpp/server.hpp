@@ -26,6 +26,7 @@ using json = nlohmann::ordered_json;
 
 constexpr int HTTP_POLLING_SECONDS = 1;
 
+
 enum stop_type {
     STOP_TYPE_NONE,
     STOP_TYPE_EOS,
@@ -33,7 +34,7 @@ enum stop_type {
     STOP_TYPE_LIMIT,
 };
 
-// state diagram: https://github.com/ggerganov/llama.cpp/pull/9283
+// state diagram: https://github.com/ggml-org/llama.cpp/pull/9283
 enum slot_state {
     SLOT_STATE_IDLE,
     SLOT_STATE_STARTED, // TODO: this state is only used for setting up the initial prompt processing; maybe merge it with launch_slot_with_task in the future
@@ -122,9 +123,9 @@ struct slot_params {
             lora.push_back({{"id", i}, {"scale", this->lora[i].scale}});
         }
 
-        std::vector<std::string> grammar_trigger_words;
-        for (const auto & trigger : sampling.grammar_trigger_words) {
-            grammar_trigger_words.push_back(trigger.word);
+        auto grammar_triggers = json::array();
+        for (const auto & trigger : sampling.grammar_triggers) {
+            grammar_triggers.push_back(trigger.to_json<json>());
         }
 
         return json {
@@ -161,8 +162,8 @@ struct slot_params {
             {"n_probs",                   sampling.n_probs},
             {"min_keep",                  sampling.min_keep},
             {"grammar",                   sampling.grammar},
-            {"grammar_trigger_words",     grammar_trigger_words},
-            {"grammar_trigger_tokens",    sampling.grammar_trigger_tokens},
+            {"grammar_lazy",              sampling.grammar_lazy},
+            {"grammar_triggers",          grammar_triggers},
             {"preserved_tokens",          sampling.preserved_tokens},
             {"chat_format",               common_chat_format_name(oaicompat_chat_format)},
             {"samplers",                  samplers},
@@ -347,24 +348,6 @@ struct server_task {
         }
 
         {
-            const auto grammar_triggers = data.find("grammar_triggers");
-            if (grammar_triggers != data.end()) {
-                for (const auto & t : *grammar_triggers) {
-                    common_grammar_trigger trigger;
-                    trigger.word = t.at("word");
-                    trigger.at_start = t.at("at_start");
-
-                    auto ids = common_tokenize(vocab, trigger.word, /* add_special= */ false, /* parse_special= */ true);
-                    if (ids.size() == 1) {
-                        SRV_DBG("Grammar trigger token: %d (`%s`)\n", ids[0], trigger.word.c_str());
-                        params.sampling.grammar_trigger_tokens.push_back(ids[0]);
-                        params.sampling.preserved_tokens.insert(ids[0]);
-                        continue;
-                    }
-                    SRV_DBG("Grammar trigger word: `%s`\n", trigger.word.c_str());
-                    params.sampling.grammar_trigger_words.push_back(trigger);
-                }
-            }
             const auto preserved_tokens = data.find("preserved_tokens");
             if (preserved_tokens != data.end()) {
                 for (const auto & t : *preserved_tokens) {
@@ -374,12 +357,38 @@ struct server_task {
                         params.sampling.preserved_tokens.insert(ids[0]);
                     } else {
                         // This may happen when using a tool call style meant for a model with special tokens to preserve on a model without said tokens.
-                        SRV_WRN("Not preserved because more than 1 token (wrong chat template override?): %s\n", t.get<std::string>().c_str());
+                        SRV_DBG("Not preserved because more than 1 token: %s\n", t.get<std::string>().c_str());
                     }
                 }
             }
-            if (params.sampling.grammar_lazy) {
-                GGML_ASSERT(params.sampling.grammar_trigger_tokens.size() > 0 || params.sampling.grammar_trigger_words.size() > 0);
+            const auto grammar_triggers = data.find("grammar_triggers");
+            if (grammar_triggers != data.end()) {
+                for (const auto & t : *grammar_triggers) {
+                    auto ct = common_grammar_trigger::from_json(t);
+                    if (ct.type == COMMON_GRAMMAR_TRIGGER_TYPE_WORD) {
+                        const auto & word = ct.value;
+                        auto ids = common_tokenize(vocab, word, /* add_special= */ false, /* parse_special= */ true);
+                        if (ids.size() == 1) {
+                            auto token = ids[0];
+                            if (std::find(params.sampling.preserved_tokens.begin(), params.sampling.preserved_tokens.end(), (llama_token) token) == params.sampling.preserved_tokens.end()) {
+                                throw std::runtime_error("Grammar trigger word should be marked as preserved token: " + word);
+                            }
+                            SRV_DBG("Grammar trigger token: %d (`%s`)\n", token, word.c_str());
+                            common_grammar_trigger trigger;
+                            trigger.type = COMMON_GRAMMAR_TRIGGER_TYPE_TOKEN;
+                            trigger.value = (llama_token) token;
+                            params.sampling.grammar_triggers.push_back(trigger);
+                        } else {
+                            SRV_DBG("Grammar trigger word: `%s`\n", word.c_str());
+                            params.sampling.grammar_triggers.push_back({COMMON_GRAMMAR_TRIGGER_TYPE_WORD, word});
+                        }
+                    } else {
+                        params.sampling.grammar_triggers.push_back(ct);
+                    }
+                }
+            }
+            if (params.sampling.grammar_lazy && params.sampling.grammar_triggers.empty()) {
+                throw std::runtime_error("Error: no triggers set for lazy grammar!");
             }
         }
 
@@ -981,7 +990,6 @@ struct server_task_result_cmpl_partial : server_task_result {
     }
 };
 
-
 struct server_task_result_embd : server_task_result {
     int index = 0;
     std::vector<std::vector<float>> embedding;
@@ -1479,7 +1487,6 @@ struct server_metrics {
         t_tokens_generation       = 0;
     }
 };
-
 
 struct server_queue {
     int id = 0;
@@ -2038,7 +2045,7 @@ struct server_context {
 
         if (slot.n_predict > 0 && slot.params.n_predict > slot.n_predict) {
             // Might be better to reject the request with a 400 ?
-            SLT_WRN(slot, "n_predict = %d exceeds server configuration, setting to %d", slot.params.n_predict, slot.n_predict);
+            SLT_WRN(slot, "n_predict = %d exceeds server configuration, setting to %d\n", slot.params.n_predict, slot.n_predict);
             slot.params.n_predict = slot.n_predict;
         }
 
@@ -2996,7 +3003,7 @@ struct server_context {
                                             const int64_t kv_shift = (int64_t) head_p - (int64_t) head_c;
 
                                             llama_kv_cache_seq_rm (ctx, slot.id, head_p, head_c);
-                                            llama_kv_cache_seq_add(ctx, slot.id, head_c, -1,     kv_shift);
+                                            llama_kv_cache_seq_add(ctx, slot.id, head_c, head_c + n_match, kv_shift);
 
                                             for (size_t i = 0; i < n_match; i++) {
                                                 slot.cache_tokens[head_p + i] = slot.cache_tokens[head_c + i];
@@ -3315,6 +3322,8 @@ struct server_context {
         };
     }
 };
+
+
 
 
 static void common_params_handle_model_default(
