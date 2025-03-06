@@ -777,7 +777,7 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_delete(JNIEnv *env, jobje
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
     auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
     ctx_server->queue_tasks.terminate();
-    delete ctx_server;
+    //delete ctx_server;
 }
 
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_cancelCompletion(JNIEnv *env, jobject obj, jint id_task)

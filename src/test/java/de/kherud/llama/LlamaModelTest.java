@@ -133,7 +133,8 @@ public class LlamaModelTest {
 		String output = model.complete(params);
 		Assert.assertTrue(output + " doesn't match [ab]+", output.matches("[ab]+"));
 		int generated = model.encode(output).length;
-		Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
+		Assert.assertTrue("generated count is: " + generated,  generated > 0 && generated <= nPredict + 1);
+		
 	}
 
 	@Test
