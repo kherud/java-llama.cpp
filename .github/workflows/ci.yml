@@ -91,17 +91,18 @@ jobs:
       - name: Copy DLL to Java resources
         run: |
           mkdir -Force "target/classes/Windows/x86_64"
-          Copy-Item ".\build\Release\llama.dll" "target/classes/Windows/x86_64/"
+          Copy-Item ".\src\main\resources\de\kherud\llama\Windows\x86_64\*.dll" "target/classes/de/kherud/llama/Windows/x86_64/"
 
       - name: Verify DLL placement (debug step)
-        run: dir target\classes\Windows\x86_64\
+        run: |
+          dir target\classes\de\kherud\llama\Windows\x86_64\
 
       - name: Download model
         run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
 
       - name: Run tests with explicit DLL path
         run: |
-          mvn test -Djava.library.path="${{ github.workspace }}\target\classes\Windows\x86_64"
+          mvn test
 
       - if: failure()
         uses: actions/upload-artifact@v4
