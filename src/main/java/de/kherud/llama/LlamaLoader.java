@@ -152,7 +152,8 @@ class LlamaLoader {
 
 		throw new UnsatisfiedLinkError(
 				String.format(
-						"No native library found for os.name=%s, os.arch=%s, paths=[%s]",
+						"No native library found for name=%s os.name=%s, os.arch=%s, paths=[%s]",
+						name,
 						OSInfo.getOSName(),
 						OSInfo.getArchName(),
 						String.join(File.pathSeparator, triedPaths)
