@@ -87,6 +87,10 @@ jobs:
         run: |
           mvn compile
           .github\build.bat -DLLAMA_VERBOSE=ON -DLLAMA_CURL=ON -DCURL_LIBRARY=C:/vcpkg/packages/curl_x64-windows/lib/libcurl.lib -DCURL_INCLUDE_DIR=C:/vcpkg/packages/curl_x64-windows/include
+      - name: Copy DLL to Java resources
+        run: | 
+          mkdir -Force "target/classes/Windows/x86_64"
+          Copy-Item ".\build\Release\*.dll" "target/classes/Windows/x86_64/"
       - name: Download model
         run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
       - name: Run tests
