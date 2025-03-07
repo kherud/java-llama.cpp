@@ -84,23 +84,23 @@ jobs:
       - name: Install libcurl
         run: vcpkg install curl
       - name: Build libraries
-         run: |
+        run: |
           mvn compile
           .github\build.bat -DLLAMA_VERBOSE=ON -DLLAMA_CURL=ON -DCURL_LIBRARY=C:/vcpkg/packages/curl_x64-windows/lib/libcurl.lib -DCURL_INCLUDE_DIR=C:/vcpkg/packages/curl_x64-windows/include
 
       - name: Copy DLL to Java resources
-         run: |
+        run: |
           mkdir -Force "target/classes/Windows/x86_64"
           Copy-Item ".\build\Release\llama.dll" "target/classes/Windows/x86_64/"
 
       - name: Verify DLL placement (debug step)
-         run: dir target\classes\Windows\x86_64\
+        run: dir target\classes\Windows\x86_64\
 
       - name: Download model
-         run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
+        run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
 
       - name: Run tests with explicit DLL path
-         run: |
+        run: |
           mvn test -Djava.library.path="${{ github.workspace }}\target\classes\Windows\x86_64"
 
       - if: failure()
