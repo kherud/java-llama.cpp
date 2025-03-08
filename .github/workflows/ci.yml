@@ -81,8 +81,12 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
-      - name: Install libcurl
-        run: vcpkg install curl
+      - name: Install libcurl and dependencies
+        run: |
+          vcpkg install curl:x64-windows
+          vcpkg install openssl:x64-windows
+          vcpkg install zlib:x64-windows
+
       - name: Build libraries
         run: |
           mvn compile
