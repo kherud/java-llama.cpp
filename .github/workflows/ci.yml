@@ -92,7 +92,8 @@ jobs:
         run: |
           mkdir -Force "target/classes/de/kherud/llama/Windows/x86_64"
           Copy-Item ".\src\main\resources\de\kherud\llama\Windows\x86_64\*.dll" "target/classes/de/kherud/llama/Windows/x86_64/"
-          Copy-Item "C:\vcpkg\installed\x64-windows\bin\curl.dll" "target/classes/de/kherud/llama/Windows/x86_64/"
+          Get-ChildItem "C:/vcpkg/packages/curl_x64-windows" -Filter *.dll -Recurse `
+            | ForEach-Object { Copy-Item $_.FullName -Destination "target/classes/de/kherud/llama/Windows/x86_64/" -Verbose }
 
       - name: Verify DLL placement (debug step)
         run: |
