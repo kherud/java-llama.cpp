@@ -87,7 +87,7 @@ jobs:
       - name: Download model
         run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
       - name: Run tests
-        run: mvn test "-Djava.library.path=${env:PATH};${{ github.workspace }}\target\classes\de\kherud\llama\Windows\x86_64" -Ddebug.native.loading=true
+        run: mvn test "-Djava.library.path=${env:PATH};${{ github.workspace }}\target\classes\de\kherud\llama\Windows\x86_64 -Ddebug.native.loading=true"
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
