@@ -42,7 +42,7 @@ jobs:
           - runner: macos-13
             cmake: -DLLAMA_METAL=OFF -DLLAMA_VERBOSE=ON
           - runner: macos-14
-            cmake: -DLLAMA_METAL_EMBED_LIBRARY=ON -DLLAMA_METAL=OFF -DLLAMA_VERBOSE=ON
+            cmake: -DLLAMA_METAL_EMBED_LIBRARY=ON -DLLAMA_VERBOSE=ON
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
