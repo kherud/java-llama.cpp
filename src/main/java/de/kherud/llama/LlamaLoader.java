@@ -63,8 +63,6 @@ class LlamaLoader {
 				System.err.println("'ggml-metal.metal' not found");
 			}
 		}
-		loadNativeLibrary("ggml");
-		loadNativeLibrary("llama");
 		loadNativeLibrary("jllama");
 		extracted = true;
 	}
