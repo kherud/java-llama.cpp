@@ -206,6 +206,7 @@ public class LlamaModelTest {
 		}
 	}
 
+	@Ignore
 	@Test
 	public void testLogStdout() {
 		// Unfortunately, `printf` can't be easily re-directed to Java. This test only works manually, thus.
