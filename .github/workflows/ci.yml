@@ -76,7 +76,7 @@ jobs:
       - name: Build libraries
         run: |
           mvn compile
-          .github\build.bat -DGGML_NATIVE=OFF -DLLAMA_VERBOSE=ON
+          .github\build.bat -DLLAMA_VERBOSE=ON
       - name: Download model
         run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
       - name: Run tests
@@ -84,6 +84,8 @@ jobs:
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: error-log-windows
-          path: ${{ github.workspace }}\hs_err_pid*.log
+          name: windows-output
+          path: |
+            ${{ github.workspace }}\hs_err_pid*.log
+            ${{ github.workspace }}/src/main/resources/de/kherud/llama/**/*
           if-no-files-found: warn
