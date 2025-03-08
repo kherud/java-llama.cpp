@@ -104,6 +104,7 @@ jobs:
 
       - name: Run tests with explicit DLL path
         run: |
+          $env:PATH = "C:\vcpkg\installed\x64-windows\bin;${env:PATH}"
           mvn test  "-Djava.library.path=${env:PATH};target/classes/de/kherud/llama/Windows/x86_64"
 
       - if: failure()
