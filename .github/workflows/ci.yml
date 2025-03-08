@@ -102,7 +102,7 @@ jobs:
 
       - name: Run tests with explicit DLL path
         run: |
-          mvn test
+          mvn test  "-Djava.library.path=${env:PATH};target/classes/de/kherud/llama/Windows/x86_64"
 
       - if: failure()
         uses: actions/upload-artifact@v4
