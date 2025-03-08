@@ -107,6 +107,7 @@ if(OS_NAME STREQUAL "Windows")
     set_target_properties(jllama llama ggml PROPERTIES
 	  RUNTIME_OUTPUT_DIRECTORY_DEBUG ${JLLAMA_DIR}
 	  RUNTIME_OUTPUT_DIRECTORY_RELEASE ${JLLAMA_DIR}
+	  RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${JLLAMA_DIR}
 	)
 else()
 	set_target_properties(jllama llama ggml PROPERTIES
