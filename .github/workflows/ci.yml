@@ -86,40 +86,68 @@ jobs:
           vcpkg install curl:x64-windows
           vcpkg install openssl:x64-windows
           vcpkg install zlib:x64-windows
+          vcpkg install boost-filesystem:x64-windows  # Often needed for C++ projects
+          vcpkg install boost-system:x64-windows      # Often needed for C++ projects
+
+    - name: Download Dependency Walker
+      run: |
+        Invoke-WebRequest -Uri "https://www.dependencywalker.com/depends22_x64.zip" -OutFile "depends.zip"
+        Expand-Archive -Path "depends.zip" -DestinationPath "depends"
 
       - name: Build libraries
         run: |
           mvn compile
           .github\build.bat -DLLAMA_VERBOSE=ON -DLLAMA_CURL=ON -DCURL_LIBRARY=C:/vcpkg/packages/curl_x64-windows/lib/libcurl.lib -DCURL_INCLUDE_DIR=C:/vcpkg/packages/curl_x64-windows/include
 
-      - name: Prepare DLL directory
-        run: |
-          mkdir -Force "target/classes/de/kherud/llama/Windows/x86_64"
-          Copy-Item ".\src\main\resources\de\kherud\llama\Windows\x86_64\*.dll" "target/classes/de/kherud/llama/Windows/x86_64/"
-          
-          # Copy curl and all its dependencies to our directory
-          Get-ChildItem "C:/vcpkg/installed/x64-windows/bin" -Filter *.dll | ForEach-Object { 
-            Copy-Item $_.FullName -Destination "target/classes/de/kherud/llama/Windows/x86_64/" -Verbose 
+    - name: Prepare DLL directory
+      run: |
+        mkdir -Force "target/classes/de/kherud/llama/Windows/x86_64"
+        Copy-Item ".\src\main\resources\de\kherud\llama\Windows\x86_64\*.dll" "target/classes/de/kherud/llama/Windows/x86_64/"
+        
+        # Copy ALL DLLs from vcpkg directories to ensure we have everything
+        Get-ChildItem "C:/vcpkg/installed/x64-windows/bin" -Filter *.dll | ForEach-Object { 
+          Copy-Item $_.FullName -Destination "target/classes/de/kherud/llama/Windows/x86_64/" -Verbose 
+        }
+        
+        # Also from the packages directory
+        Get-ChildItem "C:/vcpkg/packages" -Recurse -Filter "*.dll" | Where-Object { $_.Directory -like "*bin*" } | ForEach-Object {
+          Copy-Item $_.FullName -Destination "target/classes/de/kherud/llama/Windows/x86_64/" -Verbose
+        }
+        
+        # Copy Visual C++ Redistributable DLLs
+        $vcredistPath = "C:\Windows\System32"
+        @(
+          "msvcp140.dll", 
+          "vcruntime140.dll", 
+          "vcruntime140_1.dll",
+          "msvcp140_1.dll",
+          "msvcp140_2.dll",
+          "concrt140.dll"
+        ) | ForEach-Object {
+          if (Test-Path "$vcredistPath\$_") {
+            Copy-Item "$vcredistPath\$_" -Destination "target/classes/de/kherud/llama/Windows/x86_64/" -Verbose
           }
-          
-          # Also copy from curl packages directory for completeness
-          Get-ChildItem "C:/vcpkg/packages/curl_x64-windows/bin" -Filter *.dll -Recurse | ForEach-Object { 
-            Copy-Item $_.FullName -Destination "target/classes/de/kherud/llama/Windows/x86_64/" -Verbose 
-          }
-          
-          # Copy OpenSSL DLLs if needed by curl
-          Get-ChildItem "C:/vcpkg/packages/openssl_x64-windows/bin" -Filter *.dll -Recurse | ForEach-Object { 
-            Copy-Item $_.FullName -Destination "target/classes/de/kherud/llama/Windows/x86_64/" -Verbose 
-          }
-          
-          # Copy zlib DLLs if needed
-          Get-ChildItem "C:/vcpkg/packages/zlib_x64-windows/bin" -Filter *.dll -Recurse | ForEach-Object { 
-            Copy-Item $_.FullName -Destination "target/classes/de/kherud/llama/Windows/x86_64/" -Verbose 
-          }
+        }
 
-      - name: Verify DLL placement (debug step)
-        run: |
-          dir target\classes\de\kherud\llama\Windows\x86_64\
+    - name: Analyze DLL dependencies
+      run: |
+        # Run dependency walker on ggml.dll to see what's missing
+        .\depends\depends.exe -c -oc:deps_ggml.txt "${{ github.workspace }}\target\classes\de\kherud\llama\Windows\x86_64\ggml.dll"
+        # Also analyze jllama.dll and llama.dll
+        .\depends\depends.exe -c -oc:deps_jllama.txt "${{ github.workspace }}\target\classes\de\kherud\llama\Windows\x86_64\jllama.dll"
+        .\depends\depends.exe -c -oc:deps_llama.txt "${{ github.workspace }}\target\classes\de\kherud\llama\Windows\x86_64\llama.dll"
+        
+        # Display the results
+        Get-Content deps_ggml.txt
+        echo "--------------------"
+        Get-Content deps_jllama.txt
+        echo "--------------------"
+        Get-Content deps_llama.txt
+
+    - name: Verify DLL placement
+      run: |
+        dir target\classes\de\kherud\llama\Windows\x86_64\
+
 
       - name: Download model
         run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
@@ -127,7 +155,7 @@ jobs:
       - name: Run tests with explicit DLL path
         run: |
           $env:PATH = "C:\vcpkg\installed\x64-windows\bin;${env:PATH}"
-          mvn test  "-Djava.library.path=${env:PATH};target/classes/de/kherud/llama/Windows/x86_64"
+          mvn test  "-Djava.library.path=${env:PATH};target/classes/de/kherud/llama/Windows/x86_64" -Ddebug.native.loading=true
 
       - if: failure()
         uses: actions/upload-artifact@v4
