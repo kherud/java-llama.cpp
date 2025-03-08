@@ -7,6 +7,7 @@ env:
   MODEL_URL: https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf
   MODEL_NAME: codellama-7b.Q2_K.gguf
 jobs:
+
   build-and-test-linux:
     name: ubuntu-latest
     runs-on: ubuntu-latest
@@ -16,12 +17,10 @@ jobs:
         with:
           distribution: zulu
           java-version: "11"
-      - name: Install libcurl
-        run: sudo apt-get install -y libcurl4-openssl-dev
       - name: Build libraries
         run: |
           mvn compile
-          .github/build.sh -DLLAMA_VERBOSE=ON -DLLAMA_CURL=ON
+          .github/build.sh -DLLAMA_VERBOSE=ON
       - name: Download model
         run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
       - name: Run tests
@@ -32,6 +31,7 @@ jobs:
           name: error-log-linux
           path: ${{ github.workspace }}/hs_err_pid*.log
           if-no-files-found: warn
+
   build-and-test-macos:
     name: ${{ matrix.target.runner }}
     runs-on: ${{ matrix.target.runner }}
@@ -40,10 +40,9 @@ jobs:
       matrix:
         target:
           - runner: macos-13
-            cmake: -DLLAMA_METAL=OFF -DLLAMA_VERBOSE=ON -DLLAMA_CURL=ON
+            cmake: -DLLAMA_METAL=OFF -DLLAMA_VERBOSE=ON
           - runner: macos-14
             cmake: -DLLAMA_METAL_EMBED_LIBRARY=ON -DLLAMA_METAL=OFF -DLLAMA_VERBOSE=ON
-              -DLLAMA_CURL=ON
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -64,6 +63,7 @@ jobs:
           name: error-log-macos
           path: ${{ github.workspace }}/hs_err_pid*.log
           if-no-files-found: warn
+
   build-and-test-windows:
     name: windows-latest
     runs-on: windows-latest
@@ -77,21 +77,13 @@ jobs:
         run: |
           mvn compile
           .github\build.bat -DLLAMA_VERBOSE=ON
-      - name: Copy DLLs (including curl.dll) from vcpkg explicitly
-        run: |
-          mkdir -Force "target/classes/de/kherud/llama/Windows/x86_64"
-          Copy-Item ".\src\main\resources\de\kherud\llama\Windows\x86_64\*.dll" "target/classes/de/kherud/llama/Windows/x86_64/"
-      - name: Verify DLL placement
-        run: |
-          dir target\classes\de\kherud\llama\Windows\x86_64\
       - name: Download model
         run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
       - name: Run tests
-        run: mvn test "-Djava.library.path=${env:PATH};${{ github.workspace }}\target\classes\de\kherud\llama\Windows\x86_64 -Ddebug.native.loading=true"
+        run: mvn test
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: error-log-windows
           path: ${{ github.workspace }}\hs_err_pid*.log
-          if-no-files-found: warn 
-
+          if-no-files-found: warn
