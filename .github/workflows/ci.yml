@@ -76,7 +76,7 @@ jobs:
       - name: Build libraries
         run: |
           mvn compile
-          .github\build.bat -DLLAMA_VERBOSE=ON
+          .github\build.bat -DGGML_NATIVE=OFF -DLLAMA_VERBOSE=ON
       - name: Download model
         run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
       - name: Run tests
