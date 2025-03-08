@@ -77,10 +77,17 @@ jobs:
         run: |
           mvn compile
           .github\build.bat -DLLAMA_VERBOSE=ON
+      - name: Copy DLLs (including curl.dll) from vcpkg explicitly
+        run: |
+          mkdir -Force "target/classes/de/kherud/llama/Windows/x86_64"
+          Copy-Item ".\src\main\resources\de\kherud\llama\Windows\x86_64\*.dll" "target/classes/de/kherud/llama/Windows/x86_64/"
+      - name: Verify DLL placement
+        run: |
+          dir target\classes\de\kherud\llama\Windows\x86_64\
       - name: Download model
         run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
       - name: Run tests
-        run: mvn test
+        run: mvn test "-Djava.library.path=${env:PATH};${{ github.workspace }}\target\classes\de\kherud\llama\Windows\x86_64" -Ddebug.native.loading=true
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
