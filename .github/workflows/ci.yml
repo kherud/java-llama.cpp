@@ -90,6 +90,8 @@ jobs:
           -OutFile "depends.zip"
 
           Expand-Archive -Path "depends.zip" -DestinationPath "depends"
+          # Verify it was extracted correctly
+          dir depends
       - name: Build libraries
         run: >
           mvn compile
@@ -137,29 +139,60 @@ jobs:
             }
           }
       - name: Analyze DLL dependencies
-        run: >
-          # Run dependency walker on ggml.dll to see what's missing
+        run: |
+          # Create directory for outputs
+          mkdir -Force "dependency_reports"
+    
+          # Get paths to DLLs for analysis
+          $ggmlPath = "${{ github.workspace }}\target\classes\de\kherud\llama\Windows\x86_64\ggml.dll"
+          $llamaPath = "${{ github.workspace }}\target\classes\de\kherud\llama\Windows\x86_64\llama.dll"
+          $jllamaPath = "${{ github.workspace }}\target\classes\de\kherud\llama\Windows\x86_64\jllama.dll"
+    
+          # Verify files exist before analysis
+          Write-Host "Verifying DLL files exist:"
+          if (Test-Path $ggmlPath) { Write-Host "ggml.dll exists at $ggmlPath" } else { Write-Host "ERROR: ggml.dll NOT FOUND at $ggmlPath" }
+          if (Test-Path $llamaPath) { Write-Host "llama.dll exists at $llamaPath" } else { Write-Host "ERROR: llama.dll NOT FOUND at $llamaPath" }
+          if (Test-Path $jllamaPath) { Write-Host "jllama.dll exists at $jllamaPath" } else { Write-Host "ERROR: jllama.dll NOT FOUND at $jllamaPath" }
 
-          .\depends\depends.exe -c -oc:deps_ggml.txt "${{ github.workspace }}\target\classes\de\kherud\llama\Windows\x86_64\ggml.dll"
+          # Alternative approach using dumpbin (available on Windows)
+          Write-Host "Analyzing dependencies with dumpbin..."
+    
+          # Create a function to extract dependencies
+          function Get-Dependencies {
+            param([string]$dllPath, [string]$outputPath)
+      
+            if (Test-Path $dllPath) {
+              Write-Host "Running dumpbin on $dllPath"
+              & "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Tools\MSVC\14.29.30133\bin\Hostx64\x64\dumpbin.exe" /DEPENDENTS $dllPath > $outputPath
+              if ($LASTEXITCODE -eq 0) {
+                Write-Host "Successfully wrote dependencies to $outputPath"
+                Get-Content $outputPath | Select-String -Pattern "Image has the following dependencies"
+                Get-Content $outputPath | Select-String -Pattern "\.dll"
+              } else {
+                Write-Host "Error running dumpbin: $LASTEXITCODE"
+              }
+            } else {
+               Write-Host "ERROR: File not found: $dllPath"
+            }
+          }  
+    
+          # Run dependency analysis
+          Get-Dependencies -dllPath $ggmlPath -outputPath "dependency_reports\deps_ggml.txt"
+          Get-Dependencies -dllPath $llamaPath -outputPath "dependency_reports\deps_llama.txt"
+          Get-Dependencies -dllPath $jllamaPath -outputPath "dependency_reports\deps_jllama.txt"
+    
+          # List files in the output directory
+          Write-Host "Files in dependency_reports directory:"
+          dir dependency_reports
 
-          # Also analyze jllama.dll and llama.dll
-
-          .\depends\depends.exe -c -oc:deps_jllama.txt "${{ github.workspace }}\target\classes\de\kherud\llama\Windows\x86_64\jllama.dll"
-
-          .\depends\depends.exe -c -oc:deps_llama.txt "${{ github.workspace }}\target\classes\de\kherud\llama\Windows\x86_64\llama.dll"
-
-
-          # Display the results
-
-          Get-Content deps_ggml.txt
-
-          echo "--------------------"
-
-          Get-Content deps_jllama.txt
-
-          echo "--------------------"
-
-          Get-Content deps_llama.txt
+      - name: Upload dependency reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-reports
+          path: dependency_reports\*
+          if-no-files-found: warn
+          
       - name: Verify DLL placement
         run: |
           dir target\classes\de\kherud\llama\Windows\x86_64\
