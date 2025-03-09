@@ -3,6 +3,7 @@
 #include "arg.h"
 #include "llama.h"
 #include "log.h"
+#include "json-schema-to-grammar.h"
 #include "nlohmann/json.hpp"
 #include "server.hpp"
 
@@ -431,7 +432,6 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     if (!ctx_server->load_model(params))
     {
         llama_backend_free();
-        ;
         env->ThrowNew(c_llama_error, "could not load model from given file path");
         return;
     }
@@ -442,7 +442,7 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     LOG_INF("%s: model loaded\n", __func__);
 
     const auto model_meta = ctx_server->model_meta();
-    
+
  	if (!params.speculative.model.empty() || !params.speculative.hf_repo.empty()) {
     	SRV_INF("loading draft model '%s'\n", params.speculative.model.c_str());
 		auto params_dft = params;
@@ -493,7 +493,7 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     LOG_INF("%s: chat template, chat_template: %s, example_format: '%s'\n", __func__,
         common_chat_templates_source(ctx_server->chat_templates.get()),
         common_chat_format_example(ctx_server->chat_templates.get(), ctx_server->params_base.use_jinja).c_str());
-        
+
 
     // print sample chat example to make it clear which template is used
 //    LOG_INF("%s: chat template, chat_template: %s, example_format: '%s'\n", __func__,
@@ -543,9 +543,9 @@ JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv 
     try
     {
 		const auto & prompt = data.at("prompt");
-		
+
         std::vector<llama_tokens> tokenized_prompts = tokenize_input_prompts(ctx_server->vocab, prompt, true, true);
-        
+
         tasks.reserve(tokenized_prompts.size());
         for (size_t i = 0; i < tokenized_prompts.size(); i++)
         {
@@ -600,7 +600,7 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIE
     auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
 
     server_task_result_ptr result = ctx_server->queue_results.recv(id_task);
-    
+
     if (result->is_error())
     {
         std::string response = result->to_json()["message"].get<std::string>();
@@ -609,9 +609,9 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIE
         return nullptr;
     }
     const auto out_res = result->to_json();
-    
 
-    
+
+
     std::string response = out_res["content"].get<std::string>();
     if (result->is_stop())
     {
@@ -652,11 +652,11 @@ JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env,
                       "model was not loaded with embedding support (see ModelParameters#setEmbedding(boolean))");
         return nullptr;
     }
-    
+
 
 
     const std::string prompt = parse_jstring(env, jprompt);
-    
+
     SRV_INF("Calling embedding '%s'\n", prompt.c_str());
 
     const auto tokens = tokenize_mixed(ctx_server->vocab, prompt, true, true);
@@ -716,7 +716,7 @@ JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env,
 	// Extract only the first row
 	const std::vector<float>& first_row = embedding[0];  // Reference to avoid copying
 
-	
+
 	// Create a new float array in JNI
 	jfloatArray j_embedding = env->NewFloatArray(embedding_cols);
 	if (j_embedding == nullptr) {
@@ -818,4 +818,12 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_setLogger(JNIEnv *env, jc
             llama_log_set(log_callback_trampoline, nullptr);
         }
     }
+}
+
+JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_jsonSchemaToGrammarBytes(JNIEnv *env, jclass clazz, jstring j_schema)
+{
+    const std::string c_schema = parse_jstring(env, j_schema);
+    nlohmann::ordered_json c_schema_json = nlohmann::ordered_json::parse(c_schema);
+    const std::string c_grammar = json_schema_to_grammar(c_schema_json);
+    return parse_jbytes(env, c_grammar);
 }

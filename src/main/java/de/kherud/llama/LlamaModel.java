@@ -132,4 +132,9 @@ public class LlamaModel implements AutoCloseable {
 	
 	private native void releaseTask(int taskId);
 
+	private static native byte[] jsonSchemaToGrammarBytes(String schema);
+	
+	public static String jsonSchemaToGrammar(String schema) {
+		return new String(jsonSchemaToGrammarBytes(schema), StandardCharsets.UTF_8);
+	}
 }

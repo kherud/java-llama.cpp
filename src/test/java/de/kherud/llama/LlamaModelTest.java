@@ -271,4 +271,29 @@ public class LlamaModelTest {
 			this.text = text;
 		}
 	}
+	
+	@Test
+	public void testJsonSchemaToGrammar() {
+		String schema = "{\n" +
+                "    \"properties\": {\n" +
+                "        \"a\": {\"type\": \"string\"},\n" +
+                "        \"b\": {\"type\": \"string\"},\n" +
+                "        \"c\": {\"type\": \"string\"}\n" +
+                "    },\n" +
+                "    \"additionalProperties\": false\n" +
+                "}";
+		
+		String expectedGrammar = "a-kv ::= \"\\\"a\\\"\" space \":\" space string\n" +
+                "a-rest ::= ( \",\" space b-kv )? b-rest\n" +
+                "b-kv ::= \"\\\"b\\\"\" space \":\" space string\n" +
+                "b-rest ::= ( \",\" space c-kv )?\n" +
+                "c-kv ::= \"\\\"c\\\"\" space \":\" space string\n" +
+                "char ::= [^\"\\\\\\x7F\\x00-\\x1F] | [\\\\] ([\"\\\\bfnrt] | \"u\" [0-9a-fA-F]{4})\n" +
+                "root ::= \"{\" space  (a-kv a-rest | b-kv b-rest | c-kv )? \"}\" space\n" +
+                "space ::= | \" \" | \"\\n\"{1,2} [ \\t]{0,20}\n" +
+                "string ::= \"\\\"\" char* \"\\\"\" space\n";
+		
+		String actualGrammar = LlamaModel.jsonSchemaToGrammar(schema);
+		Assert.assertEquals(expectedGrammar, actualGrammar);
+	}
 }
