@@ -16,9 +16,6 @@ Inference of Meta's LLaMA model (and others) in pure C/C++.
     2.3 [Infilling](#infilling)  
 3. [Android](#importing-in-android)
 
-> [!NOTE]
-> Now with support for Llama 3, Phi-3, and flash attention
-
 ## Quick Start
 
 Access this library via Maven:
@@ -27,18 +24,7 @@ Access this library via Maven:
 <dependency>
     <groupId>de.kherud</groupId>
     <artifactId>llama</artifactId>
-    <version>3.4.1</version>
-</dependency>
-```
-
-Bu default the default library artifact is built only with CPU inference support. To enable CUDA, use a `cuda12-linux-x86-64` maven classifier:
-
-```xml
-<dependency>
-    <groupId>de.kherud</groupId>
-    <artifactId>llama</artifactId>
-    <version>3.4.1</version>
-    <classifier>cuda12-linux-x86-64</classifier>
+    <version>4.0.0</version>
 </dependency>
 ```
 
@@ -50,11 +36,7 @@ We support CPU inference for the following platforms out of the box:
 
 - Linux x86-64, aarch64
 - MacOS x86-64, aarch64 (M-series)
-- Windows x86-64, x64, arm (32 bit)
-
-For GPU inference, we support:
-
-- Linux x86-64 with CUDA 12.1+
+- Windows x86-64, x64
 
 If any of these match your platform, you can include the Maven dependency and get started.
 
@@ -88,13 +70,9 @@ All compiled libraries will be put in a resources directory matching your platfo
 
 #### Library Location
 
-This project has to load three shared libraries:
+This project has to load a single shared library `jllama`.
 
-- ggml
-- llama
-- jllama
-
-Note, that the file names vary between operating systems, e.g., `ggml.dll` on Windows, `libggml.so` on Linux, and `libggml.dylib` on macOS.
+Note, that the file name varies between operating systems, e.g., `jllama.dll` on Windows, `jllama.so` on Linux, and `jllama.dylib` on macOS.
 
 The application will search in the following order in the following locations:
 
@@ -104,14 +82,6 @@ The application will search in the following order in the following locations:
   Use this option if you want to install the shared libraries as system libraries.
 - From the **JAR**: If any of the libraries weren't found yet, the application will try to use a prebuilt shared library.
   This of course only works for the [supported platforms](#no-setup-required) .
-
-Not all libraries have to be in the same location.
-For example, if you already have a llama.cpp and ggml version you can install them as a system library and rely on the jllama library from the JAR.
-This way, you don't have to compile anything. 
-
-#### CUDA 
-
-On Linux x86-64 with CUDA 12.1+, the library assumes that your CUDA libraries are findable in `java.library.path`. If you have CUDA installed in a non-standard location, then point the `java.library.path` to the directory containing the `libcudart.so.12` library.
 
 ## Documentation
 
@@ -234,7 +204,7 @@ LlamaModel.setLogger(null, (level, message) -> {});
 ## Importing in Android
 
 You can use this library in Android project.
-1. Add java-llama.cpp as a submodule in your android `app` project directory
+1. Add java-llama.cpp as a submodule in your an droid `app` project directory
 ```shell
 git submodule add https://github.com/kherud/java-llama.cpp 
 ```
