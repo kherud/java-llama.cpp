@@ -46,6 +46,7 @@ public final class InferenceParameters extends JsonParameters {
 	private static final String PARAM_SAMPLERS = "samplers";
 	private static final String PARAM_STREAM = "stream";
 	private static final String PARAM_USE_CHAT_TEMPLATE = "use_chat_template";
+	private static final String PARAM_USE_JINJA = "use_jinja";
 
 	public InferenceParameters(String prompt) {
 		// we always need a prompt
@@ -459,12 +460,6 @@ public final class InferenceParameters extends JsonParameters {
 					case TOP_K:
 						builder.append("\"top_k\"");
 						break;
-					case TFS_Z:
-						builder.append("\"tfs_z\"");
-						break;
-					case TYPICAL_P:
-						builder.append("\"typical_p\"");
-						break;
 					case TOP_P:
 						builder.append("\"top_p\"");
 						break;
@@ -494,8 +489,12 @@ public final class InferenceParameters extends JsonParameters {
 	 * Set whether or not generate should apply a chat template (default: false)
 	 */
 	public InferenceParameters setUseChatTemplate(boolean useChatTemplate) {
-		parameters.put(PARAM_USE_CHAT_TEMPLATE, String.valueOf(useChatTemplate));
+		parameters.put(PARAM_USE_JINJA, String.valueOf(useChatTemplate));
 		return this;
 	}
+	
+	
+	
+	
 
 }

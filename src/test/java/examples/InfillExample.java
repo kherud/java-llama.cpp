@@ -9,8 +9,8 @@ public class InfillExample {
 
 	public static void main(String... args) {
 		ModelParameters modelParams = new ModelParameters()
-				.setModelFilePath("models/codellama-7b.Q2_K.gguf")
-				.setNGpuLayers(43);
+				.setModel("models/codellama-7b.Q2_K.gguf")
+				.setGpuLayers(43);
 
 		String prefix = "def remove_non_ascii(s: str) -> str:\n    \"\"\" ";
 		String suffix = "\n    return result\n";
