@@ -10,10 +10,8 @@ set(BUILD_SHARED_LIBS OFF)
 
 option(LLAMA_VERBOSE	"llama: verbose output"		OFF)
 
-if(MSVC)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    add_compile_options(/MT)
-endif()
+message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
+message(STATUS "C++ Compiler Version: ${CMAKE_CXX_COMPILER_VERSION}")
 
 #################### json ####################
 

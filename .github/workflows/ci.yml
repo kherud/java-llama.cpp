@@ -65,8 +65,8 @@ jobs:
           if-no-files-found: warn
 
   build-and-test-windows:
-    name: windows-latest
-    runs-on: windows-latest
+    name: windows-2019
+    runs-on: windows-2019
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
