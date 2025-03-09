@@ -81,20 +81,19 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_delete
 
 /*
  * Class:     de_kherud_llama_LlamaModel
+ * Method:    releaseTask
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_releaseTask
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     de_kherud_llama_LlamaModel
  * Method:    jsonSchemaToGrammarBytes
  * Signature: (Ljava/lang/String;)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_jsonSchemaToGrammarBytes
   (JNIEnv *, jclass, jstring);
-
-
-/*
- * Class:     de_kherud_llama_LlamaModel
- * Method:    releaseTask
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_releaseTask
-  (JNIEnv *, jobject, jint);
 
 #ifdef __cplusplus
 }
