@@ -326,11 +326,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         goto error;
     }
 
-    printf("loaded JNI symbols\n"); fflush(stdout);
-
     llama_backend_init();
-
-    printf("loaded llama.cpp backend\n"); fflush(stdout);
 
     goto success;
 
@@ -395,7 +391,6 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
 {
     common_params params;
 
-    printf("load model\n"); fflush(stdout);
     const jsize argc = env->GetArrayLength(jparams);
     char **argv = parse_string_array(env, jparams, argc);
     if (argv == nullptr)
@@ -403,7 +398,6 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
         return;
     }
 
-    printf("loaded jargs\n"); fflush(stdout);
     const auto parsed_params = common_params_parse(argc, argv, params, LLAMA_EXAMPLE_SERVER);
     free_string_array(argv, argc);
     if (!parsed_params)
@@ -411,17 +405,15 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
         return;
     }
 
-    printf("parsed params\n"); fflush(stdout);
      SRV_INF("loading model '%s'\n", params.model.c_str());
 
     common_init();
 
-    printf("initialized common\n"); fflush(stdout);
     // struct that contains llama context and inference
     auto *ctx_server = new server_context();
 
+    llama_backend_init();
     llama_numa_init(params.numa);
-    printf("created ctx\n"); fflush(stdout);
 
     LOG_INF("system info: n_threads = %d, n_threads_batch = %d, total_threads = %d\n", params.cpuparams.n_threads,
             params.cpuparams_batch.n_threads, std::thread::hardware_concurrency());
