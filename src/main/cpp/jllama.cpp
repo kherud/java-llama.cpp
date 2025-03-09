@@ -326,8 +326,6 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         goto error;
     }
 
-    llama_backend_init();
-
     goto success;
 
 error:
