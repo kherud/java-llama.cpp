@@ -204,10 +204,10 @@ jobs:
           pattern: "*-libraries"
           merge-multiple: true
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
-      - uses: actions/download-artifact@v4
-        with:
-          name: linux-libraries-cuda
-          path: ${{ github.workspace }}/src/main/resources_linux_cuda/de/kherud/llama/
+#      - uses: actions/download-artifact@v4
+#        with:
+#          name: linux-libraries-cuda
+#          path: ${{ github.workspace }}/src/main/resources_linux_cuda/de/kherud/llama/
       - name: Set up Maven Central Repository
         uses: actions/setup-java@v3
         with:
