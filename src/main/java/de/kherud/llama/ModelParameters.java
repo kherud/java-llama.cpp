@@ -584,7 +584,7 @@ public final class ModelParameters extends CliParameters {
     }
 
     /**
-     * Set KV cache defragmentation threshold (default: 0.1, < 0 - disabled).
+     * Set KV cache defragmentation threshold (default: 0.1, &lt; 0 - disabled).
      */
     public ModelParameters setDefragThold(float defragThold) {
         parameters.put("--defrag-thold", String.valueOf(defragThold));
@@ -640,7 +640,7 @@ public final class ModelParameters extends CliParameters {
     }
 
     /**
-     * Set comma-separated list of devices to use for offloading <dev1,dev2,..> (none = don't offload).
+     * Set comma-separated list of devices to use for offloading &lt;dev1,dev2,..&gt; (none = don't offload).
      */
     public ModelParameters setDevices(String devices) {
         parameters.put("--device", devices);
