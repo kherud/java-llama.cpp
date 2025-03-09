@@ -62,8 +62,6 @@ class LlamaLoader {
 				System.err.println("'ggml-metal.metal' not found");
 			}
 		}
-		loadNativeLibrary("ggml");
-		loadNativeLibrary("llama");
 		loadNativeLibrary("jllama");
 		extracted = true;
 	}
@@ -166,7 +164,7 @@ class LlamaLoader {
 	 * @param path path of the native library
 	 * @return true for successfully loading, otherwise false
 	 */
-	private static boolean loadNativeLibrary(Path path) {
+	public static boolean loadNativeLibrary(Path path) {
 		if (!Files.exists(path)) {
 			return false;
 		}

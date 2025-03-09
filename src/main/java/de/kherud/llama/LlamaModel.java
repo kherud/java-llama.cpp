@@ -16,7 +16,7 @@ import java.util.function.BiConsumer;
  * <ul>
  *     <li>Streaming answers (and probabilities) via {@link #generate(InferenceParameters)}</li>
  *     <li>Creating whole responses to prompts via {@link #complete(InferenceParameters)}</li>
- *     <li>Creating embeddings via {@link #embed(String)} (make sure to configure {@link ModelParameters#setEmbedding(boolean)}</li>
+ *     <li>Creating embeddings via {@link #embed(String)} (make sure to configure {@link ModelParameters#enableEmbedding()}</li>
  *     <li>Accessing the tokenizer via {@link #encode(String)} and {@link #decode(int[])}</li>
  * </ul>
  */
@@ -32,16 +32,16 @@ public class LlamaModel implements AutoCloseable {
 	/**
 	 * Load with the given {@link ModelParameters}. Make sure to either set
 	 * <ul>
-	 *     <li>{@link ModelParameters#setModelFilePath(String)}</li>
+	 *     <li>{@link ModelParameters#setModel(String)}</li>
 	 *     <li>{@link ModelParameters#setModelUrl(String)}</li>
-	 *     <li>{@link ModelParameters#setHuggingFaceRepository(String)}}, {@link ModelParameters#setHuggingFaceFile(String)}</li>
+	 *     <li>{@link ModelParameters#setHfRepo(String)}, {@link ModelParameters#setHfFile(String)}</li>
 	 * </ul>
 	 *
 	 * @param parameters the set of options
 	 * @throws LlamaException if no model could be loaded from the given file path
 	 */
 	public LlamaModel(ModelParameters parameters) {
-		loadModel(parameters.toString());
+		loadModel(parameters.toArray());
 	}
 
 	/**
@@ -66,17 +66,19 @@ public class LlamaModel implements AutoCloseable {
 	public LlamaIterable generate(InferenceParameters parameters) {
 		return () -> new LlamaIterator(this, parameters);
 	}
-
+	
+	
+    
 	/**
 	 * Get the embedding of a string. Note, that the prompt isn't preprocessed in any way, nothing like
 	 * "User: ", "###Instruction", etc. is added.
 	 *
 	 * @param prompt the string to embed
 	 * @return an embedding float array
-	 * @throws IllegalStateException if embedding mode was not activated (see
-	 *                               {@link ModelParameters#setEmbedding(boolean)})
+	 * @throws IllegalStateException if embedding mode was not activated (see {@link ModelParameters#enableEmbedding()})
 	 */
-	public native float[] embed(String prompt);
+	public  native float[] embed(String prompt);
+		
 
 	/**
 	 * Tokenize a prompt given the native tokenizer
@@ -124,9 +126,11 @@ public class LlamaModel implements AutoCloseable {
 
 	native byte[] decodeBytes(int[] tokens);
 
-	private native void loadModel(String parameters) throws LlamaException;
+	private native void loadModel(String... parameters) throws LlamaException;
 
 	private native void delete();
+	
+	private native void releaseTask(int taskId);
 
 	private static native byte[] jsonSchemaToGrammarBytes(String schema);
 	

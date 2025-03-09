@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 @SuppressWarnings("UseOfSystemOutOrSystemErr")
 class OSInfo {
 	public static final String X86 = "x86";
+	public static final String X64 = "x64";
 	public static final String X86_64 = "x86_64";
 	public static final String IA64_32 = "ia64_32";
 	public static final String IA64 = "ia64";
@@ -78,6 +79,9 @@ class OSInfo {
 		archMapping.put("power_rs64", PPC64);
 		archMapping.put("ppc64el", PPC64);
 		archMapping.put("ppc64le", PPC64);
+		
+		// TODO: Adding X64 support
+		archMapping.put(X64, X64);
 	}
 
 	public static void main(String[] args) {

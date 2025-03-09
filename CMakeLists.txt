@@ -6,6 +6,7 @@ include(FetchContent)
 
 set(BUILD_SHARED_LIBS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(BUILD_SHARED_LIBS OFF)
 
 option(LLAMA_VERBOSE	"llama: verbose output"		OFF)
 
@@ -20,10 +21,11 @@ FetchContent_MakeAvailable(json)
 
 #################### llama.cpp ####################
 
+set(LLAMA_BUILD_COMMON ON)
 FetchContent_Declare(
 	llama.cpp
 	GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-	GIT_TAG        b3534
+	GIT_TAG        b4831
 )
 FetchContent_MakeAvailable(llama.cpp)
 
@@ -102,9 +104,10 @@ target_compile_definitions(jllama PRIVATE
 )
 
 if(OS_NAME STREQUAL "Windows")
-	set_target_properties(jllama llama ggml PROPERTIES
+    set_target_properties(jllama llama ggml PROPERTIES
 	  RUNTIME_OUTPUT_DIRECTORY_DEBUG ${JLLAMA_DIR}
 	  RUNTIME_OUTPUT_DIRECTORY_RELEASE ${JLLAMA_DIR}
+	  RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${JLLAMA_DIR}
 	)
 else()
 	set_target_properties(jllama llama ggml PROPERTIES

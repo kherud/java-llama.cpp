@@ -1,14 +1,13 @@
-# This work flow runs all Java tests for continuous integration.
-# Since it has to build llama.cpp first, for speed, it only runs / tests on the natively supported GitHub runners.
-
+---
 name: Continuous Integration
-on: [ "pull_request", "workflow_dispatch" ]
+on:
+  - pull_request
+  - workflow_dispatch
 env:
-  MODEL_URL: "https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf"
-  MODEL_NAME: "codellama-7b.Q2_K.gguf"
+  MODEL_URL: https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf
+  MODEL_NAME: codellama-7b.Q2_K.gguf
 jobs:
 
-  # don't split build and test jobs to keep the workflow simple
   build-and-test-linux:
     name: ubuntu-latest
     runs-on: ubuntu-latest
@@ -16,10 +15,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '11'
+          distribution: zulu
+          java-version: "11"
       - name: Build libraries
-        # cmake should figure out OS and ARCH automatically when running build.sh (but we need mvn compile for it)
         run: |
           mvn compile
           .github/build.sh -DLLAMA_VERBOSE=ON
@@ -41,20 +39,16 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - {
-            runner: macos-13,
-            cmake: '-DLLAMA_METAL=OFF -DLLAMA_VERBOSE=ON'
-          }
-          - {
-            runner: macos-14,
-            cmake: '-DLLAMA_METAL_EMBED_LIBRARY=ON -DLLAMA_METAL=OFF -DLLAMA_VERBOSE=ON'
-          }
+          - runner: macos-13
+            cmake: -DLLAMA_METAL=OFF -DLLAMA_VERBOSE=ON
+          - runner: macos-14
+            cmake: -DLLAMA_METAL_EMBED_LIBRARY=ON -DLLAMA_VERBOSE=ON
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '11'
+          distribution: zulu
+          java-version: "11"
       - name: Build libraries
         run: |
           mvn compile
@@ -71,8 +65,8 @@ jobs:
           if-no-files-found: warn
 
   build-and-test-windows:
-    name: windows-latest
-    runs-on: windows-latest
+    name: windows-2019
+    runs-on: windows-2019
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -90,6 +84,8 @@ jobs:
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: error-log-windows
-          path: ${{ github.workspace }}\hs_err_pid*.log
+          name: windows-output
+          path: |
+            ${{ github.workspace }}\hs_err_pid*.log
+            ${{ github.workspace }}/src/main/resources/de/kherud/llama/**/*
           if-no-files-found: warn

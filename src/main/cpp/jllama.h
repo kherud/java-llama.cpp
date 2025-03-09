@@ -66,10 +66,10 @@ JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_decodeBytes
 /*
  * Class:     de_kherud_llama_LlamaModel
  * Method:    loadModel
- * Signature: (Ljava/lang/String;)V
+ * Signature: ([Ljava/lang/String;)V
  */
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel
-  (JNIEnv *, jobject, jstring);
+  (JNIEnv *, jobject, jobjectArray);
 
 /*
  * Class:     de_kherud_llama_LlamaModel
@@ -78,7 +78,7 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel
  */
 JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_delete
   (JNIEnv *, jobject);
-  
+
 /*
  * Class:     de_kherud_llama_LlamaModel
  * Method:    jsonSchemaToGrammarBytes
@@ -86,6 +86,15 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_delete
  */
 JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_jsonSchemaToGrammarBytes
   (JNIEnv *, jclass, jstring);
+
+
+/*
+ * Class:     de_kherud_llama_LlamaModel
+ * Method:    releaseTask
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_releaseTask
+  (JNIEnv *, jobject, jint);
 
 #ifdef __cplusplus
 }
