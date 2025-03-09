@@ -26,7 +26,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 import org.jetbrains.annotations.Nullable;
@@ -94,176 +93,69 @@ class LlamaLoader {
 	}
 
 	private static void loadNativeLibrary(String name) {
-	    List<String> triedPaths = new LinkedList<>();
-	    boolean isDebug = System.getProperty("debug.native.loading", "false").equals("true");
-	    
-	    if (isDebug) {
-	        System.out.println("[DEBUG] Attempting to load native library: " + name);
-	        System.out.println("[DEBUG] Current working directory: " + System.getProperty("user.dir"));
-	        System.out.println("[DEBUG] java.library.path: " + System.getProperty("java.library.path", ""));
-	        System.out.println("[DEBUG] PATH environment: " + System.getenv("PATH"));
-	    }
+		List<String> triedPaths = new LinkedList<>();
 
-	    String nativeLibName = System.mapLibraryName(name);
-	    if (isDebug) {
-	        System.out.println("[DEBUG] Mapped library name: " + nativeLibName);
-	    }
-	    
-	    String nativeLibPath = System.getProperty("de.kherud.llama.lib.path");
-	    if (nativeLibPath != null) {
-	        Path path = Paths.get(nativeLibPath, nativeLibName);
-	        if (isDebug) {
-	            System.out.println("[DEBUG] Trying custom lib path: " + path);
-	        }
-	        if (loadNativeLibraryWithDebug(path, isDebug)) {
-	            return;
-	        } else {
-	            triedPaths.add(nativeLibPath);
-	        }
-	    }
+		String nativeLibName = System.mapLibraryName(name);
+		String nativeLibPath = System.getProperty("de.kherud.llama.lib.path");
+		if (nativeLibPath != null) {
+			Path path = Paths.get(nativeLibPath, nativeLibName);
+			if (loadNativeLibrary(path)) {
+				return;
+			}
+			else {
+				triedPaths.add(nativeLibPath);
+			}
+		}
 
-	    if (OSInfo.isAndroid()) {
-	        try {
-	            if (isDebug) {
-	                System.out.println("[DEBUG] Android detected, trying System.loadLibrary directly");
-	            }
-	            // loadLibrary can load directly from packed apk file automatically
-	            // if java-llama.cpp is added as code source
-	            System.loadLibrary(name);
-	            return;
-	        } catch (UnsatisfiedLinkError e) {
-	            if (isDebug) {
-	                System.out.println("[DEBUG] Failed to load from APK: " + e.getMessage());
-	            }
-	            triedPaths.add("Directly from .apk/lib");
-	        }
-	    }
+		if (OSInfo.isAndroid()) {
+			try {
+				// loadLibrary can load directly from packed apk file automatically
+				// if java-llama.cpp is added as code source
+				System.loadLibrary(name);
+				return;
+			}
+			catch (UnsatisfiedLinkError e) {
+				triedPaths.add("Directly from .apk/lib");
+			}
+		}
 
-	    // Try to load the library from java.library.path
-	    String javaLibraryPath = System.getProperty("java.library.path", "");
-	    for (String ldPath : javaLibraryPath.split(File.pathSeparator)) {
-	        if (ldPath.isEmpty()) {
-	            continue;
-	        }
-	        Path path = Paths.get(ldPath, nativeLibName);
-	        if (isDebug) {
-	            System.out.println("[DEBUG] Trying java.library.path entry: " + path);
-	            if (Files.exists(path)) {
-	                System.out.println("[DEBUG] File exists at path: " + path);
-	            } else {
-	                System.out.println("[DEBUG] File does NOT exist at path: " + path);
-	            }
-	        }
-	        if (loadNativeLibraryWithDebug(path, isDebug)) {
-	            return;
-	        } else {
-	            triedPaths.add(ldPath);
-	        }
-	    }
+		// Try to load the library from java.library.path
+		String javaLibraryPath = System.getProperty("java.library.path", "");
+		for (String ldPath : javaLibraryPath.split(File.pathSeparator)) {
+			if (ldPath.isEmpty()) {
+				continue;
+			}
+			Path path = Paths.get(ldPath, nativeLibName);
+			if (loadNativeLibrary(path)) {
+				return;
+			}
+			else {
+				triedPaths.add(ldPath);
+			}
+		}
 
-	    // As a last resort try load the os-dependent library from the jar file
-	    nativeLibPath = getNativeResourcePath();
-	    if (isDebug) {
-	        System.out.println("[DEBUG] Trying to extract from JAR, native resource path: " + nativeLibPath);
-	    }
-	    
-	    if (hasNativeLib(nativeLibPath, nativeLibName)) {
-	        // temporary library folder
-	        String tempFolder = getTempDir().getAbsolutePath();
-	        if (isDebug) {
-	            System.out.println("[DEBUG] Extracting library to temp folder: " + tempFolder);
-	        }
-	        
-	        // Try extracting the library from jar
-	        if (extractAndLoadLibraryFileWithDebug(nativeLibPath, nativeLibName, tempFolder, isDebug)) {
-	            return;
-	        } else {
-	            triedPaths.add(nativeLibPath);
-	        }
-	    } else if (isDebug) {
-	        System.out.println("[DEBUG] Native library not found in JAR at path: " + nativeLibPath + "/" + nativeLibName);
-	    }
+		// As a last resort try load the os-dependent library from the jar file
+		nativeLibPath = getNativeResourcePath();
+		if (hasNativeLib(nativeLibPath, nativeLibName)) {
+			// temporary library folder
+			String tempFolder = getTempDir().getAbsolutePath();
+			// Try extracting the library from jar
+			if (extractAndLoadLibraryFile(nativeLibPath, nativeLibName, tempFolder)) {
+				return;
+			}
+			else {
+				triedPaths.add(nativeLibPath);
+			}
+		}
 
-	    throw new UnsatisfiedLinkError(
-	        String.format(
-	            "No native library found for name=%s os.name=%s, os.arch=%s, paths=[%s]",
-	            name,
-	            OSInfo.getOSName(),
-	            OSInfo.getArchName(),
-	            String.join(File.pathSeparator, triedPaths)
-	        )
-	    );
-	}
-
-	// Add these helper methods
-
-	private static boolean loadNativeLibraryWithDebug(Path path, boolean isDebug) {
-	    try {
-	        if (isDebug) {
-	            System.out.println("[DEBUG] Attempting to load: " + path.toAbsolutePath());
-	        }
-	        
-	        if (!Files.exists(path)) {
-	            if (isDebug) System.out.println("[DEBUG] File doesn't exist: " + path);
-	            return false;
-	        }
-	        
-	        System.load(path.toAbsolutePath().toString());
-	        if (isDebug) System.out.println("[DEBUG] Successfully loaded: " + path);
-	        return true;
-	    } catch (UnsatisfiedLinkError e) {
-	        if (isDebug) {
-	            System.out.println("[DEBUG] Failed to load " + path + ": " + e.getMessage());
-	            e.printStackTrace();
-	        }
-	        return false;
-	    }
-	}
-
-	private static boolean extractAndLoadLibraryFileWithDebug(String libFolderForCurrentOS, String libraryFileName,
-	                                                         String targetFolder, boolean isDebug) {
-	    String nativeLibraryFilePath = libFolderForCurrentOS + "/" + libraryFileName;
-	    
-	    // Include architecture name in temporary filename to avoid naming conflicts
-	    String uuid = UUID.randomUUID().toString();
-	    String extractedLibFileName = String.format("%s-%s-%s", libraryFileName, uuid, OSInfo.getArchName());
-	    File extractedLibFile = new File(targetFolder, extractedLibFileName);
-	    
-	    try (InputStream reader = LlamaLoader.class.getResourceAsStream(nativeLibraryFilePath)) {
-	        if (isDebug) {
-	            System.out.println("[DEBUG] Extracting native library from JAR: " + nativeLibraryFilePath);
-	        }
-	        
-	        if (reader == null) {
-	            if (isDebug) System.out.println("[DEBUG] Cannot find native library in JAR: " + nativeLibraryFilePath);
-	            return false;
-	        }
-	        
-	        Files.copy(reader, extractedLibFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-	        
-	        if (isDebug) {
-	            System.out.println("[DEBUG] Extracted to: " + extractedLibFile.getAbsolutePath());
-	            System.out.println("[DEBUG] Attempting to load extracted file");
-	        }
-	        
-	        try {
-	            System.load(extractedLibFile.getAbsolutePath());
-	            if (isDebug) System.out.println("[DEBUG] Successfully loaded: " + extractedLibFile.getAbsolutePath());
-	            return true;
-	        } catch (UnsatisfiedLinkError e) {
-	            if (isDebug) {
-	                System.out.println("[DEBUG] Failed to load extracted library: " + e.getMessage());
-	                e.printStackTrace();
-	            }
-	            return false;
-	        }
-	    } catch (IOException e) {
-	        if (isDebug) {
-	            System.out.println("[DEBUG] Failed to extract library: " + e.getMessage());
-	            e.printStackTrace();
-	        }
-	        return false;
-	    }
+		throw new UnsatisfiedLinkError(
+				String.format(
+						"No native library found for os.name=%s, os.arch=%s, paths=[%s]",
+						OSInfo.getOSName(),
+						OSInfo.getArchName(),
+						String.join(File.pathSeparator, triedPaths)
+				)
+		);
 	}
 
 	/**
@@ -272,7 +164,7 @@ class LlamaLoader {
 	 * @param path path of the native library
 	 * @return true for successfully loading, otherwise false
 	 */
-	private static boolean loadNativeLibrary(Path path) {
+	public static boolean loadNativeLibrary(Path path) {
 		if (!Files.exists(path)) {
 			return false;
 		}
