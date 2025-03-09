@@ -326,6 +326,8 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         goto error;
     }
 
+    llama_backend_init();
+
     goto success;
 
 error:
@@ -410,7 +412,6 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     // struct that contains llama context and inference
     auto *ctx_server = new server_context();
 
-    llama_backend_init();
     llama_numa_init(params.numa);
 
     LOG_INF("system info: n_threads = %d, n_threads_batch = %d, total_threads = %d\n", params.cpuparams.n_threads,

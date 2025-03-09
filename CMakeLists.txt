@@ -10,9 +10,6 @@ set(BUILD_SHARED_LIBS OFF)
 
 option(LLAMA_VERBOSE	"llama: verbose output"		OFF)
 
-message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
-message(STATUS "C++ Compiler Version: ${CMAKE_CXX_COMPILER_VERSION}")
-
 #################### json ####################
 
 FetchContent_Declare(
