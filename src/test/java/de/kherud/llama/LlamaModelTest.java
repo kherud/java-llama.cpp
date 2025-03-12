@@ -158,6 +158,26 @@ public class LlamaModelTest {
 		float[] embedding = model.embed(prefix);
 		Assert.assertEquals(4096, embedding.length);
 	}
+	
+	
+	@Ignore
+	/**
+	 * To run this test download the model from here https://huggingface.co/mradermacher/jina-reranker-v1-tiny-en-GGUF/tree/main
+	 * remove .enableEmbedding() from model setup and add .enableReRanking() and then enable the test.
+	 */
+	public void testReRanking() {
+		
+		String query = "Machine learning is";
+		String [] TEST_DOCUMENTS = new String[] {
+				                  "A machine is a physical system that uses power to apply forces and control movement to perform an action. The term is commonly applied to artificial devices, such as those employing engines or motors, but also to natural biological macromolecules, such as molecular machines.",
+				                  "Learning is the process of acquiring new understanding, knowledge, behaviors, skills, values, attitudes, and preferences. The ability to learn is possessed by humans, non-human animals, and some machines; there is also evidence for some kind of learning in certain plants.",
+				                  "Machine learning is a field of study in artificial intelligence concerned with the development and study of statistical algorithms that can learn from data and generalize to unseen data, and thus perform tasks without explicit instructions.",
+				                  "Paris, capitale de la France, est une grande ville européenne et un centre mondial de l'art, de la mode, de la gastronomie et de la culture. Son paysage urbain du XIXe siècle est traversé par de larges boulevards et la Seine."
+		};
+		LlamaOutput llamaOutput = model.rerank(query, TEST_DOCUMENTS[0], TEST_DOCUMENTS[1], TEST_DOCUMENTS[2], TEST_DOCUMENTS[3] );
+		
+		System.out.println(llamaOutput);
+	}
 
 	@Test
 	public void testTokenization() {

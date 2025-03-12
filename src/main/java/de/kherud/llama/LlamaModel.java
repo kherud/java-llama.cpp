@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.lang.annotation.Native;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.function.BiConsumer;
 
 /**
@@ -137,4 +138,6 @@ public class LlamaModel implements AutoCloseable {
 	public static String jsonSchemaToGrammar(String schema) {
 		return new String(jsonSchemaToGrammarBytes(schema), StandardCharsets.UTF_8);
 	}
+	
+	public native LlamaOutput rerank(String query, String... documents);
 }
