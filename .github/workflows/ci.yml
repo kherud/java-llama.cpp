@@ -90,7 +90,7 @@ jobs:
       - name: Download model
         run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
       - name: Download reranking model 
-        run: curl -L ${RERANKING_MODEL_URL} --create-dirs -o models/${RERANKING_MODEL_NAME}
+        run: curl -L $env:RERANKING_MODEL_URL --create-dirs -o models/$env:RERANKING_MODEL_NAME
       - name: List files in models directory
         run: ls -l models/
       - name: Run tests
