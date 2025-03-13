@@ -6,6 +6,8 @@ on:
 env:
   MODEL_URL: https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf
   MODEL_NAME: codellama-7b.Q2_K.gguf
+  RERANKING_MODEL_URL: https://huggingface.co/gpustack/jina-reranker-v1-tiny-en-GGUF/resolve/main/jina-reranker-v1-tiny-en-Q4_0.gguf
+  RERANKING_MODEL_NAME: jina-reranker-v1-tiny-en-Q4_0.gguf
 jobs:
 
   build-and-test-linux:
@@ -21,8 +23,10 @@ jobs:
         run: |
           mvn compile
           .github/build.sh -DLLAMA_VERBOSE=ON
-      - name: Download model
+      - name: Download text generation model
         run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
+      - name: Download reranking model 
+        run: curl -L ${RERANKING_MODEL_URL} --create-dirs -o models/${RERANKING_MODEL_NAME}
       - name: Run tests
         run: mvn test
       - if: failure()
@@ -53,8 +57,11 @@ jobs:
         run: |
           mvn compile
           .github/build.sh ${{ matrix.target.cmake }}
-      - name: Download model
+      - name: Download text generaton model model
         run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
+      - name: Download reranking model 
+        run: curl -L ${RERANKING_MODEL_URL} --create-dirs -o models/${RERANKING_MODEL_NAME}
+
       - name: Run tests
         run: mvn test
       - if: failure()
@@ -79,6 +86,9 @@ jobs:
           .github\build.bat -DLLAMA_VERBOSE=ON
       - name: Download model
         run: curl -L $env:MODEL_URL --create-dirs -o models/$env:MODEL_NAME
+      - name: Download reranking model 
+        run: curl -L ${RERANKING_MODEL_URL} --create-dirs -o models/${RERANKING_MODEL_NAME}
+
       - name: Run tests
         run: mvn test
       - if: failure()
