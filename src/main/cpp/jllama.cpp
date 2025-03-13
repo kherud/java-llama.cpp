@@ -765,8 +765,6 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_rerank(JNIEnv *env, jo
     
 		const auto out_res = result->to_json();
     	
-		std::cout << out_res.dump(4) << std::endl;
-    	
 		if (result->is_stop()) {
 			for (const int id_task : task_ids) {
 				ctx_server->queue_results.remove_waiting_task_id(id_task);
