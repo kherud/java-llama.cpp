@@ -1,14 +1,10 @@
 package de.kherud.llama;
 
-import java.io.*;
-import java.util.*;
-import java.util.regex.Pattern;
+import java.util.Map;
 
-import de.kherud.llama.args.LogFormat;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class RerankingModelTest {
@@ -41,7 +37,32 @@ public class RerankingModelTest {
 		LlamaOutput llamaOutput = model.rerank(query, TEST_DOCUMENTS[0], TEST_DOCUMENTS[1], TEST_DOCUMENTS[2],
 				TEST_DOCUMENTS[3]);
 
-		System.out.println(llamaOutput);
+		Map<String, Float> rankedDocumentsMap = llamaOutput.probabilities;
+		Assert.assertTrue(rankedDocumentsMap.size()==TEST_DOCUMENTS.length);
+		
+		 // Finding the most and least relevant documents
+        String mostRelevantDoc = null;
+        String leastRelevantDoc = null;
+        float maxScore = Float.MIN_VALUE;
+        float minScore = Float.MAX_VALUE;
+
+        for (Map.Entry<String, Float> entry : rankedDocumentsMap.entrySet()) {
+            if (entry.getValue() > maxScore) {
+                maxScore = entry.getValue();
+                mostRelevantDoc = entry.getKey();
+            }
+            if (entry.getValue() < minScore) {
+                minScore = entry.getValue();
+                leastRelevantDoc = entry.getKey();
+            }
+        }
+
+        // Assertions
+        Assert.assertTrue(maxScore > minScore);
+        Assert.assertEquals("Machine learning is a field of study in artificial intelligence concerned with the development and study of statistical algorithms that can learn from data and generalize to unseen data, and thus perform tasks without explicit instructions.", mostRelevantDoc);
+        Assert.assertEquals("Paris, capitale de la France, est une grande ville européenne et un centre mondial de l'art, de la mode, de la gastronomie et de la culture. Son paysage urbain du XIXe siècle est traversé par de larges boulevards et la Seine.", leastRelevantDoc);
+
+		
 	}
 
 }
