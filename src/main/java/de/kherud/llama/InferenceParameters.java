@@ -1,7 +1,12 @@
 package de.kherud.llama;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import de.kherud.llama.args.MiroStat;
 import de.kherud.llama.args.Sampler;
@@ -12,6 +17,9 @@ import de.kherud.llama.args.Sampler;
  * {@link LlamaModel#complete(InferenceParameters)}.
  */
 public final class InferenceParameters extends JsonParameters {
+	
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(); // Reusable ObjectMapper
+
 
 	private static final String PARAM_PROMPT = "prompt";
 	private static final String PARAM_INPUT_PREFIX = "input_prefix";
@@ -47,6 +55,7 @@ public final class InferenceParameters extends JsonParameters {
 	private static final String PARAM_STREAM = "stream";
 	private static final String PARAM_USE_CHAT_TEMPLATE = "use_chat_template";
 	private static final String PARAM_USE_JINJA = "use_jinja";
+	private static final String PARAM_MESSAGES = "messages";
 
 	public InferenceParameters(String prompt) {
 		// we always need a prompt
@@ -493,7 +502,41 @@ public final class InferenceParameters extends JsonParameters {
 		return this;
 	}
 	
-	
+	/**
+     * Set the messages for chat-based inference.
+     * - Allows **only one** system message.
+     * - Allows **one or more** user/assistant messages.
+     */
+    public InferenceParameters setMessages(String systemMessage, List<Pair<String, String>> messages) {
+        ArrayNode messagesArray = OBJECT_MAPPER.createArrayNode();
+
+        // Add system message (if provided)
+        if (systemMessage != null && !systemMessage.isEmpty()) {
+            ObjectNode systemObj = OBJECT_MAPPER.createObjectNode();
+            systemObj.put("role", "system");
+            systemObj.put("content", systemMessage);
+            messagesArray.add(systemObj);
+        }
+
+        // Add user/assistant messages
+        for (Pair<String, String> message : messages) {
+            String role = message.getKey();
+            String content = message.getValue();
+
+            if (!role.equals("user") && !role.equals("assistant")) {
+                throw new IllegalArgumentException("Invalid role: " + role + ". Role must be 'user' or 'assistant'.");
+            }
+
+            ObjectNode messageObj = OBJECT_MAPPER.createObjectNode();
+            messageObj.put("role", role);
+            messageObj.put("content", content);
+            messagesArray.add(messageObj);
+        }
+
+        // Convert ArrayNode to a JSON string and store it in parameters
+        parameters.put(PARAM_MESSAGES, messagesArray.toString());
+        return this;
+    }
 	
 	
 

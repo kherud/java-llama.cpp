@@ -786,6 +786,20 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_rerank(JNIEnv *env, jo
     
 }
 
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_applyTemplate(JNIEnv *env, jobject obj, jstring jparams){
+ jlong server_handle = env->GetLongField(obj, f_model_pointer);
+    auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
+
+    std::string c_params = parse_jstring(env, jparams);
+    json data = json::parse(c_params);
+    
+    json templateData = oaicompat_completion_params_parse(data, ctx_server->params_base.use_jinja, ctx_server->params_base.reasoning_format, ctx_server->chat_templates.get());
+    std::string tok_str = templateData.at("prompt");
+	jstring jtok_str = env->NewStringUTF(tok_str.c_str());
+	
+	return jtok_str;
+}
+
 JNIEXPORT jintArray JNICALL Java_de_kherud_llama_LlamaModel_encode(JNIEnv *env, jobject obj, jstring jprompt) {
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
     auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)

@@ -316,4 +316,20 @@ public class LlamaModelTest {
 		String actualGrammar = LlamaModel.jsonSchemaToGrammar(schema);
 		Assert.assertEquals(expectedGrammar, actualGrammar);
 	}
+	
+	@Test
+	public void testTemplate() {
+		
+		List<Pair<String, String>> userMessages = new ArrayList<>();
+        userMessages.add(new Pair<>("user", "What is the best book?"));
+        userMessages.add(new Pair<>("assistant", "It depends on your interests. Do you like fiction or non-fiction?"));
+        
+		InferenceParameters params = new InferenceParameters("A book recommendation system.")
+				.setMessages("Book", userMessages)
+				.setTemperature(0.95f)
+				.setStopStrings("\"\"\"")
+				.setNPredict(nPredict)
+				.setSeed(42);
+		Assert.assertEquals(model.applyTemplate(params), "<|im_start|>system\nBook<|im_end|>\n<|im_start|>user\nWhat is the best book?<|im_end|>\n<|im_start|>assistant\nIt depends on your interests. Do you like fiction or non-fiction?<|im_end|>\n<|im_start|>assistant\n");
+	}
 }

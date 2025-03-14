@@ -163,4 +163,9 @@ public class LlamaModel implements AutoCloseable {
 	}
 	
 	public native LlamaOutput rerank(String query, String... documents);
+	
+	public  String applyTemplate(InferenceParameters parameters) {
+		return applyTemplate(parameters.toString());
+	}
+	public native String applyTemplate(String parametersJson);
 }
