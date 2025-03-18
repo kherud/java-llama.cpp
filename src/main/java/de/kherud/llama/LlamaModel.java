@@ -5,6 +5,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.lang.annotation.Native;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 
 /**
@@ -130,11 +133,39 @@ public class LlamaModel implements AutoCloseable {
 
 	private native void delete();
 	
-	private native void releaseTask(int taskId);
+	native void releaseTask(int taskId);
 
 	private static native byte[] jsonSchemaToGrammarBytes(String schema);
 	
 	public static String jsonSchemaToGrammar(String schema) {
 		return new String(jsonSchemaToGrammarBytes(schema), StandardCharsets.UTF_8);
 	}
+	
+	public List<Pair<String, Float>> rerank(boolean reRank, String query, String ... documents) {
+		LlamaOutput output = rerank(query, documents);
+		
+		Map<String, Float> scoredDocumentMap = output.probabilities;
+		
+		List<Pair<String, Float>> rankedDocuments = new ArrayList<>();
+		
+		if (reRank) {
+            // Sort in descending order based on Float values
+            scoredDocumentMap.entrySet()
+                    .stream()
+                    .sorted((a, b) -> Float.compare(b.getValue(), a.getValue())) // Descending order
+                    .forEach(entry -> rankedDocuments.add(new Pair<>(entry.getKey(), entry.getValue())));
+        } else {
+            // Copy without sorting
+            scoredDocumentMap.forEach((key, value) -> rankedDocuments.add(new Pair<>(key, value)));
+        }
+		
+		return rankedDocuments;
+	}
+	
+	public native LlamaOutput rerank(String query, String... documents);
+	
+	public  String applyTemplate(InferenceParameters parameters) {
+		return applyTemplate(parameters.toString());
+	}
+	public native String applyTemplate(String parametersJson);
 }

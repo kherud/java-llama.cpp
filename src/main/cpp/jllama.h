@@ -84,6 +84,20 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_releaseTask(JNIEnv *, job
  */
 JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_jsonSchemaToGrammarBytes(JNIEnv *, jclass, jstring);
 
+/*
+ * Class:     de_kherud_llama_LlamaModel
+ * Method:    rerank
+ * Signature: (Ljava/lang/String;[Ljava/lang/String;)Lde/kherud/llama/LlamaOutput;
+ */
+JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_rerank(JNIEnv *, jobject, jstring, jobjectArray);
+
+/*
+ * Class:     de_kherud_llama_LlamaModel
+ * Method:    applyTemplate
+ * Signature: (Ljava/lang/String;)Ljava/lang/String;;
+ */
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_applyTemplate(JNIEnv *, jobject, jstring);
+
 #ifdef __cplusplus
 }
 #endif

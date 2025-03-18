@@ -634,7 +634,6 @@ JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env,
     json error = nullptr;
 
     server_task_result_ptr result = ctx_server->queue_results.recv(id_task);
-    ctx_server->queue_results.remove_waiting_task_id(id_task);
 
     json response_str = result->to_json();
     if (result->is_error()) {
@@ -642,6 +641,10 @@ JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env,
         ctx_server->queue_results.remove_waiting_task_id(id_task);
         env->ThrowNew(c_llama_error, response.c_str());
         return nullptr;
+    }
+
+    if (result->is_stop()) {
+        ctx_server->queue_results.remove_waiting_task_id(id_task);
     }
 
     const auto out_res = result->to_json();
@@ -677,6 +680,102 @@ JNIEXPORT jfloatArray JNICALL Java_de_kherud_llama_LlamaModel_embed(JNIEnv *env,
     env->SetFloatArrayRegion(j_embedding, 0, embedding_cols, reinterpret_cast<const jfloat *>(first_row.data()));
 
     return j_embedding;
+}
+
+JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_rerank(JNIEnv *env, jobject obj, jstring jprompt,
+                                                                 jobjectArray documents) {
+    jlong server_handle = env->GetLongField(obj, f_model_pointer);
+    auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
+
+    if (!ctx_server->params_base.reranking || ctx_server->params_base.embedding) {
+        env->ThrowNew(c_llama_error,
+                      "This server does not support reranking. Start it with `--reranking` and without `--embedding`");
+        return nullptr;
+    }
+
+    const std::string prompt = parse_jstring(env, jprompt);
+
+    const auto tokenized_query = tokenize_mixed(ctx_server->vocab, prompt, true, true);
+
+    json responses = json::array();
+
+    std::vector<server_task> tasks;
+    const jsize amount_documents = env->GetArrayLength(documents);
+    auto *document_array = parse_string_array(env, documents, amount_documents);
+    auto document_vector = std::vector<std::string>(document_array, document_array + amount_documents);
+    free_string_array(document_array, amount_documents);
+
+    std::vector<llama_tokens> tokenized_docs = tokenize_input_prompts(ctx_server->vocab, document_vector, true, true);
+
+    tasks.reserve(tokenized_docs.size());
+    for (int i = 0; i < tokenized_docs.size(); i++) {
+        auto task = server_task(SERVER_TASK_TYPE_RERANK);
+        task.id = ctx_server->queue_tasks.get_new_id();
+        task.index = i;
+        task.prompt_tokens = format_rerank(ctx_server->vocab, tokenized_query, tokenized_docs[i]);
+        tasks.push_back(task);
+    }
+    ctx_server->queue_results.add_waiting_tasks(tasks);
+    ctx_server->queue_tasks.post(tasks);
+
+    // get the result
+    std::unordered_set<int> task_ids = server_task::get_list_id(tasks);
+    std::vector<server_task_result_ptr> results(task_ids.size());
+
+    // Create a new HashMap instance
+    jobject o_probabilities = env->NewObject(c_hash_map, cc_hash_map);
+    if (o_probabilities == nullptr) {
+        env->ThrowNew(c_llama_error, "Failed to create HashMap object.");
+        return nullptr;
+    }
+
+    for (int i = 0; i < (int)task_ids.size(); i++) {
+        server_task_result_ptr result = ctx_server->queue_results.recv(task_ids);
+        if (result->is_error()) {
+            auto response = result->to_json()["message"].get<std::string>();
+            for (const int id_task : task_ids) {
+                ctx_server->queue_results.remove_waiting_task_id(id_task);
+            }
+            env->ThrowNew(c_llama_error, response.c_str());
+            return nullptr;
+        }
+
+        const auto out_res = result->to_json();
+
+        if (result->is_stop()) {
+            for (const int id_task : task_ids) {
+                ctx_server->queue_results.remove_waiting_task_id(id_task);
+            }
+        }
+
+        int index = out_res["index"].get<int>();
+        float score = out_res["score"].get<float>();
+        std::string tok_str = document_vector[index];
+        jstring jtok_str = env->NewStringUTF(tok_str.c_str());
+
+        jobject jprob = env->NewObject(c_float, cc_float, score);
+        env->CallObjectMethod(o_probabilities, m_map_put, jtok_str, jprob);
+        env->DeleteLocalRef(jtok_str);
+        env->DeleteLocalRef(jprob);
+    }
+    jbyteArray jbytes = parse_jbytes(env, prompt);
+    return env->NewObject(c_output, cc_output, jbytes, o_probabilities, true);
+}
+
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_applyTemplate(JNIEnv *env, jobject obj, jstring jparams) {
+    jlong server_handle = env->GetLongField(obj, f_model_pointer);
+    auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
+
+    std::string c_params = parse_jstring(env, jparams);
+    json data = json::parse(c_params);
+
+    json templateData =
+        oaicompat_completion_params_parse(data, ctx_server->params_base.use_jinja,
+                                          ctx_server->params_base.reasoning_format, ctx_server->chat_templates.get());
+    std::string tok_str = templateData.at("prompt");
+    jstring jtok_str = env->NewStringUTF(tok_str.c_str());
+
+    return jtok_str;
 }
 
 JNIEXPORT jintArray JNICALL Java_de_kherud_llama_LlamaModel_encode(JNIEnv *env, jobject obj, jstring jprompt) {

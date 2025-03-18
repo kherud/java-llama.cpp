@@ -35,6 +35,9 @@ public final class LlamaIterator implements Iterator<LlamaOutput> {
         }
         LlamaOutput output = model.receiveCompletion(taskId);
         hasNext = !output.stop;
+        if (output.stop) {
+        	model.releaseTask(taskId);
+        }
         return output;
     }
 

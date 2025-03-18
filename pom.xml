@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
@@ -8,7 +9,8 @@
 	<packaging>jar</packaging>
 
 	<name>${project.groupId}:${project.artifactId}</name>
-	<description>Java Bindings for llama.cpp - A Port of Facebook's LLaMA model in C/C++.</description>
+	<description>Java Bindings for llama.cpp - A Port of Facebook's LLaMA model
+		in C/C++.</description>
 	<url>https://github.com/kherud/java-llama.cpp</url>
 
 	<licenses>
@@ -39,7 +41,8 @@
 		</snapshotRepository>
 		<repository>
 			<id>ossrh</id>
-			<url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+			<url>
+				https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
 		</repository>
 	</distributionManagement>
 
@@ -71,17 +74,21 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.13.0</version>
 				<executions>
-					<!-- We have to perform a separate build pass for cuda classifier -->
+					<!-- We have to perform a separate build pass for cuda
+					classifier -->
 					<execution>
 						<id>gpu</id>
 						<phase>compile</phase>
-						<goals><goal>compile</goal></goals>
+						<goals>
+							<goal>compile</goal>
+						</goals>
 						<configuration>
 							<compilerArgs>
 								<arg>-h</arg>
 								<arg>src/main/cpp</arg>
 							</compilerArgs>
-							<outputDirectory>${project.build.outputDirectory}_cuda</outputDirectory>
+							<outputDirectory>
+								${project.build.outputDirectory}_cuda</outputDirectory>
 						</configuration>
 					</execution>
 				</executions>
@@ -98,10 +105,12 @@
 							<goal>copy-resources</goal>
 						</goals>
 						<configuration>
-							<outputDirectory>${project.build.outputDirectory}_cuda</outputDirectory>
+							<outputDirectory>
+								${project.build.outputDirectory}_cuda</outputDirectory>
 							<resources>
 								<resource>
-									<directory>${basedir}/src/main/resources_linux_cuda/</directory>
+									<directory>
+										${basedir}/src/main/resources_linux_cuda/</directory>
 									<includes>
 										<include>**/*.*</include>
 									</includes>
@@ -176,7 +185,8 @@
 						<artifactId>maven-jar-plugin</artifactId>
 						<version>3.4.2</version>
 						<executions>
-							<!-- Pick class files AND libs from custom output directory -->
+							<!-- Pick class files AND libs from custom output
+							directory -->
 							<execution>
 								<id>cuda</id>
 								<phase>package</phase>
@@ -185,7 +195,8 @@
 								</goals>
 								<configuration>
 									<classifier>cuda12-linux-x86-64</classifier>
-									<classesDirectory>${project.build.outputDirectory}_cuda</classesDirectory>
+									<classesDirectory>
+										${project.build.outputDirectory}_cuda</classesDirectory>
 								</configuration>
 							</execution>
 						</executions>
