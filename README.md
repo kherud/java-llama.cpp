@@ -94,8 +94,8 @@ public class Example {
 
     public static void main(String... args) throws IOException {
         ModelParameters modelParams = new ModelParameters()
-                .setModelFilePath("/path/to/model.gguf")
-                .setNGpuLayers(43);
+                .setModel("models/mistral-7b-instruct-v0.2.Q2_K.gguf")
+                .setGpuLayers(43);
 
         String system = "This is a conversation between User and Llama, a friendly chatbot.\n" +
                 "Llama is helpful, kind, honest, good at writing, and never fails to answer any " +
@@ -114,8 +114,8 @@ public class Example {
                 InferenceParameters inferParams = new InferenceParameters(prompt)
                         .setTemperature(0.7f)
                         .setPenalizeNl(true)
-                        .setMirostat(InferenceParameters.MiroStat.V2)
-                        .setAntiPrompt("\n");
+                        .setMiroStat(MiroStat.V2)
+                        .setStopStrings("User:");
                 for (LlamaOutput output : model.generate(inferParams)) {
                     System.out.print(output);
                     prompt += output;
@@ -135,7 +135,7 @@ model to your prompt in order to extend the context. If there is repeated conten
 cache this, to improve performance.
 
 ```java
-ModelParameters modelParams = new ModelParameters().setModelFilePath("/path/to/model.gguf");
+ModelParameters modelParams = new ModelParameters().setModel("/path/to/model.gguf");
 InferenceParameters inferParams = new InferenceParameters("Tell me a joke.");
 try (LlamaModel model = new LlamaModel(modelParams)) {
     // Stream a response and access more information about each output.
@@ -167,9 +167,8 @@ for every inference task. All non-specified options have sensible defaults.
 
 ```java
 ModelParameters modelParams = new ModelParameters()
-        .setModelFilePath("/path/to/model.gguf")
-        .setLoraAdapter("/path/to/lora/adapter")
-        .setLoraBase("/path/to/lora/base");
+        .setModel("/path/to/model.gguf")
+        .addLoraAdapter("/path/to/lora/adapter");
 String grammar = """
 		root  ::= (expr "=" term "\\n")+
 		expr  ::= term ([-+*/] term)*
