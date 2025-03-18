@@ -4,10 +4,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import de.kherud.llama.args.MiroStat;
 import de.kherud.llama.args.Sampler;
 
@@ -16,10 +12,8 @@ import de.kherud.llama.args.Sampler;
  * and
  * {@link LlamaModel#complete(InferenceParameters)}.
  */
+@SuppressWarnings("unused")
 public final class InferenceParameters extends JsonParameters {
-	
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper(); // Reusable ObjectMapper
-
 
 	private static final String PARAM_PROMPT = "prompt";
 	private static final String PARAM_INPUT_PREFIX = "input_prefix";
@@ -489,13 +483,8 @@ public final class InferenceParameters extends JsonParameters {
 		return this;
 	}
 
-	InferenceParameters setStream(boolean stream) {
-		parameters.put(PARAM_STREAM, String.valueOf(stream));
-		return this;
-	}
-
 	/**
-	 * Set whether or not generate should apply a chat template (default: false)
+	 * Set whether generate should apply a chat template (default: false)
 	 */
 	public InferenceParameters setUseChatTemplate(boolean useChatTemplate) {
 		parameters.put(PARAM_USE_JINJA, String.valueOf(useChatTemplate));
@@ -508,18 +497,22 @@ public final class InferenceParameters extends JsonParameters {
      * - Allows **one or more** user/assistant messages.
      */
     public InferenceParameters setMessages(String systemMessage, List<Pair<String, String>> messages) {
-        ArrayNode messagesArray = OBJECT_MAPPER.createArrayNode();
+		StringBuilder messagesBuilder = new StringBuilder();
+		messagesBuilder.append("[");
 
         // Add system message (if provided)
         if (systemMessage != null && !systemMessage.isEmpty()) {
-            ObjectNode systemObj = OBJECT_MAPPER.createObjectNode();
-            systemObj.put("role", "system");
-            systemObj.put("content", systemMessage);
-            messagesArray.add(systemObj);
+			messagesBuilder.append("{\"role\": \"system\", \"content\": ")
+					.append(toJsonString(systemMessage))
+					.append("}");
+			if (!messages.isEmpty()) {
+				messagesBuilder.append(", ");
+			}
         }
 
         // Add user/assistant messages
-        for (Pair<String, String> message : messages) {
+        for (int i = 0; i < messages.size(); i++) {
+            Pair<String, String> message = messages.get(i);
             String role = message.getKey();
             String content = message.getValue();
 
@@ -527,17 +520,27 @@ public final class InferenceParameters extends JsonParameters {
                 throw new IllegalArgumentException("Invalid role: " + role + ". Role must be 'user' or 'assistant'.");
             }
 
-            ObjectNode messageObj = OBJECT_MAPPER.createObjectNode();
-            messageObj.put("role", role);
-            messageObj.put("content", content);
-            messagesArray.add(messageObj);
+			messagesBuilder.append("{\"role\":")
+					.append(toJsonString(role))
+					.append(", \"content\": ")
+					.append(toJsonString(content))
+					.append("}");
+
+			if (i < messages.size() - 1) {
+				messagesBuilder.append(", ");
+			}
         }
 
+		messagesBuilder.append("]");
+
         // Convert ArrayNode to a JSON string and store it in parameters
-        parameters.put(PARAM_MESSAGES, messagesArray.toString());
+        parameters.put(PARAM_MESSAGES, messagesBuilder.toString());
         return this;
     }
-	
-	
+
+	InferenceParameters setStream(boolean stream) {
+		parameters.put(PARAM_STREAM, String.valueOf(stream));
+		return this;
+	}
 
 }
