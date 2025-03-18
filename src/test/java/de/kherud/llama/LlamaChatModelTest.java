@@ -92,7 +92,7 @@ public class LlamaChatModelTest {
 
 	    InferenceParameters params = new InferenceParameters("AI Chatbot.")
 	            .setMessages("AI", userMessages)
-	            .setTemperature(0.7f)
+	            .setTemperature(0f)
 	            .setSeed(42) // Fixed seed for reproducibility
 	            .setNPredict(50);
 
