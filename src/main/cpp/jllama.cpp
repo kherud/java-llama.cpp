@@ -112,28 +112,6 @@ char **parse_string_array(JNIEnv *env, const jobjectArray string_array, const js
     return result;
 }
 
-std::vector<std::string> parse_string_array_for_rerank(JNIEnv *env, const jobjectArray string_array,
-                                                       const jsize length) {
-    std::vector<std::string> result;
-    result.reserve(length); // Reserve memory for efficiency
-
-    for (jsize i = 0; i < length; i++) {
-        jstring javaString = static_cast<jstring>(env->GetObjectArrayElement(string_array, i));
-        if (javaString == nullptr)
-            continue;
-
-        const char *cString = env->GetStringUTFChars(javaString, nullptr);
-        if (cString != nullptr) {
-            result.emplace_back(cString); // Add to vector
-            env->ReleaseStringUTFChars(javaString, cString);
-        }
-
-        env->DeleteLocalRef(javaString); // Avoid memory leaks
-    }
-
-    return result;
-}
-
 void free_string_array(char **array, jsize length) {
     if (array != nullptr) {
         for (jsize i = 0; i < length; i++) {
@@ -720,17 +698,18 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_rerank(JNIEnv *env, jo
     const auto tokenized_query = tokenize_mixed(ctx_server->vocab, prompt, true, true);
 
     json responses = json::array();
-    bool error = false;
 
     std::vector<server_task> tasks;
-    const jsize argc = env->GetArrayLength(documents);
-    std::vector<std::string> documentsArray = parse_string_array_for_rerank(env, documents, argc);
+    const jsize amount_documents = env->GetArrayLength(documents);
+    auto *document_array = parse_string_array(env, documents, amount_documents);
+    auto document_vector = std::vector<std::string>(document_array, document_array + amount_documents);
+    free_string_array(document_array, amount_documents);
 
-    std::vector<llama_tokens> tokenized_docs = tokenize_input_prompts(ctx_server->vocab, documentsArray, true, true);
+    std::vector<llama_tokens> tokenized_docs = tokenize_input_prompts(ctx_server->vocab, document_vector, true, true);
 
     tasks.reserve(tokenized_docs.size());
-    for (size_t i = 0; i < tokenized_docs.size(); i++) {
-        server_task task = server_task(SERVER_TASK_TYPE_RERANK);
+    for (int i = 0; i < tokenized_docs.size(); i++) {
+        auto task = server_task(SERVER_TASK_TYPE_RERANK);
         task.id = ctx_server->queue_tasks.get_new_id();
         task.index = i;
         task.prompt_tokens = format_rerank(ctx_server->vocab, tokenized_query, tokenized_docs[i]);
@@ -753,7 +732,7 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_rerank(JNIEnv *env, jo
     for (int i = 0; i < (int)task_ids.size(); i++) {
         server_task_result_ptr result = ctx_server->queue_results.recv(task_ids);
         if (result->is_error()) {
-            std::string response = result->to_json()["message"].get<std::string>();
+            auto response = result->to_json()["message"].get<std::string>();
             for (const int id_task : task_ids) {
                 ctx_server->queue_results.remove_waiting_task_id(id_task);
             }
@@ -771,7 +750,7 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_rerank(JNIEnv *env, jo
 
         int index = out_res["index"].get<int>();
         float score = out_res["score"].get<float>();
-        std::string tok_str = documentsArray[index];
+        std::string tok_str = document_vector[index];
         jstring jtok_str = env->NewStringUTF(tok_str.c_str());
 
         jobject jprob = env->NewObject(c_float, cc_float, score);
