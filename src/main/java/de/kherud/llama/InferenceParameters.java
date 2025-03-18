@@ -543,4 +543,8 @@ public final class InferenceParameters extends JsonParameters {
 		return this;
 	}
 
+	public String get(String field) {
+		return parameters.get(field);
+	}
+
 }
