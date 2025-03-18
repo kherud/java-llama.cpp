@@ -65,11 +65,6 @@
 			<version>24.1.0</version>
 			<scope>compile</scope>
 		</dependency>
-		<dependency>
-    		<groupId>com.fasterxml.jackson.core</groupId>
-    		<artifactId>jackson-databind</artifactId>
-    		<version>2.16.0</version> <!-- Use the latest version -->
-		</dependency>
 	</dependencies>
 
 	<build>
