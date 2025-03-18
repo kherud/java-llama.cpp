@@ -27,11 +27,7 @@ Access this library via Maven:
 <dependency>
     <groupId>de.kherud</groupId>
     <artifactId>llama</artifactId>
-<<<<<<< HEAD
-    <version>4.0.1</version>
-=======
     <version>4.1.0</version>
->>>>>>> 481714559fd5c80bad3a51edfa4c5887c0b528b3
 </dependency>
 ```
 
