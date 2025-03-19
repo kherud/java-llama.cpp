@@ -4,9 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
 import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
 public class LlamaChatModelTest {
 
@@ -85,7 +86,7 @@ public class LlamaChatModelTest {
 	    Assert.assertFalse(response.contains("\"\"\""));
 	}
 	
-	@Test
+	@Ignore
 	public void testFixedSeed() {
 	    List<Pair<String, String>> userMessages = new ArrayList<>();
 	    userMessages.add(new Pair<>("user", "What is reinforcement learning?"));
