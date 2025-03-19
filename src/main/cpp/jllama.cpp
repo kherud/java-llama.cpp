@@ -493,6 +493,69 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
     env->SetLongField(obj, f_model_pointer, reinterpret_cast<jlong>(ctx_server));
 }
 
+JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestChat(JNIEnv *env, jobject obj, jstring jparams) {
+    jlong server_handle = env->GetLongField(obj, f_model_pointer);
+    auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
+
+    std::string c_params = parse_jstring(env, jparams);
+    json data = json::parse(c_params);
+    std::cout << "dumping data" << std::endl;
+    std::cout << data.dump(4) << std::endl;
+	json oi_params = oaicompat_completion_params_parse(data, ctx_server->params_base.use_jinja, ctx_server->params_base.reasoning_format, ctx_server->chat_templates.get());
+	std::cout << "dumping oi_params" << std::endl;
+	std::cout << oi_params.dump(4) << std::endl;
+
+    server_task_type type = SERVER_TASK_TYPE_COMPLETION;
+
+    if (oi_params.contains("input_prefix") || oi_params.contains("input_suffix")) {
+        type = SERVER_TASK_TYPE_INFILL;
+    }
+
+    auto completion_id = gen_chatcmplid();
+    std::vector<server_task> tasks;
+
+    try {
+        const auto &prompt = oi_params.at("prompt");
+
+        std::vector<llama_tokens> tokenized_prompts = tokenize_input_prompts(ctx_server->vocab, prompt, true, true);
+
+        tasks.reserve(tokenized_prompts.size());
+        for (size_t i = 0; i < tokenized_prompts.size(); i++) {
+            server_task task = server_task(type);
+
+            task.id = ctx_server->queue_tasks.get_new_id();
+            task.index = i;
+
+            task.prompt_tokens = std::move(tokenized_prompts[i]);
+            task.params = server_task::params_from_json_cmpl(ctx_server->ctx, ctx_server->params_base, oi_params);
+            task.id_selected_slot = json_value(oi_params, "id_slot", -1);
+
+            // OAI-compat
+            task.params.oaicompat = OAICOMPAT_TYPE_CHAT;
+            task.params.oaicompat_cmpl_id = completion_id;
+            // oaicompat_model is already populated by params_from_json_cmpl
+
+            tasks.push_back(task);
+        }
+    } catch (const std::exception &e) {
+        const auto &err = format_error_response(e.what(), ERROR_TYPE_INVALID_REQUEST);
+        env->ThrowNew(c_llama_error, err.dump().c_str());
+        return 0;
+    }
+
+    ctx_server->queue_results.add_waiting_tasks(tasks);
+    ctx_server->queue_tasks.post(tasks);
+
+    const auto task_ids = server_task::get_list_id(tasks);
+
+    if (task_ids.size() != 1) {
+        env->ThrowNew(c_llama_error, "multitasking currently not supported");
+        return 0;
+    }
+
+    return *task_ids.begin();
+}
+
 JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv *env, jobject obj, jstring jparams) {
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
     auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
@@ -557,6 +620,31 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_releaseTask(JNIEnv *env, 
     ctx_server->queue_results.remove_waiting_task_id(id_task);
 }
 
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_receiveChatCompletion(JNIEnv *env, jobject obj, jint id_task) {
+    jlong server_handle = env->GetLongField(obj, f_model_pointer);
+    auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
+
+    server_task_result_ptr result = ctx_server->queue_results.recv(id_task);
+
+    if (result->is_error()) {
+        std::string response = result->to_json()["message"].get<std::string>();
+        ctx_server->queue_results.remove_waiting_task_id(id_task);
+        env->ThrowNew(c_llama_error, response.c_str());
+        return nullptr;
+    }
+    const auto out_res = result->to_json();
+    std::cout << out_res.dump(4) << std::endl;
+
+    
+    if (result->is_stop()) {
+        ctx_server->queue_results.remove_waiting_task_id(id_task);
+    }
+    
+    jstring jtok_str = env->NewStringUTF(out_res.dump(4).c_str());
+
+    return jtok_str;
+}
+
 JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIEnv *env, jobject obj, jint id_task) {
     jlong server_handle = env->GetLongField(obj, f_model_pointer);
     auto *ctx_server = reinterpret_cast<server_context *>(server_handle); // NOLINT(*-no-int-to-ptr)
@@ -570,6 +658,7 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIE
         return nullptr;
     }
     const auto out_res = result->to_json();
+    std::cout << out_res.dump(4) << std::endl;
 
     std::string response = out_res["content"].get<std::string>();
     if (result->is_stop()) {

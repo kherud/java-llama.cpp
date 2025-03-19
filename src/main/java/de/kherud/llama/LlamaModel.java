@@ -68,11 +68,10 @@ public class LlamaModel implements AutoCloseable {
 	 */
 	public String completeChat(InferenceParameters parameters) {
 		parameters.setStream(false);
-		String prompt = applyTemplate(parameters);
-		parameters.setPrompt(prompt);
-		int taskId = requestCompletion(parameters.toString());
-		LlamaOutput output = receiveCompletion(taskId);
-		return output.text;
+		
+		int taskId = requestChat(parameters.toString());
+		String output = receiveChatCompletion(taskId);
+		return output;
 	}
 
 	/**
@@ -148,9 +147,13 @@ public class LlamaModel implements AutoCloseable {
 
 	// don't overload native methods since the C++ function names get nasty
 	native int requestCompletion(String params) throws LlamaException;
+	
+	native int requestChat(String params) throws LlamaException;
 
 	native LlamaOutput receiveCompletion(int taskId) throws LlamaException;
-
+	
+	native String receiveChatCompletion(int taskId) throws LlamaException;
+	
 	native void cancelCompletion(int taskId);
 
 	native byte[] decodeBytes(int[] tokens);

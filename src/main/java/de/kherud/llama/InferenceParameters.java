@@ -50,6 +50,9 @@ public final class InferenceParameters extends JsonParameters {
 	private static final String PARAM_USE_CHAT_TEMPLATE = "use_chat_template";
 	private static final String PARAM_USE_JINJA = "use_jinja";
 	private static final String PARAM_MESSAGES = "messages";
+	private static final String PARAM_TOOLS = "tools";
+	private static final String PARAM_TOOL_CHOICE = "tool_choice";
+	private static final String PARAM_PARALLEL_TOOL_CALLS = "parallel_tool_calls";
 
 	public InferenceParameters(String prompt) {
 		// we always need a prompt
@@ -537,9 +540,31 @@ public final class InferenceParameters extends JsonParameters {
         parameters.put(PARAM_MESSAGES, messagesBuilder.toString());
         return this;
     }
+    
+    
 
 	InferenceParameters setStream(boolean stream) {
 		parameters.put(PARAM_STREAM, String.valueOf(stream));
+		return this;
+	}
+	
+	/**
+	 * Set Tools
+	 */
+	public InferenceParameters setTools(String... tools) {
+		StringBuilder toolBuilder = new StringBuilder();
+		
+		for (String tool:tools) {
+			if (toolBuilder.length() > 0) {
+				toolBuilder.append(",");
+			}
+			toolBuilder.append(tool);
+			
+		}
+		
+ 		parameters.put(PARAM_TOOLS, "[" + toolBuilder.toString() +"]");
+ 		parameters.put(PARAM_TOOL_CHOICE, toJsonString("required"));
+// 		parameters.put(PARAM_PARALLEL_TOOL_CALLS,String.valueOf(false));
 		return this;
 	}
 
