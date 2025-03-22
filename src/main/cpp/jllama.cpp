@@ -499,11 +499,7 @@ JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestChat(JNIEnv *env, 
 
     std::string c_params = parse_jstring(env, jparams);
     json data = json::parse(c_params);
-    std::cout << "dumping data" << std::endl;
-    std::cout << data.dump(4) << std::endl;
 	json oi_params = oaicompat_completion_params_parse(data, ctx_server->params_base.use_jinja, ctx_server->params_base.reasoning_format, ctx_server->chat_templates.get());
-	std::cout << "dumping oi_params" << std::endl;
-	std::cout << oi_params.dump(4) << std::endl;
 
     server_task_type type = SERVER_TASK_TYPE_COMPLETION;
 
@@ -633,8 +629,6 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_receiveChatCompletion(
         return nullptr;
     }
     const auto out_res = result->to_json();
-    std::cout << out_res.dump(4) << std::endl;
-
     
     if (result->is_stop()) {
         ctx_server->queue_results.remove_waiting_task_id(id_task);
@@ -658,7 +652,7 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIE
         return nullptr;
     }
     const auto out_res = result->to_json();
-    std::cout << out_res.dump(4) << std::endl;
+    
 
     std::string response = out_res["content"].get<std::string>();
     if (result->is_stop()) {
@@ -949,4 +943,500 @@ JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_jsonSchemaToGrammar
     nlohmann::ordered_json c_schema_json = nlohmann::ordered_json::parse(c_schema);
     const std::string c_grammar = json_schema_to_grammar(c_schema_json);
     return parse_jbytes(env, c_grammar);
+}
+
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_handleCompletions(
+    JNIEnv *env, jobject obj, jstring jrequestData, jboolean jstream, jint jtaskType) {
+    
+    try {
+        jlong server_handle = env->GetLongField(obj, f_model_pointer);
+        if (server_handle == 0) {
+            env->ThrowNew(c_llama_error, "Model is not loaded");
+            return nullptr;
+        }
+        
+        auto *ctx_server = reinterpret_cast<server_context *>(server_handle);
+        
+        if (ctx_server->params_base.embedding) {
+            env->ThrowNew(c_llama_error, "This server does not support completions. Start it without `--embeddings`");
+            return nullptr;
+        }
+        
+        // Parse input data
+        std::string request_str = parse_jstring(env, jrequestData);
+        json data = json::parse(request_str);
+        
+        // Set streaming flag if requested
+        bool stream = jstream;
+        data["stream"] = stream;
+        
+        // Determine task type (completion, chat, infill)
+        server_task_type task_type = static_cast<server_task_type>(jtaskType);
+        oaicompat_type oai_type = OAICOMPAT_TYPE_NONE;
+        
+        // Handle chat completions with OAI format if needed
+        if (task_type == SERVER_TASK_TYPE_COMPLETION && data.contains("messages")) {
+            // This is a chat completion request
+            data = oaicompat_completion_params_parse(
+                data, 
+                ctx_server->params_base.use_jinja,
+                ctx_server->params_base.reasoning_format, 
+                ctx_server->chat_templates.get());
+            oai_type = OAICOMPAT_TYPE_CHAT;
+        } else if (data.contains("oai_compatible") && data["oai_compatible"].is_boolean() && data["oai_compatible"].get<bool>()) {
+            // Regular completion with OAI compatibility requested
+            oai_type = OAICOMPAT_TYPE_COMPLETION;
+        }
+        
+        // Create a completion ID
+        auto completion_id = gen_chatcmplid();
+        std::vector<server_task> tasks;
+        
+        // Process prompt(s)
+        const auto &prompt = data.at("prompt");
+        std::vector<llama_tokens> tokenized_prompts = tokenize_input_prompts(
+            ctx_server->vocab, prompt, true, true);
+            
+        tasks.reserve(tokenized_prompts.size());
+        for (size_t i = 0; i < tokenized_prompts.size(); i++) {
+            server_task task(task_type);
+            
+            task.id = ctx_server->queue_tasks.get_new_id();
+            task.index = i;
+            
+            task.prompt_tokens = std::move(tokenized_prompts[i]);
+            task.params = server_task::params_from_json_cmpl(
+                ctx_server->ctx, ctx_server->params_base, data);
+                
+            task.id_selected_slot = json_value(data, "id_slot", -1);
+            
+            // OAI compatibility
+            task.params.oaicompat = oai_type;
+            task.params.oaicompat_cmpl_id = completion_id;
+            
+            tasks.push_back(task);
+        }
+        
+        // Submit tasks
+        ctx_server->queue_results.add_waiting_tasks(tasks);
+        ctx_server->queue_tasks.post(tasks);
+        
+        // Get task IDs
+        const auto task_ids = server_task::get_list_id(tasks);
+        
+        // Create response JSON
+        json response;
+        
+        if (!stream) {
+    		// For non-streaming, collect all results
+    		std::vector<server_task_result_ptr> results;
+    		results.reserve(tasks.size());
+    
+    		for (size_t i = 0; i < tasks.size(); i++) {
+        		server_task_result_ptr result = ctx_server->queue_results.recv(task_ids);
+        
+        		if (result->is_error()) {
+            		// Clean up and throw error
+            		ctx_server->queue_results.remove_waiting_task_ids(task_ids);
+            		std::string error_msg = result->to_json()["message"].get<std::string>();
+            		env->ThrowNew(c_llama_error, error_msg.c_str());
+            		return nullptr;
+        		}
+        
+        		results.push_back(std::move(result));
+    		}
+    
+    		// Format the response
+    		response["type"] = "completion";
+    		response["streaming"] = false;
+    		response["completion_id"] = completion_id;
+    
+    		if (results.size() == 1) {
+        		// Single result - preserve all the data including token probabilities
+        		auto result_json = results[0]->to_json();
+        
+        		// Check if this is a final completion result that might have probabilities
+        		auto *cmpl_final = dynamic_cast<server_task_result_cmpl_final*>(results[0].get());
+        		
+        		
+        		if (cmpl_final != nullptr && !cmpl_final->probs_output.empty() && cmpl_final->post_sampling_probs) {
+            		// Make sure the token probabilities are included
+            		result_json["completion_probabilities"] = 
+                	completion_token_output::probs_vector_to_json(cmpl_final->probs_output, 
+                                                              cmpl_final->post_sampling_probs);
+        		}
+        
+        		response["result"] = result_json;
+    		} else {
+        		// Multiple results
+        		json results_array = json::array();
+        		for (auto &res : results) {
+            		auto result_json = res->to_json();
+            
+		            // Check for token probabilities in each result
+        		    auto *cmpl_final = dynamic_cast<server_task_result_cmpl_final*>(res.get());
+        		    
+            		if (cmpl_final != nullptr && !cmpl_final->probs_output.empty() && cmpl_final->post_sampling_probs) {
+                		// Make sure the token probabilities are included
+                		result_json["completion_probabilities"] = 
+                    		completion_token_output::probs_vector_to_json(cmpl_final->probs_output, 
+                                                                 cmpl_final->post_sampling_probs);
+            		}
+            
+            		results_array.push_back(result_json);
+        		}
+        		response["results"] = results_array;
+    		}
+    
+    		// Clean up
+    		ctx_server->queue_results.remove_waiting_task_ids(task_ids);
+
+        } else {
+            // For streaming, return the task IDs
+            response["type"] = "stream_init";
+            response["streaming"] = true;
+            response["completion_id"] = completion_id;
+            
+            // Convert set to array
+            json task_ids_array = json::array();
+            for (const auto& id : task_ids) {
+                task_ids_array.push_back(id);
+            }
+            response["task_ids"] = task_ids_array;
+            
+            SRV_INF("Started streaming completion with %zu task(s)\n", task_ids.size());
+        }
+        
+        // Return the response as a JSON string
+        std::string response_str = response.dump();
+        jstring result = env->NewStringUTF(response_str.c_str());
+        
+        return result;
+    } catch (const std::exception &e) {
+        SRV_ERR("Exception in handleCompletions: %s\n", e.what());
+        env->ThrowNew(c_llama_error, e.what());
+        return nullptr;
+    }
+}
+
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getNextStreamResult(
+    JNIEnv *env, jobject obj, jint taskId) {
+    
+    try {
+        jlong server_handle = env->GetLongField(obj, f_model_pointer);
+        if (server_handle == 0) {
+            env->ThrowNew(c_llama_error, "Model is not loaded");
+            return nullptr;
+        }
+        
+        auto *ctx_server = reinterpret_cast<server_context *>(server_handle);
+        
+        // Get next result chunk
+        server_task_result_ptr result = ctx_server->queue_results.recv(taskId);
+        
+        if (result->is_error()) {
+            ctx_server->queue_results.remove_waiting_task_id(taskId);
+            std::string error_msg = result->to_json()["message"].get<std::string>();
+            env->ThrowNew(c_llama_error, error_msg.c_str());
+            return nullptr;
+        }
+        
+        // Create response JSON with metadata
+        json response;
+        response["type"] = "stream_chunk";
+        response["task_id"] = taskId;
+        response["result"] = result->to_json();
+        response["is_final"] = result->is_stop();
+        
+        // If this is the final result, remove the task
+        if (result->is_stop()) {
+            ctx_server->queue_results.remove_waiting_task_id(taskId);
+        }
+        
+        // Return the response as a JSON string
+        std::string response_str = response.dump();
+        jstring result_str = env->NewStringUTF(response_str.c_str());
+        
+        return result_str;
+    } catch (const std::exception &e) {
+        SRV_ERR("Exception in getNextStreamResult: %s\n", e.what());
+        env->ThrowNew(c_llama_error, e.what());
+        return nullptr;
+    }
+}
+
+/**
+ * Handle OpenAI-compatible completions
+ */
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_handleCompletionsOai(
+    JNIEnv *env, jobject obj, jstring jrequestData, jboolean jstream) {
+    
+    try {
+        jlong server_handle = env->GetLongField(obj, f_model_pointer);
+        if (server_handle == 0) {
+            env->ThrowNew(c_llama_error, "Model is not loaded");
+            return nullptr;
+        }
+        
+        auto *ctx_server = reinterpret_cast<server_context *>(server_handle);
+        
+        if (ctx_server->params_base.embedding) {
+            env->ThrowNew(c_llama_error, "This server does not support completions. Start it without `--embeddings`");
+            return nullptr;
+        }
+        
+        // Parse input data
+        std::string request_str = parse_jstring(env, jrequestData);
+        json body = json::parse(request_str);
+        
+        // Set streaming flag if requested
+        bool stream = jstream;
+        body["stream"] = stream;
+        
+        // Parse OAI parameters
+        json data = oaicompat_completion_params_parse(body);
+        
+        // Create a completion ID
+        auto completion_id = gen_chatcmplid();
+        std::vector<server_task> tasks;
+        
+        // Process prompt(s)
+        const auto &prompt = data.at("prompt");
+        std::vector<llama_tokens> tokenized_prompts = tokenize_input_prompts(
+            ctx_server->vocab, prompt, true, true);
+            
+        tasks.reserve(tokenized_prompts.size());
+        for (size_t i = 0; i < tokenized_prompts.size(); i++) {
+            server_task task(SERVER_TASK_TYPE_COMPLETION);
+            
+            task.id = ctx_server->queue_tasks.get_new_id();
+            task.index = i;
+            
+            task.prompt_tokens = std::move(tokenized_prompts[i]);
+            task.params = server_task::params_from_json_cmpl(
+                ctx_server->ctx, ctx_server->params_base, data);
+                
+            task.id_selected_slot = json_value(data, "id_slot", -1);
+            
+            // OAI compatibility
+            task.params.oaicompat = OAICOMPAT_TYPE_COMPLETION;
+            task.params.oaicompat_cmpl_id = completion_id;
+            
+            tasks.push_back(task);
+        }
+        
+        // Submit tasks
+        ctx_server->queue_results.add_waiting_tasks(tasks);
+        ctx_server->queue_tasks.post(tasks);
+        
+        // Get task IDs
+        const auto task_ids = server_task::get_list_id(tasks);
+        
+        // Create response JSON
+        json response;
+        
+        if (!stream) {
+            // For non-streaming, collect all results
+            std::vector<server_task_result_ptr> results;
+            results.reserve(tasks.size());
+            
+            for (size_t i = 0; i < tasks.size(); i++) {
+                server_task_result_ptr result = ctx_server->queue_results.recv(task_ids);
+                
+                if (result->is_error()) {
+                    // Clean up and throw error
+                    ctx_server->queue_results.remove_waiting_task_ids(task_ids);
+                    std::string error_msg = result->to_json()["message"].get<std::string>();
+                    env->ThrowNew(c_llama_error, error_msg.c_str());
+                    return nullptr;
+                }
+                
+                results.push_back(std::move(result));
+            }
+            
+            // Format the response
+            response["type"] = "oai_completion";
+            response["streaming"] = false;
+            response["completion_id"] = completion_id;
+            
+            if (results.size() == 1) {
+                // Single result
+                response["result"] = results[0]->to_json();
+            } else {
+                // Multiple results
+                json results_array = json::array();
+                for (auto &res : results) {
+                    results_array.push_back(res->to_json());
+                }
+                response["results"] = results_array;
+            }
+            
+            // Clean up
+            ctx_server->queue_results.remove_waiting_task_ids(task_ids);
+        } else {
+            // For streaming, return the task IDs
+            response["type"] = "oai_stream_init";
+            response["streaming"] = true;
+            response["completion_id"] = completion_id;
+            
+            // Convert set to array
+            json task_ids_array = json::array();
+            for (const auto& id : task_ids) {
+                task_ids_array.push_back(id);
+            }
+            response["task_ids"] = task_ids_array;
+            
+            SRV_INF("Started streaming OAI completion with %zu task(s)\n", task_ids.size());
+        }
+        
+        // Return the response as a JSON string
+        std::string response_str = response.dump();
+        jstring result = env->NewStringUTF(response_str.c_str());
+        
+        return result;
+    } catch (const std::exception &e) {
+        SRV_ERR("Exception in handleCompletionsOai: %s\n", e.what());
+        env->ThrowNew(c_llama_error, e.what());
+        return nullptr;
+    }
+}
+
+/**
+ * Handle OpenAI-compatible chat completions
+ */
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_handleChatCompletionsOai(
+    JNIEnv *env, jobject obj, jstring jrequestData, jboolean jstream) {
+    
+    try {
+        jlong server_handle = env->GetLongField(obj, f_model_pointer);
+        if (server_handle == 0) {
+            env->ThrowNew(c_llama_error, "Model is not loaded");
+            return nullptr;
+        }
+        
+        auto *ctx_server = reinterpret_cast<server_context *>(server_handle);
+        
+        if (ctx_server->params_base.embedding) {
+            env->ThrowNew(c_llama_error, "This server does not support completions. Start it without `--embeddings`");
+            return nullptr;
+        }
+        
+        // Parse input data
+        std::string request_str = parse_jstring(env, jrequestData);
+        json body = json::parse(request_str);
+        
+        // Set streaming flag if requested
+        bool stream = jstream;
+        body["stream"] = stream;
+        
+        // Parse the OAI-compatible parameters with chat template application
+        json data = oaicompat_completion_params_parse(
+            body, 
+            ctx_server->params_base.use_jinja,
+            ctx_server->params_base.reasoning_format, 
+            ctx_server->chat_templates.get());
+        
+        // Create a completion ID
+        auto completion_id = gen_chatcmplid();
+        std::vector<server_task> tasks;
+        
+        // Process prompt(s)
+        const auto &prompt = data.at("prompt");
+        std::vector<llama_tokens> tokenized_prompts = tokenize_input_prompts(
+            ctx_server->vocab, prompt, true, true);
+            
+        tasks.reserve(tokenized_prompts.size());
+        for (size_t i = 0; i < tokenized_prompts.size(); i++) {
+            server_task task(SERVER_TASK_TYPE_COMPLETION);
+            
+            task.id = ctx_server->queue_tasks.get_new_id();
+            task.index = i;
+            
+            task.prompt_tokens = std::move(tokenized_prompts[i]);
+            task.params = server_task::params_from_json_cmpl(
+                ctx_server->ctx, ctx_server->params_base, data);
+                
+            task.id_selected_slot = json_value(data, "id_slot", -1);
+            
+            // OAI compatibility
+            task.params.oaicompat = OAICOMPAT_TYPE_CHAT;
+            task.params.oaicompat_cmpl_id = completion_id;
+            
+            tasks.push_back(task);
+        }
+        
+        // Submit tasks
+        ctx_server->queue_results.add_waiting_tasks(tasks);
+        ctx_server->queue_tasks.post(tasks);
+        
+        // Get task IDs
+        const auto task_ids = server_task::get_list_id(tasks);
+        
+        // Create response JSON
+        json response;
+        
+        if (!stream) {
+            // For non-streaming, collect all results
+            std::vector<server_task_result_ptr> results;
+            results.reserve(tasks.size());
+            
+            for (size_t i = 0; i < tasks.size(); i++) {
+                server_task_result_ptr result = ctx_server->queue_results.recv(task_ids);
+                
+                if (result->is_error()) {
+                    // Clean up and throw error
+                    ctx_server->queue_results.remove_waiting_task_ids(task_ids);
+                    std::string error_msg = result->to_json()["message"].get<std::string>();
+                    env->ThrowNew(c_llama_error, error_msg.c_str());
+                    return nullptr;
+                }
+                
+                results.push_back(std::move(result));
+            }
+            
+            // Format the response
+            response["type"] = "oai_chat";
+            response["streaming"] = false;
+            response["completion_id"] = completion_id;
+            
+            if (results.size() == 1) {
+                // Single result
+                response["result"] = results[0]->to_json();
+            } else {
+                // Multiple results
+                json results_array = json::array();
+                for (auto &res : results) {
+                    results_array.push_back(res->to_json());
+                }
+                response["results"] = results_array;
+            }
+            
+            // Clean up
+            ctx_server->queue_results.remove_waiting_task_ids(task_ids);
+        } else {
+            // For streaming, return the task IDs
+            response["type"] = "oai_chat_stream_init";
+            response["streaming"] = true;
+            response["completion_id"] = completion_id;
+            
+            // Convert set to array
+            json task_ids_array = json::array();
+            for (const auto& id : task_ids) {
+                task_ids_array.push_back(id);
+            }
+            response["task_ids"] = task_ids_array;
+            
+            SRV_INF("Started streaming OAI chat completion with %zu task(s)\n", task_ids.size());
+        }
+        
+        // Return the response as a JSON string
+        std::string response_str = response.dump();
+        jstring result = env->NewStringUTF(response_str.c_str());
+        
+        return result;
+    } catch (const std::exception &e) {
+        SRV_ERR("Exception in handleChatCompletionsOai: %s\n", e.what());
+        env->ThrowNew(c_llama_error, e.what());
+        return nullptr;
+    }
 }

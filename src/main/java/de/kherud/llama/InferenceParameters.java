@@ -53,6 +53,7 @@ public final class InferenceParameters extends JsonParameters {
 	private static final String PARAM_TOOLS = "tools";
 	private static final String PARAM_TOOL_CHOICE = "tool_choice";
 	private static final String PARAM_PARALLEL_TOOL_CALLS = "parallel_tool_calls";
+	private static final String PARAM_POST_SAMPLING_PROBS = "post_sampling_probs";
 
 	public InferenceParameters(String prompt) {
 		// we always need a prompt
@@ -567,9 +568,10 @@ public final class InferenceParameters extends JsonParameters {
 // 		parameters.put(PARAM_PARALLEL_TOOL_CALLS,String.valueOf(false));
 		return this;
 	}
-
-	public String get(String field) {
-		return parameters.get(field);
+	
+	public InferenceParameters setPostSamplingProbs(boolean postSamplingProbs) {
+		parameters.put(PARAM_POST_SAMPLING_PROBS, String.valueOf(postSamplingProbs));
+		return this;
 	}
 
 }

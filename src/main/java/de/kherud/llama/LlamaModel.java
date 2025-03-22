@@ -197,4 +197,12 @@ public class LlamaModel implements AutoCloseable {
 		return applyTemplate(parameters.toString());
 	}
 	public native String applyTemplate(String parametersJson);
+	
+	public native String handleCompletions(String requestData, boolean stream, int taskType);
+	
+	public native String getNextStreamResult(int taskId);
+	
+	public native String handleCompletionsOai(String requestData, boolean stream);
+	
+	public native String handleChatCompletionsOai(String requestData, boolean stream);
 }
