@@ -1858,6 +1858,10 @@ struct server_context {
             params_dft.n_gpu_layers = params_base.speculative.n_gpu_layers;
             params_dft.n_parallel   = 1;
 
+            // force F16 KV cache for the draft model for extra performance
+            params_dft.cache_type_k = GGML_TYPE_F16;
+            params_dft.cache_type_v = GGML_TYPE_F16;
+
             llama_init_dft = common_init_from_params(params_dft);
 
             model_dft = llama_init_dft.model.get();
@@ -1877,10 +1881,6 @@ struct server_context {
 
             cparams_dft = common_context_params_to_llama(params_dft);
             cparams_dft.n_batch = n_ctx_dft;
-
-            // force F16 KV cache for the draft model for extra performance
-            cparams_dft.type_k = GGML_TYPE_F16;
-            cparams_dft.type_v = GGML_TYPE_F16;
 
             // the context is not needed - we will create one for each slot
             llama_init_dft.context.reset();
@@ -2247,7 +2247,7 @@ struct server_context {
         return slot.has_next_token; // continue
     }
 
-      void populate_token_probs(const server_slot & slot, completion_token_output & result, bool post_sampling, bool special, int idx) {
+    void populate_token_probs(const server_slot & slot, completion_token_output & result, bool post_sampling, bool special, int idx) {
         size_t n_probs = slot.params.sampling.n_probs;
         size_t n_vocab = llama_vocab_n_tokens(vocab);
         if (post_sampling) {
@@ -3441,7 +3441,7 @@ static void server_params_parse(json jparams, common_params &params) {
     params.lookup_cache_static = json_value(jparams, "lookup_cache_static", default_params.lookup_cache_static);
     params.lookup_cache_dynamic = json_value(jparams, "lookup_cache_dynamic", default_params.lookup_cache_dynamic);
     params.logits_file = json_value(jparams, "logits_file", default_params.logits_file);
-    // params.lora_adapters = json_value(jparams, "lora_adapter", default_params.lora_adapters);
+    //params.lora_adapters = json_value(jparams, "lora_adapter", default_params.lora_adapters);
     params.embedding = json_value(jparams, "embedding", default_params.embedding);
     params.escape = json_value(jparams, "escape", default_params.escape);
     params.cont_batching = json_value(jparams, "cont_batching", default_params.cont_batching);

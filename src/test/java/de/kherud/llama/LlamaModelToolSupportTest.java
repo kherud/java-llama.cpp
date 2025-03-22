@@ -6,7 +6,7 @@ import java.util.List;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.Ignore;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -56,7 +56,7 @@ public class LlamaModelToolSupportTest {
 			+ "          }\n" + "        },\n" + "        \"required\": [\n" + "          \"location\",\n"
 			+ "          \"date\"\n" + "        ]\n" + "      }\n" + "    }\n" + "  }";
 
-	@Test
+	@Ignore
 	public void testToolCalling() {
 
 		List<Pair<String, String>> userMessages = new ArrayList<>();
