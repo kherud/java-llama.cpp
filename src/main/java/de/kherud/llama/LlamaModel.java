@@ -59,6 +59,20 @@ public class LlamaModel implements AutoCloseable {
 		LlamaOutput output = receiveCompletion(taskId);
 		return output.text;
 	}
+	
+	/**
+	 * Generate and return a whole answer with custom parameters. 
+	 * Please remember this will apply template and will only look at messages 
+	 *
+	 * @return an LLM response
+	 */
+	public String completeChat(InferenceParameters parameters) {
+		parameters.setStream(false);
+		
+		int taskId = requestChat(parameters.toString());
+		String output = receiveChatCompletion(taskId);
+		return output;
+	}
 
 	/**
 	 * Generate and stream outputs with custom inference parameters. Note, that the prompt isn't preprocessed in any
@@ -67,6 +81,17 @@ public class LlamaModel implements AutoCloseable {
 	 * @return iterable LLM outputs
 	 */
 	public LlamaIterable generate(InferenceParameters parameters) {
+		return () -> new LlamaIterator(this, parameters);
+	}
+	
+	/**
+	 * Generate and stream outputs with custom inference parameters.
+	 * Please remember this will apply template and will only look at messages
+	 * @return iterable LLM outputs
+	 */
+	public LlamaIterable generateChat(InferenceParameters parameters) {
+		String prompt = applyTemplate(parameters);
+		parameters.setPrompt(prompt);
 		return () -> new LlamaIterator(this, parameters);
 	}
 	
@@ -122,9 +147,13 @@ public class LlamaModel implements AutoCloseable {
 
 	// don't overload native methods since the C++ function names get nasty
 	native int requestCompletion(String params) throws LlamaException;
+	
+	native int requestChat(String params) throws LlamaException;
 
 	native LlamaOutput receiveCompletion(int taskId) throws LlamaException;
-
+	
+	native String receiveChatCompletion(int taskId) throws LlamaException;
+	
 	native void cancelCompletion(int taskId);
 
 	native byte[] decodeBytes(int[] tokens);
@@ -168,4 +197,12 @@ public class LlamaModel implements AutoCloseable {
 		return applyTemplate(parameters.toString());
 	}
 	public native String applyTemplate(String parametersJson);
+	
+	public native String handleCompletions(String requestData, boolean stream, int taskType);
+	
+	public native String getNextStreamResult(int taskId);
+	
+	public native String handleCompletionsOai(String requestData, boolean stream);
+	
+	public native String handleChatCompletionsOai(String requestData, boolean stream);
 }

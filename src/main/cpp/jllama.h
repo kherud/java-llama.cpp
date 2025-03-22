@@ -37,11 +37,23 @@ JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestCompletion(JNIEnv 
 
 /*
  * Class:     de_kherud_llama_LlamaModel
+ * Method:    requestChat
+ * Signature: (Ljava/lang/String;)I
+ */
+JNIEXPORT jint JNICALL Java_de_kherud_llama_LlamaModel_requestChat(JNIEnv *, jobject , jstring );
+/*
+ * Class:     de_kherud_llama_LlamaModel
  * Method:    receiveCompletion
  * Signature: (I)Lde/kherud/llama/LlamaOutput;
  */
 JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_receiveCompletion(JNIEnv *, jobject, jint);
 
+/*
+ * Class:     de_kherud_llama_LlamaModel
+ * Method:    receiveChatCompletion
+ * Signature: (I)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_receiveChatCompletion(JNIEnv *, jobject , jint );
 /*
  * Class:     de_kherud_llama_LlamaModel
  * Method:    cancelCompletion
@@ -98,6 +110,38 @@ JNIEXPORT jobject JNICALL Java_de_kherud_llama_LlamaModel_rerank(JNIEnv *, jobje
  */
 JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_applyTemplate(JNIEnv *, jobject, jstring);
 
+/*
+ * Class: de_kherud_llama_LlamaModel
+ * Method: getNextStreamResult
+ * Signature: (Ljava/lang/String;Z;java/lang/Integer)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_handleCompletions(
+    JNIEnv *env, jobject obj, jstring jrequestData, jboolean jstream, jint jtaskType);
+    
+/*
+ * Class: de_kherud_llama_LlamaModel
+ * Method: getNextStreamResult
+ * Signature: (Ljava/lang/String;)Ljava/lang/Integer;
+ */
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getNextStreamResult(
+    JNIEnv *, jobject , jint );
+
+/*
+ * Class: de_kherud_llama_LlamaModel
+ * Method: handleCompletionsOai
+ * Signature: (Ljava/lang/String;Z)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_handleCompletionsOai
+  (JNIEnv *, jobject, jstring, jboolean);
+
+/*
+ * Class: de_kherud_llama_LlamaModel
+ * Method: handleChatCompletionsOai
+ * Signature: (Ljava/lang/String;Z)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_handleChatCompletionsOai
+  (JNIEnv *, jobject, jstring, jboolean);
+  
 #ifdef __cplusplus
 }
 #endif
