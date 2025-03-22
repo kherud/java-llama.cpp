@@ -54,6 +54,7 @@ public final class InferenceParameters extends JsonParameters {
 	private static final String PARAM_TOOL_CHOICE = "tool_choice";
 	private static final String PARAM_PARALLEL_TOOL_CALLS = "parallel_tool_calls";
 	private static final String PARAM_POST_SAMPLING_PROBS = "post_sampling_probs";
+	private static final String PARAM_CHAT_TEMPLATE ="chat_format";
 
 	public InferenceParameters(String prompt) {
 		// we always need a prompt
@@ -571,6 +572,11 @@ public final class InferenceParameters extends JsonParameters {
 	
 	public InferenceParameters setPostSamplingProbs(boolean postSamplingProbs) {
 		parameters.put(PARAM_POST_SAMPLING_PROBS, String.valueOf(postSamplingProbs));
+		return this;
+	}
+
+	public InferenceParameters setChatTemplate(String chatTemplate) {
+		parameters.put(PARAM_CHAT_TEMPLATE, toJsonString(chatTemplate));
 		return this;
 	}
 
