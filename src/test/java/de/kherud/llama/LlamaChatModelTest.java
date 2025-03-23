@@ -31,164 +31,174 @@ public class LlamaChatModelTest {
 
 	@Test
 	public void testMultiTurnChat() {
-	    List<Pair<String, String>> userMessages = new ArrayList<>();
-	    userMessages.add(new Pair<>("user", "Recommend a good ML book."));
+		List<Pair<String, String>> userMessages = new ArrayList<>();
+		userMessages.add(new Pair<>("user", "Recommend a good ML book."));
 
-	    InferenceParameters params = new InferenceParameters("")
-	        .setMessages("You are a Book Recommendation System", userMessages)
-	        .setTemperature(0.7f)
-	        .setNPredict(50);
+		InferenceParameters params = new InferenceParameters("")
+				.setMessages("You are a Book Recommendation System", userMessages).setTemperature(0.7f).setNPredict(50);
 
-	    // Call handleCompletions with streaming = false and task type = chat
-	    String response1 = model.handleCompletions(params.toString(), false, 0);
-	    
-	    // Parse the response JSON
-	    JsonNode responseNode1 = JsonUtils.INSTANCE.jsonToNode(response1);
-	    
-	    // Verify response structure
-	    Assert.assertNotNull("Response should not be null", response1);
-	    Assert.assertEquals("Completion type should be 'completion'", "completion", responseNode1.get("type").asText());
-	    Assert.assertTrue("Should have a completion_id", responseNode1.has("completion_id"));
-	    
-	    // Extract content from result
-	    JsonNode result1 = responseNode1.get("result");
-	    Assert.assertNotNull("Result should not be null", result1);
-	    JsonNode choicesNode1 = result1.get("choices");
-	    JsonNode messageNode1 = choicesNode1.get(0).get("message");
-	    JsonNode contentNode1 = messageNode1.get("content");
-	    String content1 = contentNode1.asText();
-	    Assert.assertFalse("Content should not be empty", content1.isEmpty());
+		// Call handleCompletions with streaming = false and task type = chat
+		String response1 = model.handleCompletions(params.toString(), false, 0);
 
-	    // Continue the conversation
-	    userMessages.add(new Pair<>("assistant", content1));
-	    userMessages.add(new Pair<>("user", "How does it compare to 'Hands-on ML'?"));
+		// Parse the response JSON
+		JsonNode responseNode1 = JsonUtils.INSTANCE.jsonToNode(response1);
 
-	    params.setMessages("Book", userMessages);
-	    String response2 = model.handleCompletions(params.toString(), false, 0);
-	    
-	    // Parse the second response
-	    JsonNode responseNode2 = JsonUtils.INSTANCE.jsonToNode(response2);
-	    JsonNode result2 = responseNode2.get("result");
-	    JsonNode choicesNode2 = result2.get("choices");
-	    JsonNode messageNode2 = choicesNode2.get(0).get("message");
-	    JsonNode contentNode2 = messageNode2.get("content");
-	    String content2 = contentNode2.asText();
-	    
-	    Assert.assertNotNull("Second response should not be null", content2);
-	    Assert.assertNotEquals("Responses should be different", content1, content2);
+		// Verify response structure
+		Assert.assertNotNull("Response should not be null", response1);
+		Assert.assertEquals("Completion type should be 'completion'", "completion", responseNode1.get("type").asText());
+		Assert.assertTrue("Should have a completion_id", responseNode1.has("completion_id"));
+
+		// Extract content from result
+		JsonNode result1 = responseNode1.get("result");
+		Assert.assertNotNull("Result should not be null", result1);
+		JsonNode choicesNode1 = result1.get("choices");
+		JsonNode messageNode1 = choicesNode1.get(0).get("message");
+		JsonNode contentNode1 = messageNode1.get("content");
+		String content1 = contentNode1.asText();
+		Assert.assertFalse("Content should not be empty", content1.isEmpty());
+
+		// Get the completion_id from the first response
+		String completionId1 = responseNode1.get("completion_id").asText();
+
+		// Continue the conversation with a more specific follow-up
+		userMessages.add(new Pair<>("assistant", content1));
+		userMessages.add(new Pair<>("user",
+				"Can you compare that book specifically with 'Hands-on Machine Learning with Scikit-Learn, Keras, and TensorFlow'?"));
+
+		params.setMessages("Book", userMessages);
+		String response2 = model.handleCompletions(params.toString(), false, 0);
+
+		// Parse the second response
+		JsonNode responseNode2 = JsonUtils.INSTANCE.jsonToNode(response2);
+		JsonNode result2 = responseNode2.get("result");
+		JsonNode choicesNode2 = result2.get("choices");
+		JsonNode messageNode2 = choicesNode2.get(0).get("message");
+		JsonNode contentNode2 = messageNode2.get("content");
+		String content2 = contentNode2.asText();
+		String completionId2 = responseNode2.get("completion_id").asText();
+
+		// Better assertions
+		Assert.assertNotNull("Second response should not be null", content2);
+
+		// Check that completion IDs are different (indicating separate completions)
+		Assert.assertNotEquals("Completion IDs should be different", completionId1, completionId2);
+
+		// Check that the second response contains specific text related to the
+		// follow-up question
+		Assert.assertTrue("Response should mention 'Hands-on Machine Learning'",
+				content2.contains("Hands-on Machine Learning") || content2.contains("Hands-on ML")
+						|| content2.contains("Scikit-Learn") || content2.contains("Keras")
+						|| content2.contains("TensorFlow"));
+
+		// Check that the model is actually responding to the comparison request
+		Assert.assertTrue("Response should contain comparison language",
+				content2.contains("compare") || content2.contains("comparison") || content2.contains("differ")
+						|| content2.contains("similar") || content2.contains("unlike") || content2.contains("whereas")
+						|| content2.contains("while"));
 	}
 
 	@Test
 	public void testEmptyInput() {
-	    List<Pair<String, String>> userMessages = new ArrayList<>();
-	    userMessages.add(new Pair<>("user", ""));
+		List<Pair<String, String>> userMessages = new ArrayList<>();
+		userMessages.add(new Pair<>("user", ""));
 
-	    InferenceParameters params = new InferenceParameters("A book recommendation system.")
-	        .setMessages("Book", userMessages)
-	        .setTemperature(0.5f)
-	        .setNPredict(20);
+		InferenceParameters params = new InferenceParameters("A book recommendation system.")
+				.setMessages("Book", userMessages).setTemperature(0.5f).setNPredict(20);
 
-	    // Call handleCompletions
-	    String response = model.handleCompletions(params.toString(), false, 0);
-	    
-	    // Parse the response JSON
-	    JsonNode responseNode = JsonUtils.INSTANCE.jsonToNode(response);
-	    JsonNode result = responseNode.get("result");
-	    JsonNode choicesNode = result.get("choices");
-	    JsonNode messageNode = choicesNode.get(0).get("message");
-	    JsonNode contentNode = messageNode.get("content");
-	    String content = contentNode.asText();
-	    
-	    Assert.assertNotNull("Response should not be null", content);
-	    Assert.assertFalse("Content should not be empty", content.isEmpty());
+		// Call handleCompletions
+		String response = model.handleCompletions(params.toString(), false, 0);
+
+		// Parse the response JSON
+		JsonNode responseNode = JsonUtils.INSTANCE.jsonToNode(response);
+		JsonNode result = responseNode.get("result");
+		JsonNode choicesNode = result.get("choices");
+		JsonNode messageNode = choicesNode.get(0).get("message");
+		JsonNode contentNode = messageNode.get("content");
+		String content = contentNode.asText();
+
+		Assert.assertNotNull("Response should not be null", content);
+		Assert.assertFalse("Content should not be empty", content.isEmpty());
 	}
 
 	@Test
 	public void testStopString() {
-	    List<Pair<String, String>> userMessages = new ArrayList<>();
-	    userMessages.add(new Pair<>("user", "Tell me about AI ethics."));
+		List<Pair<String, String>> userMessages = new ArrayList<>();
+		userMessages.add(new Pair<>("user", "Tell me about AI ethics."));
 
-	    InferenceParameters params = new InferenceParameters("A book recommendation system.")
-	        .setMessages("AI", userMessages)
-	        .setStopStrings("\"\"\"") // Ensures stopping at proper place
-	        .setTemperature(0.7f)
-	        .setNPredict(50);
+		InferenceParameters params = new InferenceParameters("A book recommendation system.")
+				.setMessages("AI", userMessages).setStopStrings("\"\"\"") // Ensures stopping at proper place
+				.setTemperature(0.7f).setNPredict(50);
 
-	    // Call handleCompletions
-	    String response = model.handleCompletions(params.toString(), false, 0);
-	    
-	    
-	    // Parse the response JSON
-	    JsonNode responseNode = JsonUtils.INSTANCE.jsonToNode(response);
-	    JsonNode result = responseNode.get("result");
-	    JsonNode choicesNode = result.get("choices");
-	    JsonNode messageNode = choicesNode.get(0).get("message");
-	    JsonNode contentNode = messageNode.get("content");
-	    String content = contentNode.asText();
-	    
-	    Assert.assertNotNull("Response should not be null", content);
-	    Assert.assertFalse("Content should contain stop string", content.contains("\"\"\""));
+		// Call handleCompletions
+		String response = model.handleCompletions(params.toString(), false, 0);
+
+		// Parse the response JSON
+		JsonNode responseNode = JsonUtils.INSTANCE.jsonToNode(response);
+		JsonNode result = responseNode.get("result");
+		JsonNode choicesNode = result.get("choices");
+		JsonNode messageNode = choicesNode.get(0).get("message");
+		JsonNode contentNode = messageNode.get("content");
+		String content = contentNode.asText();
+
+		Assert.assertNotNull("Response should not be null", content);
+		Assert.assertFalse("Content should contain stop string", content.contains("\"\"\""));
 	}
 
 	@Test
 	public void testFixedSeed() {
-	    List<Pair<String, String>> userMessages = new ArrayList<>();
-	    userMessages.add(new Pair<>("user", "What is reinforcement learning?"));
+		List<Pair<String, String>> userMessages = new ArrayList<>();
+		userMessages.add(new Pair<>("user", "What is reinforcement learning?"));
 
-	    InferenceParameters params = new InferenceParameters("AI Chatbot.")
-	        .setMessages("AI", userMessages)
-	        .setTemperature(0f)
-	        .setSeed(42) // Fixed seed for reproducibility
-	        .setNPredict(50);
+		InferenceParameters params = new InferenceParameters("AI Chatbot.").setMessages("AI", userMessages)
+				.setTemperature(0f).setSeed(42) // Fixed seed for reproducibility
+				.setNPredict(50);
 
-	    // Call handleCompletions for the first response
-	    String response1 = model.handleCompletions(params.toString(), false, 0);
-	    
-	    // Parse the first response JSON
-	    JsonNode responseNode1 = JsonUtils.INSTANCE.jsonToNode(response1);
-	    JsonNode result1 = responseNode1.get("result");
-	    JsonNode choicesNode1 = result1.get("choices");
-	    JsonNode messageNode1 = choicesNode1.get(0).get("message");
-	    JsonNode contentNode1 = messageNode1.get("content");
-	    String content1 = contentNode1.asText();
-	    
-	    // Call handleCompletions again with the same parameters
-	    String response2 = model.handleCompletions(params.toString(), false, 0);
-	    
-	    // Parse the second response JSON
-	    JsonNode responseNode2 = JsonUtils.INSTANCE.jsonToNode(response2);
-	    JsonNode result2 = responseNode2.get("result");
-	    JsonNode choicesNode2 = result2.get("choices");
-	    JsonNode messageNode2 = choicesNode2.get(0).get("message");
-	    JsonNode contentNode2 = messageNode2.get("content");
-	    String content2 = contentNode2.asText();
-	    
-	    Assert.assertEquals("Responses with same seed should be identical", content1, content2);
+		// Call handleCompletions for the first response
+		String response1 = model.handleCompletions(params.toString(), false, 0);
+
+		// Parse the first response JSON
+		JsonNode responseNode1 = JsonUtils.INSTANCE.jsonToNode(response1);
+		JsonNode result1 = responseNode1.get("result");
+		JsonNode choicesNode1 = result1.get("choices");
+		JsonNode messageNode1 = choicesNode1.get(0).get("message");
+		JsonNode contentNode1 = messageNode1.get("content");
+		String content1 = contentNode1.asText();
+
+		// Call handleCompletions again with the same parameters
+		String response2 = model.handleCompletions(params.toString(), false, 0);
+
+		// Parse the second response JSON
+		JsonNode responseNode2 = JsonUtils.INSTANCE.jsonToNode(response2);
+		JsonNode result2 = responseNode2.get("result");
+		JsonNode choicesNode2 = result2.get("choices");
+		JsonNode messageNode2 = choicesNode2.get(0).get("message");
+		JsonNode contentNode2 = messageNode2.get("content");
+		String content2 = contentNode2.asText();
+
+		Assert.assertEquals("Responses with same seed should be identical", content1, content2);
 	}
 
 	@Test
 	public void testNonEnglishInput() {
-	    List<Pair<String, String>> userMessages = new ArrayList<>();
-	    userMessages.add(new Pair<>("user", "Quel est le meilleur livre sur l'apprentissage automatique ?"));
+		List<Pair<String, String>> userMessages = new ArrayList<>();
+		userMessages.add(new Pair<>("user", "Quel est le meilleur livre sur l'apprentissage automatique ?"));
 
-	    InferenceParameters params = new InferenceParameters("A book recommendation system.")
-	        .setMessages("Book", userMessages)
-	        .setTemperature(0.7f)
-	        .setNPredict(50);
+		InferenceParameters params = new InferenceParameters("A book recommendation system.")
+				.setMessages("Book", userMessages).setTemperature(0.7f).setNPredict(50);
 
-	    // Call handleCompletions
-	    String response = model.handleCompletions(params.toString(), false, 0);
-	    
-	    // Parse the response JSON
-	    JsonNode responseNode = JsonUtils.INSTANCE.jsonToNode(response);
-	    JsonNode result = responseNode.get("result");
-	    JsonNode choicesNode = result.get("choices");
-	    JsonNode messageNode = choicesNode.get(0).get("message");
-	    JsonNode contentNode = messageNode.get("content");
-	    String content = contentNode.asText();
-	    
-	    Assert.assertNotNull("Response should not be null", content);
-	    Assert.assertTrue("Content should have sufficient length", content.length() > 5);
+		// Call handleCompletions
+		String response = model.handleCompletions(params.toString(), false, 0);
+
+		// Parse the response JSON
+		JsonNode responseNode = JsonUtils.INSTANCE.jsonToNode(response);
+		JsonNode result = responseNode.get("result");
+		JsonNode choicesNode = result.get("choices");
+		JsonNode messageNode = choicesNode.get(0).get("message");
+		JsonNode contentNode = messageNode.get("content");
+		String content = contentNode.asText();
+
+		Assert.assertNotNull("Response should not be null", content);
+		Assert.assertTrue("Content should have sufficient length", content.length() > 5);
 	}
 
 	@Test
@@ -199,23 +209,22 @@ public class LlamaChatModelTest {
 		// Call handleCompletions with streaming = false and task type = completion
 		String response = model.handleCompletions(params.toString(), false, 0);
 
-	    
-	    // Parse the response JSON
-	    JsonNode responseNode = JsonUtils.INSTANCE.jsonToNode(response);
-	    
-	    // Verify basic response structure
-	    Assert.assertNotNull("Response should not be null", response);
-	    Assert.assertEquals("Completion type should be 'completion'", "completion", responseNode.get("type").asText());
-	    Assert.assertEquals("Streaming should be false", false, responseNode.get("streaming").asBoolean());
-	    Assert.assertTrue("Should have a completion_id", responseNode.has("completion_id"));
-	    
-	    // Verify result content
-	    JsonNode result = responseNode.get("result");
-	    Assert.assertNotNull("Result should not be null", result);
-	    Assert.assertTrue("Content should not be null", result.has("content"));
-	    Assert.assertFalse("Content should not be empty", result.get("content").asText().isEmpty());
-	    
-	    System.out.println("Completion result: " + result.get("content").asText());
+		// Parse the response JSON
+		JsonNode responseNode = JsonUtils.INSTANCE.jsonToNode(response);
+
+		// Verify basic response structure
+		Assert.assertNotNull("Response should not be null", response);
+		Assert.assertEquals("Completion type should be 'completion'", "completion", responseNode.get("type").asText());
+		Assert.assertEquals("Streaming should be false", false, responseNode.get("streaming").asBoolean());
+		Assert.assertTrue("Should have a completion_id", responseNode.has("completion_id"));
+
+		// Verify result content
+		JsonNode result = responseNode.get("result");
+		Assert.assertNotNull("Result should not be null", result);
+		Assert.assertTrue("Content should not be null", result.has("content"));
+		Assert.assertFalse("Content should not be empty", result.get("content").asText().isEmpty());
+
+		System.out.println("Completion result: " + result.get("content").asText());
 	}
 
 	@Test
