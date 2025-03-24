@@ -25,8 +25,6 @@ public class LlamaModelTest {
 		model = new LlamaModel(new ModelParameters()
 				.setModel("models/EXAONE-Deep-2.4B-Q4_K_M.gguf")
 				.setGpuLayers(43)
-				.enableLogTimestamps()
-				.enableLogPrefix()
 				.enableJinja()
 				.setChatTemplate("{% for message in messages %}{% if "
 						+ "loop.first and message['role'] != 'system' %}"
@@ -53,6 +51,7 @@ public class LlamaModelTest {
 
 	@Test
 	public void testGenerateAnswer() {
+		System.out.println("***** Running the test:  testGenerateAnswer");
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
 		InferenceParameters params = new InferenceParameters(prefix)
@@ -71,6 +70,7 @@ public class LlamaModelTest {
 
 	@Test
 	public void testGenerateInfill() {
+		System.out.println("***** Running the test:  testGenerateInfill");
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
 		InferenceParameters params = new InferenceParameters("")
@@ -91,6 +91,7 @@ public class LlamaModelTest {
 
 	@Test
 	public void testGenerateGrammar() {
+		System.out.println("***** Running the test:  testGenerateGrammar");
 		InferenceParameters params = new InferenceParameters("code ")
 				.setGrammar("root ::= (\"a\" | \"b\")+")
 				.setNPredict(nPredict);
@@ -107,6 +108,7 @@ public class LlamaModelTest {
 
 	@Test
 	public void testCompleteAnswer() {
+		System.out.println("***** Running the test:  testGenerateGrammar");
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
 		InferenceParameters params = new InferenceParameters(prefix)
@@ -122,6 +124,7 @@ public class LlamaModelTest {
 
 	@Test
 	public void testCompleteInfillCustom() {
+		System.out.println("***** Running the test:  testCompleteInfillCustom");
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
 		InferenceParameters params = new InferenceParameters("code ")
@@ -139,6 +142,7 @@ public class LlamaModelTest {
 
 	@Test
 	public void testCompleteGrammar() {
+		System.out.println("***** Running the test:  testCompleteGrammar");
 		InferenceParameters params = new InferenceParameters("code ")
 				.setGrammar("root ::= (\"a\" | \"b\")+")
 				.setTemperature(0.6f)
@@ -153,6 +157,9 @@ public class LlamaModelTest {
 
 	@Test
 	public void testCancelGenerating() {
+		
+		System.out.println("***** Running the test:  testCancelGenerating");
+
 		InferenceParameters params = new InferenceParameters(prefix).setNPredict(nPredict);
 
 		int generated = 0;
@@ -171,6 +178,8 @@ public class LlamaModelTest {
 	
 	@Test
 	public void testTokenization() {
+		System.out.println("***** Running the test:  testTokenization");
+
 		String prompt = "Hello, world!";
 		int[] encoded = model.encode(prompt);
 		String decoded = model.decode(encoded);
@@ -218,6 +227,8 @@ public class LlamaModelTest {
 
 	@Test
 	public void testLogStdout() {
+		System.out.println("***** Running the test:  testLogStdout");
+		
 		// Unfortunately, `printf` can't be easily re-directed to Java. This test only works manually, thus.
 		InferenceParameters params = new InferenceParameters(prefix)
 				.setNPredict(nPredict)
@@ -283,6 +294,8 @@ public class LlamaModelTest {
 	
 	@Test
 	public void testJsonSchemaToGrammar() {
+		
+		System.out.println("***** Running the test:  testJsonSchemaToGrammar");
 		String schema = "{\n" +
                 "    \"properties\": {\n" +
                 "        \"a\": {\"type\": \"string\"},\n" +
@@ -308,7 +321,7 @@ public class LlamaModelTest {
 	
 	@Test
 	public void testTemplate() {
-		
+		System.out.println("***** Running the test:  testTemplate");
 		List<Pair<String, String>> userMessages = new ArrayList<>();
         userMessages.add(new Pair<>("user", "What is the best book?"));
         userMessages.add(new Pair<>("assistant", "It depends on your interests. Do you like fiction or non-fiction?"));
