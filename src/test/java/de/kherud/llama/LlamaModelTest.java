@@ -21,15 +21,28 @@ public class LlamaModelTest {
 
 	@BeforeClass
 	public static void setup() {
-//		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> System.out.println(level + ": " + msg));
-		model = new LlamaModel(
-				new ModelParameters()
-						.setCtxSize(128)
-						.setModel("models/codellama-7b.Q2_K.gguf")
-						//.setModelUrl("https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf")
-						.setGpuLayers(43)
-						.enableEmbedding().enableLogTimestamps().enableLogPrefix()
-		);
+
+		model = new LlamaModel(new ModelParameters()
+				.setModel("models/EXAONE-Deep-2.4B-Q4_K_M.gguf")
+				.setGpuLayers(43)
+				.enableLogTimestamps()
+				.enableLogPrefix()
+				.enableJinja()
+				.enableEmbedding()
+				.setChatTemplate("{% for message in messages %}{% if "
+						+ "loop.first and message['role'] != 'system' %}"
+						+ "{{ '[|system|][|endofturn|]\\n' }}{% endif %}"
+						+ "{% set content = message['content'] %}"
+						+ "{% if '</thought>' in content %}{% "
+						+ "set content = content.split('</thought>')"
+						+ "[-1].lstrip('\\\\n') %}{% endif %}"
+						+ "{{ '[|' + message['role'] + '|]' + content }}"
+						+ "{% if not message['role'] == 'user' %}"
+						+ "{{ '[|endofturn|]' }}{% endif %}{% if not loop.last %}"
+						+ "{{ '\\n' }}{% endif %}{% endfor %}"
+						+ "{% if add_generation_prompt %}"
+						+ "{{ '\\n[|assistant|]<thought>\\n' }}"
+						+ "{% endif %}"));
 	}
 
 	@AfterClass
@@ -79,7 +92,7 @@ public class LlamaModelTest {
 
 	@Test
 	public void testGenerateGrammar() {
-		InferenceParameters params = new InferenceParameters("")
+		InferenceParameters params = new InferenceParameters("code ")
 				.setGrammar("root ::= (\"a\" | \"b\")+")
 				.setNPredict(nPredict);
 		StringBuilder sb = new StringBuilder();
@@ -87,7 +100,7 @@ public class LlamaModelTest {
 			sb.append(output);
 		}
 		String output = sb.toString();
-
+		
 		Assert.assertTrue(output.matches("[ab]+"));
 		int generated = model.encode(output).length;
 		Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
@@ -112,7 +125,7 @@ public class LlamaModelTest {
 	public void testCompleteInfillCustom() {
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters("")
+		InferenceParameters params = new InferenceParameters("code ")
 				.setInputPrefix(prefix)
 				.setInputSuffix(suffix)
 				.setTemperature(0.95f)
@@ -127,8 +140,10 @@ public class LlamaModelTest {
 
 	@Test
 	public void testCompleteGrammar() {
-		InferenceParameters params = new InferenceParameters("")
+		InferenceParameters params = new InferenceParameters("code ")
 				.setGrammar("root ::= (\"a\" | \"b\")+")
+				.setTemperature(0.6f)
+				.setTopP(0.95f)
 				.setNPredict(nPredict);
 		String output = model.complete(params);
 		Assert.assertTrue(output + " doesn't match [ab]+", output.matches("[ab]+"));
@@ -156,7 +171,7 @@ public class LlamaModelTest {
 	@Test
 	public void testEmbedding() {
 		float[] embedding = model.embed(prefix);
-		Assert.assertEquals(4096, embedding.length);
+		Assert.assertEquals(2560, embedding.length);
 	}
 	
 	@Test
@@ -165,7 +180,7 @@ public class LlamaModelTest {
 		int[] encoded = model.encode(prompt);
 		String decoded = model.decode(encoded);
 		// the llama tokenizer adds a space before the prompt
-		Assert.assertEquals(" " +prompt, decoded);
+		Assert.assertEquals(prompt, decoded);
 	}
 
 	@Ignore
@@ -206,7 +221,6 @@ public class LlamaModelTest {
 		}
 	}
 
-	@Ignore
 	@Test
 	public void testLogStdout() {
 		// Unfortunately, `printf` can't be easily re-directed to Java. This test only works manually, thus.
@@ -310,6 +324,9 @@ public class LlamaModelTest {
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
 				.setSeed(42);
-		Assert.assertEquals(model.applyTemplate(params), "<|im_start|>system\nBook<|im_end|>\n<|im_start|>user\nWhat is the best book?<|im_end|>\n<|im_start|>assistant\nIt depends on your interests. Do you like fiction or non-fiction?<|im_end|>\n<|im_start|>assistant\n");
+		Assert.assertEquals(model.applyTemplate(params), "[|system|]Book[|endofturn|]\n"
+				+ "[|user|]What is the best book?\n"
+				+ "[|assistant|]It depends on your interests. Do you like fiction or non-fiction?[|endofturn|]\n"
+				+ "[|assistant|]<thought>\n");
 	}
 }
