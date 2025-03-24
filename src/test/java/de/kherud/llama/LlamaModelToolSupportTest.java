@@ -7,6 +7,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
+import org.junit.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -22,20 +23,7 @@ public class LlamaModelToolSupportTest {
 				.enableLogTimestamps()
 				.enableLogPrefix()
 				.enableJinja()
-				.setChatTemplate("{% for message in messages %}{% if "
-						+ "loop.first and message['role'] != 'system' %}"
-						+ "{{ '[|system|][|endofturn|]\\n' }}{% endif %}"
-						+ "{% set content = message['content'] %}"
-						+ "{% if '</thought>' in content %}{% "
-						+ "set content = content.split('</thought>')"
-						+ "[-1].lstrip('\\\\n') %}{% endif %}"
-						+ "{{ '[|' + message['role'] + '|]' + content }}"
-						+ "{% if not message['role'] == 'user' %}"
-						+ "{{ '[|endofturn|]' }}{% endif %}{% if not loop.last %}"
-						+ "{{ '\\n' }}{% endif %}{% endfor %}"
-						+ "{% if add_generation_prompt %}"
-						+ "{{ '\\n[|assistant|]<thought>\\n' }}"
-						+ "{% endif %}"));
+				.setChatTemplate("{% for message in messages %}{% if loop.first and message['role'] != 'system' %}{{ '[|system|][|endofturn|]\\n' }}{% endif %}{% set content = message['content'] %}{% if '</thought>' in content %}{% set content = content.split('</thought>')[-1].lstrip('\\\\n') %}{% endif %}{{ '[|' + message['role'] + '|]' + content }}{% if not message['role'] == 'user' %}{{ '[|endofturn|]' }}{% endif %}{% if not loop.last %}{{ '\\n' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ '\\n[|assistant|]<thought>\\n' }}{% endif %}"));
 
 	}
 
@@ -74,7 +62,7 @@ public class LlamaModelToolSupportTest {
 			+ "          }\n" + "        },\n" + "        \"required\": [\n" + "          \"location\",\n"
 			+ "          \"date\"\n" + "        ]\n" + "      }\n" + "    }\n" + "  }";
 
-	@Ignore
+	@Test
 	public void testToolCalling() {
 
 		List<Pair<String, String>> userMessages = new ArrayList<>();
