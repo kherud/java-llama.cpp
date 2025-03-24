@@ -1,15 +1,23 @@
 package de.kherud.llama;
 
-import java.io.*;
-import java.util.*;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
 import java.util.regex.Pattern;
 
-import de.kherud.llama.args.LogFormat;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+
+import com.fasterxml.jackson.databind.JsonNode;
+
+import de.kherud.llama.args.LogFormat;
 
 public class LlamaModelTest {
 
@@ -92,18 +100,20 @@ public class LlamaModelTest {
 	@Test
 	public void testGenerateGrammar() {
 		System.out.println("***** Running the test:  testGenerateGrammar");
-		InferenceParameters params = new InferenceParameters("code ")
+		InferenceParameters params = new InferenceParameters("code")
 				.setGrammar("root ::= (\"a\" | \"b\")+")
 				.setNPredict(nPredict);
-		StringBuilder sb = new StringBuilder();
-		for (LlamaOutput output : model.generate(params)) {
-			sb.append(output);
-		}
-		String output = sb.toString();
+		List<Pair<String, String>> userMessages = new ArrayList<>();
+		userMessages.add(new Pair<>("user", "Does not matter what I say, does it?"));
 		
-		Assert.assertTrue(output.matches("[ab]+"));
-		int generated = model.encode(output).length;
-		Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
+		String output = model.handleCompletions(params.toString(), false, 0);
+		JsonNode jsonNode = JsonUtils.INSTANCE.jsonToNode(output);
+		JsonNode resultNode = jsonNode.get("result");
+		String content = resultNode.get("content").asText();
+		Assert.assertTrue(content.matches("[ab]+"));
+		int generated = model.encode(content).length;
+		
+		Assert.assertTrue("generated should be between 0 and  11 but is " + generated, generated > 0 && generated <= nPredict + 1);
 	}
 
 	@Test
