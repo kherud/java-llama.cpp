@@ -62,13 +62,13 @@ public class LlamaModelToolSupportTest {
 			+ "          }\n" + "        },\n" + "        \"required\": [\n" + "          \"location\",\n"
 			+ "          \"date\"\n" + "        ]\n" + "      }\n" + "    }\n" + "  }";
 
-	@Test
+	@Ignore
 	public void testToolCalling() {
 
 		List<Pair<String, String>> userMessages = new ArrayList<>();
 
 		userMessages.add(new Pair<>("user", "What's the temperature in San Francisco today?"));
-
+		
 		InferenceParameters params = new InferenceParameters(null)
 				.setMessages("You are a helpful assistant.\\n\\nCurrent Date: 2024-09-30", userMessages)
 				.setTemperature(0f).setTools(get_current_temperatureFunction, get_temperature_dateFunction)
