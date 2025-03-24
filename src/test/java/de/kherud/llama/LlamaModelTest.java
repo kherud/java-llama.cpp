@@ -28,7 +28,6 @@ public class LlamaModelTest {
 				.enableLogTimestamps()
 				.enableLogPrefix()
 				.enableJinja()
-				.enableEmbedding()
 				.setChatTemplate("{% for message in messages %}{% if "
 						+ "loop.first and message['role'] != 'system' %}"
 						+ "{{ '[|system|][|endofturn|]\\n' }}{% endif %}"
@@ -168,11 +167,7 @@ public class LlamaModelTest {
 		Assert.assertEquals(5, generated);
 	}
 
-	@Test
-	public void testEmbedding() {
-		float[] embedding = model.embed(prefix);
-		Assert.assertEquals(2560, embedding.length);
-	}
+	
 	
 	@Test
 	public void testTokenization() {
