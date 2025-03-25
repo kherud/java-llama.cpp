@@ -1139,7 +1139,6 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getNextStreamResult(
     jlong server_handle = env -> GetLongField(obj, f_model_pointer);
     if (server_handle == 0) {
       env -> ThrowNew(c_llama_error, "Model is not loaded");
-      ctx_server -> queue_results.remove_waiting_task_id(taskId);
       return nullptr;
     }
 
