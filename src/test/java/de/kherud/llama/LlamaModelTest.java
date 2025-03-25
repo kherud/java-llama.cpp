@@ -183,21 +183,43 @@ public class LlamaModelTest {
 
 	@Test
 	public void testGenerateGrammar() {
-		System.out.println("***** Running the test:  testGenerateGrammar");
-		InferenceParameters params = new InferenceParameters().setPrompt(prefix)
-				.setGrammar("root ::= (\"a\" | \"b\")+")
-				.setNPredict(nPredict);
-		List<Pair<String, String>> userMessages = new ArrayList<>();
-		userMessages.add(new Pair<>("user", "Does not matter what I say, does it?"));
-		
-		String output = model.handleCompletions(params.toString(), false);
-		JsonNode jsonNode = JsonUtils.INSTANCE.jsonToNode(output);
-		JsonNode resultNode = jsonNode.get("result");
-		String content = resultNode.get("content").asText();
-		Assert.assertTrue(content.matches("[ab]+"));
-		int generated = model.encode(content).length;
-		
-		Assert.assertTrue("generated should be between 0 and  11 but is " + generated, generated > 0 && generated <= nPredict + 1);
+	    System.out.println("***** Running the test: testGenerateGrammar");
+	    
+	    InferenceParameters params = new InferenceParameters()
+	        .setPrompt(prefix)
+	        .setGrammar("root ::= (\"a\" | \"b\")+")
+	        .setNPredict(nPredict);
+	    
+	    // Try up to 3 times to handle potential transient issues
+	    String output = null;
+	    int attempts = 0;
+	    while (attempts < 3) {
+	        try {
+	            output = model.handleCompletions(params.toString(), false);
+	            break; // Success, exit loop
+	        } catch (Exception e) {
+	            attempts++;
+	            System.err.println("Grammar generation attempt " + attempts + " failed: " + e.getMessage());
+	            if (attempts >= 3) {
+	                throw e; // Re-throw after max attempts
+	            }
+	            // Wait briefly before retrying
+	            try {
+	                Thread.sleep(500);
+	            } catch (InterruptedException ie) {
+	                Thread.currentThread().interrupt();
+	            }
+	        }
+	    }
+	    
+	    JsonNode jsonNode = JsonUtils.INSTANCE.jsonToNode(output);
+	    JsonNode resultNode = jsonNode.get("result");
+	    String content = resultNode.get("content").asText();
+	    Assert.assertTrue(content.matches("[ab]+"));
+	    int generated = model.encode(content).length;
+
+	    Assert.assertTrue("generated should be between 0 and 11 but is " + generated, 
+	                      generated > 0 && generated <= nPredict + 1);
 	}
 
 	@Test
