@@ -52,7 +52,7 @@ public class LlamaChatModelTest {
 		userMessages.add(new Pair<>("user", "Recommend a good ML book."));
 
 		InferenceParameters params = new InferenceParameters()
-				.setMessages("You are a Book Recommendation System", userMessages).setTemperature(0.6f).setTopP(0.95f).setNPredict(50);
+				.setMessages("You are a Book Recommendation System", userMessages).setTemperature(0.6f).setTopP(0.95f).setNPredict(512);
 
 		 // Call handleCompletions with streaming = false and task type = chat
 	    String response1 = model.handleCompletions(params.toString(), false, 0);
