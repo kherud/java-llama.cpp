@@ -1134,7 +1134,7 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_handleCompletions(
 
 JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getNextStreamResult(
   JNIEnv * env, jobject obj, jint taskId) {
-
+	auto * ctx_server = static_cast<server_context*>(nullptr);
   try {
     jlong server_handle = env -> GetLongField(obj, f_model_pointer);
     if (server_handle == 0) {
@@ -1142,7 +1142,7 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getNextStreamResult(
       return nullptr;
     }
 
-    auto * ctx_server = reinterpret_cast < server_context * > (server_handle);
+    ctx_server = reinterpret_cast < server_context * > (server_handle);
 
     // Get next result chunk
     server_task_result_ptr result = ctx_server -> queue_results.recv(taskId);
@@ -1187,7 +1187,9 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getNextStreamResult(
   } catch (const std::exception & e) {
     SRV_ERR("Exception in getNextStreamResult: %s\n", e.what());
     env -> ThrowNew(c_llama_error, e.what());
-    ctx_server -> queue_results.remove_waiting_task_id(taskId);
+    if (ctx_server !=nullptr) {
+		ctx_server -> queue_results.remove_waiting_task_id(taskId);
+	}
     return nullptr;
   }
 }
