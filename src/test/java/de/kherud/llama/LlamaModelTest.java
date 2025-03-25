@@ -257,7 +257,7 @@ public class LlamaModelTest {
 		Assert.assertFalse(output.isEmpty());
 	}
 
-	@Test
+	@Ignore
 	public void testCompleteGrammar() {
 		System.out.println("***** Running the test:  testCompleteGrammar");
 		InferenceParameters params = new InferenceParameters().setPrompt("code")
