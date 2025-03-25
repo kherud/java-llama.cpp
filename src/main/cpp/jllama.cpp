@@ -1153,12 +1153,23 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getNextStreamResult(
       env -> ThrowNew(c_llama_error, error_msg.c_str());
       return nullptr;
     }
+    
+    // Check the JSON for UTF-8 validity before creating the response
+	json resultJson;
+	try {
+    	resultJson = result->to_json();
+	} catch (const json::exception& e) {
+    	// If parsing fails, create a basic error response instead
+    	json error_json;
+    	error_json["error"] = "Invalid UTF-8 in response";
+    	resultJson = error_json;
+	}
 
     // Create response JSON with metadata
     json response;
     response["type"] = "stream_chunk";
     response["task_id"] = taskId;
-    response["result"] = result -> to_json();
+    response["result"] = resultJson;
     response["is_final"] = result -> is_stop();
 
     // If this is the final result, remove the task
