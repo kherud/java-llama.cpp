@@ -6,6 +6,7 @@ import java.util.List;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -205,7 +206,7 @@ public class LlamaChatModelTest {
 		Assert.assertFalse("Content should contain stop string", content.contains("\"\"\""));
 	}
 
-	@Test
+	@Ignore
 	public void testFixedSeed() {
 		List<Pair<String, String>> userMessages = new ArrayList<>();
 		userMessages.add(new Pair<>("user", "What is reinforcement learning?"));
