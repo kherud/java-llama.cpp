@@ -61,7 +61,7 @@ public class LlamaModelToolSupportTest {
 			+ "          }\n" + "        },\n" + "        \"required\": [\n" + "          \"location\",\n"
 			+ "          \"date\"\n" + "        ]\n" + "      }\n" + "    }\n" + "  }";
 
-	@Ignore
+	@Test
 	public void testToolCalling() {
 
 		List<Pair<String, String>> userMessages = new ArrayList<>();
@@ -73,13 +73,13 @@ public class LlamaModelToolSupportTest {
 				.setTemperature(0f).setTools(get_current_temperatureFunction, get_temperature_dateFunction)
 				.setNPredict(512).setUseChatTemplate(true);
 
-		String responseJson = model.handleCompletions(params.toString(), false);
+		String responseJson = model.handleChatCompletions(params.toString(), false);
 
 		// Parse the JSON response using your existing JsonUtils
 		JsonNode response = JsonUtils.INSTANCE.jsonToNode(responseJson);
 
 		// Check the basics of the response
-		Assert.assertEquals("completion", response.get("type").asText());
+		Assert.assertEquals("oai_chat", response.get("type").asText());
 		Assert.assertEquals(false, response.get("streaming").asBoolean());
 		Assert.assertNotNull("Should have a completion ID", response.get("completion_id"));
 
