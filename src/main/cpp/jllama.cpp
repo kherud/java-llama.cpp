@@ -1139,6 +1139,7 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getNextStreamResult(
     jlong server_handle = env -> GetLongField(obj, f_model_pointer);
     if (server_handle == 0) {
       env -> ThrowNew(c_llama_error, "Model is not loaded");
+      ctx_server -> queue_results.remove_waiting_task_id(taskId);
       return nullptr;
     }
 
@@ -1151,6 +1152,7 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getNextStreamResult(
       ctx_server -> queue_results.remove_waiting_task_id(taskId);
       std::string error_msg = result -> to_json()["message"].get < std::string > ();
       env -> ThrowNew(c_llama_error, error_msg.c_str());
+      ctx_server -> queue_results.remove_waiting_task_id(taskId);
       return nullptr;
     }
     
@@ -1186,6 +1188,7 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getNextStreamResult(
   } catch (const std::exception & e) {
     SRV_ERR("Exception in getNextStreamResult: %s\n", e.what());
     env -> ThrowNew(c_llama_error, e.what());
+    ctx_server -> queue_results.remove_waiting_task_id(taskId);
     return nullptr;
   }
 }
