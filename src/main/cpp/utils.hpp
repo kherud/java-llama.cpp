@@ -892,3 +892,55 @@ static std::vector<common_adapter_lora_info> parse_lora_request(
 
     return lora;
 }
+
+// Helper function to sanitize UTF-8 string
+std::string sanitize_utf8(const std::string& input) {
+    std::string output;
+    output.reserve(input.length());
+    
+    for (size_t i = 0; i < input.length(); i++) {
+        unsigned char c = static_cast<unsigned char>(input[i]);
+        
+        if (c < 0x80) {
+            // ASCII character
+            output.push_back(c);
+        } else if ((c & 0xE0) == 0xC0) {
+            // 2-byte UTF-8 sequence
+            if (i + 1 < input.length() && (static_cast<unsigned char>(input[i + 1]) & 0xC0) == 0x80) {
+                output.push_back(c);
+                output.push_back(input[++i]);
+            } else {
+                output.push_back('?');
+            }
+        } else if ((c & 0xF0) == 0xE0) {
+            // 3-byte UTF-8 sequence
+            if (i + 2 < input.length() && 
+                (static_cast<unsigned char>(input[i + 1]) & 0xC0) == 0x80 && 
+                (static_cast<unsigned char>(input[i + 2]) & 0xC0) == 0x80) {
+                output.push_back(c);
+                output.push_back(input[++i]);
+                output.push_back(input[++i]);
+            } else {
+                output.push_back('?');
+            }
+        } else if ((c & 0xF8) == 0xF0) {
+            // 4-byte UTF-8 sequence
+            if (i + 3 < input.length() && 
+                (static_cast<unsigned char>(input[i + 1]) & 0xC0) == 0x80 && 
+                (static_cast<unsigned char>(input[i + 2]) & 0xC0) == 0x80 && 
+                (static_cast<unsigned char>(input[i + 3]) & 0xC0) == 0x80) {
+                output.push_back(c);
+                output.push_back(input[++i]);
+                output.push_back(input[++i]);
+                output.push_back(input[++i]);
+            } else {
+                output.push_back('?');
+            }
+        } else {
+            // Invalid UTF-8 byte
+            output.push_back('?');
+        }
+    }
+    
+    return output;
+}

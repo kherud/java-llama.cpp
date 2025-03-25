@@ -14,7 +14,7 @@ public class GrammarExample {
 				"term  ::= [0-9]";
 		ModelParameters modelParams = new ModelParameters()
 				.setModel("models/mistral-7b-instruct-v0.2.Q2_K.gguf");
-		InferenceParameters inferParams = new InferenceParameters("")
+		InferenceParameters inferParams = new InferenceParameters().setPrompt("")
 				.setGrammar(grammar);
 		try (LlamaModel model = new LlamaModel(modelParams)) {
 			for (LlamaOutput output : model.generate(inferParams)) {

@@ -48,94 +48,70 @@ public class LlamaChatModelTest {
 
 	@Test
 	public void testMultiTurnChat() {
-	    List<Pair<String, String>> userMessages = new ArrayList<>();
-	    userMessages.add(new Pair<>("user", "Recommend a good ML book."));
+		List<Pair<String, String>> userMessages = new ArrayList<>();
+		userMessages.add(new Pair<>("user", "Recommend a good ML book."));
 
-	    InferenceParameters params = new InferenceParameters("")
-	        .setMessages("You are a Book Recommendation System", userMessages)
-	        .setTemperature(0.0f)  // Lower temperature for more consistency
-	        .setNPredict(200);     // Increase prediction length for more complete responses
+		InferenceParameters params = new InferenceParameters()
+				.setMessages("You are a Book Recommendation System", userMessages).setTemperature(0.7f).setNPredict(50);
 
-	    // Call handleCompletions with streaming = false and task type = chat
-	    String response1 = model.handleCompletions(params.toString(), false, 0);
+		// Call handleCompletions with streaming = false and task type = chat
+		String response1 = model.handleCompletions(params.toString(), false, 0);
 
-	    // Parse the response JSON
-	    JsonNode responseNode1 = JsonUtils.INSTANCE.jsonToNode(response1);
+		// Parse the response JSON
+		JsonNode responseNode1 = JsonUtils.INSTANCE.jsonToNode(response1);
 
-	    // Basic structure validation
-	    Assert.assertNotNull("Response should not be null", response1);
-	    Assert.assertEquals("Completion type should be 'completion'", "completion", responseNode1.get("type").asText());
-	    Assert.assertTrue("Should have a completion_id", responseNode1.has("completion_id"));
+		// Verify response structure
+		Assert.assertNotNull("Response should not be null", response1);
+		Assert.assertEquals("Completion type should be 'completion'", "completion", responseNode1.get("type").asText());
+		Assert.assertTrue("Should have a completion_id", responseNode1.has("completion_id"));
 
-	    // Extract content from result
-	    JsonNode result1 = responseNode1.get("result");
-	    Assert.assertNotNull("Result should not be null", result1);
-	    JsonNode choicesNode1 = result1.get("choices");
-	    JsonNode messageNode1 = choicesNode1.get(0).get("message");
-	    JsonNode contentNode1 = messageNode1.get("content");
-	    String content1 = contentNode1.asText();
-	    Assert.assertFalse("Content should not be empty", content1.isEmpty());
+		// Extract content from result
+		JsonNode result1 = responseNode1.get("result");
+		Assert.assertNotNull("Result should not be null", result1);
+		JsonNode choicesNode1 = result1.get("choices");
+		JsonNode messageNode1 = choicesNode1.get(0).get("message");
+		JsonNode contentNode1 = messageNode1.get("content");
+		String content1 = contentNode1.asText();
+		Assert.assertFalse("Content should not be empty", content1.isEmpty());
 
-	    // Get the completion_id from the first response
-	    String completionId1 = responseNode1.get("completion_id").asText();
+		// Get the completion_id from the first response
+		String completionId1 = responseNode1.get("completion_id").asText();
 
-	    // Continue the conversation with a query that absolutely requires mentioning the comparison book
-	    userMessages.add(new Pair<>("assistant", content1));
-	    userMessages.add(new Pair<>("user", 
-	        "Please specifically list 3 ways the book you recommended differs from 'Hands-on Machine Learning with Scikit-Learn'"));
+		// Continue the conversation with a more specific follow-up
+		userMessages.add(new Pair<>("assistant", content1));
+		userMessages.add(new Pair<>("user",
+				"Can you compare that book specifically with 'Hands-on Machine Learning with Scikit-Learn, Keras, and TensorFlow'?"));
 
-	    params.setMessages("Book", userMessages);
-	    params.setTemperature(0.0f);  // Ensure consistency
-	    params.setNPredict(300);      // Ensure we get a full response
-	    
-	    String response2 = model.handleCompletions(params.toString(), false, 0);
+		params.setMessages("Book", userMessages);
+		String response2 = model.handleCompletions(params.toString(), false, 0);
 
-	    // Parse the second response
-	    JsonNode responseNode2 = JsonUtils.INSTANCE.jsonToNode(response2);
-	    JsonNode result2 = responseNode2.get("result");
-	    JsonNode choicesNode2 = result2.get("choices");
-	    JsonNode messageNode2 = choicesNode2.get(0).get("message");
-	    JsonNode contentNode2 = messageNode2.get("content");
-	    String content2 = contentNode2.asText();
-	    String completionId2 = responseNode2.get("completion_id").asText();
+		// Parse the second response
+		JsonNode responseNode2 = JsonUtils.INSTANCE.jsonToNode(response2);
+		JsonNode result2 = responseNode2.get("result");
+		JsonNode choicesNode2 = result2.get("choices");
+		JsonNode messageNode2 = choicesNode2.get(0).get("message");
+		JsonNode contentNode2 = messageNode2.get("content");
+		String content2 = contentNode2.asText();
+		String completionId2 = responseNode2.get("completion_id").asText();
 
-	    // Verify basic multi-turn functionality
-	    Assert.assertNotNull("Second response should not be null", content2);
-	    Assert.assertNotEquals("Completion IDs should be different", completionId1, completionId2);
-	    Assert.assertFalse("Second response should not be empty", content2.isEmpty());
-	    
-	    // Perform more flexible checks with multiple alternatives and fallbacks
-	    boolean mentionsBook = false;
-	    String[] bookTerms = {"Hands-on", "Machine Learning", "Scikit", "TensorFlow", "Keras", "Géron"};
-	    for (String term : bookTerms) {
-	        if (content2.toLowerCase().contains(term.toLowerCase())) {
-	            mentionsBook = true;
-	            break;
-	        }
-	    }
-	    
-	    boolean hasComparisonLanguage = false;
-	    String[] comparisonTerms = {
-	        "differ", "similar", "compar", "unlike", "whereas", "while", "contrast", 
-	        "distinction", "versus", "vs", "advantage", "disadvantage", "better", 
-	        "focuses on", "approach", "perspective", "different", "way", "strength"
-	    };
-	    for (String term : comparisonTerms) {
-	        if (content2.toLowerCase().contains(term.toLowerCase())) {
-	            hasComparisonLanguage = true;
-	            break;
-	        }
-	    }
-	    
-	    // More resilient assertions
-	    if (!mentionsBook || !hasComparisonLanguage) {
-	        System.out.println("WARNING: Response might not be ideal but test will continue");
-	        System.out.println("Response content: " + content2);
-	    }
-	    
-	    // Final fallback check - just ensure it's a coherent response of reasonable length
-	    Assert.assertTrue("Second response should be a substantial answer (at least 50 chars)", 
-	                      content2.length() > 50);
+		// Better assertions
+		Assert.assertNotNull("Second response should not be null", content2);
+
+		// Check that completion IDs are different (indicating separate completions)
+		Assert.assertNotEquals("Completion IDs should be different", completionId1, completionId2);
+
+		// Check that the second response contains specific text related to the
+		// follow-up question
+		Assert.assertTrue("Response should mention 'Hands-on Machine Learning'",
+				content2.contains("Hands-on Machine Learning") || content2.contains("Hands-on ML")
+						|| content2.contains("Scikit-Learn") || content2.contains("Keras")
+						|| content2.contains("TensorFlow"));
+
+		// Check that the model is actually responding to the comparison request
+		Assert.assertTrue("Response should contain comparison language",
+				content2.contains("compare") || content2.contains("comparison") || content2.contains("differ")
+						|| content2.contains("similar") || content2.contains("unlike") || content2.contains("whereas")
+						|| content2.contains("while"));
 	}
 
 	@Test
@@ -143,7 +119,7 @@ public class LlamaChatModelTest {
 		List<Pair<String, String>> userMessages = new ArrayList<>();
 		userMessages.add(new Pair<>("user", ""));
 
-		InferenceParameters params = new InferenceParameters("A book recommendation system.")
+		InferenceParameters params = new InferenceParameters()
 				.setMessages("Book", userMessages).setTemperature(0.5f).setNPredict(20);
 
 		// Call handleCompletions
@@ -166,8 +142,8 @@ public class LlamaChatModelTest {
 		List<Pair<String, String>> userMessages = new ArrayList<>();
 		userMessages.add(new Pair<>("user", "Tell me about AI ethics."));
 
-		InferenceParameters params = new InferenceParameters("A book recommendation system.")
-				.setMessages("AI", userMessages).setStopStrings("\"\"\"") // Ensures stopping at proper place
+		InferenceParameters params = new InferenceParameters()
+				.setMessages("AI Assistant", userMessages).setStopStrings("\"\"\"") // Ensures stopping at proper place
 				.setTemperature(0.7f).setNPredict(50);
 
 		// Call handleCompletions
@@ -190,8 +166,8 @@ public class LlamaChatModelTest {
 		List<Pair<String, String>> userMessages = new ArrayList<>();
 		userMessages.add(new Pair<>("user", "What is reinforcement learning?"));
 
-		InferenceParameters params = new InferenceParameters("AI Chatbot.")
-				.setMessages("AI", userMessages)
+		InferenceParameters params = new InferenceParameters()
+				.setMessages("AI Chatbot", userMessages)
 				.setTemperature(0f)
 				.setSeed(42) // Fixed seed for reproducibility
 				.setNPredict(50)
@@ -249,7 +225,7 @@ public class LlamaChatModelTest {
 		List<Pair<String, String>> userMessages = new ArrayList<>();
 		userMessages.add(new Pair<>("user", "Quel est le meilleur livre sur l'apprentissage automatique ?"));
 
-		InferenceParameters params = new InferenceParameters("A book recommendation system.")
+		InferenceParameters params = new InferenceParameters()
 				.setMessages("Book", userMessages).setTemperature(0.7f).setNPredict(50);
 
 		// Call handleCompletions
@@ -269,7 +245,9 @@ public class LlamaChatModelTest {
 
 	@Test
 	public void testCompletions() {
-		InferenceParameters params = new InferenceParameters("Tell me a joke?").setTemperature(0.7f).setNPredict(50)
+		List<Pair<String, String>> userMessages = new ArrayList<>();
+		userMessages.add(new Pair<>("user", "What is reinforcement learning?"));
+		InferenceParameters params = new InferenceParameters().setMessages(null, userMessages).setTemperature(0.7f).setNPredict(50)
 				.setNProbs(1).setPostSamplingProbs(true).setStopStrings("\"\"\"");
 
 		// Call handleCompletions with streaming = false and task type = completion
@@ -286,16 +264,20 @@ public class LlamaChatModelTest {
 
 		// Verify result content
 		JsonNode result = responseNode.get("result");
+		
 		Assert.assertNotNull("Result should not be null", result);
-		Assert.assertTrue("Content should not be null", result.has("content"));
-		Assert.assertFalse("Content should not be empty", result.get("content").asText().isEmpty());
+		JsonNode messageNode = result.get("choices").get(0).get("message");
+		Assert.assertTrue("Content should not be null", messageNode.has("content"));
+		Assert.assertFalse("Content should not be empty", messageNode.get("content").asText().isEmpty());
 
-		System.out.println("Completion result: " + result.get("content").asText());
+		System.out.println("Completion result: " + messageNode.get("content").asText());
 	}
 
 	@Test
 	public void testStreamingCompletions() {
-		InferenceParameters params = new InferenceParameters("Tell me a joke?").setTemperature(0.7f).setNPredict(50)
+		List<Pair<String, String>> userMessages = new ArrayList<>();
+		userMessages.add(new Pair<>("user", "Tell me a joke?"));
+		InferenceParameters params = new InferenceParameters().setMessages(null, userMessages).setTemperature(0.7f).setNPredict(50)
 				.setNProbs(1).setPostSamplingProbs(true).setStopStrings("\"\"\"");
 
 		String response = model.handleCompletions(params.toString(), true, 0);
@@ -325,13 +307,20 @@ public class LlamaChatModelTest {
 
 			JsonNode result = chunkNode.get("result");
 			Assert.assertNotNull("Result should not be null", result);
+			JsonNode choiceNode;
+			if (result.isArray()) {
+			    // During streaming - result is an array
+			    choiceNode = result.get(0).get("choices").get(0);
+			} else {
+			    // Final response - result is an object
+			    choiceNode = result.get("choices").get(0);
+			}
 
 			// Extract and accumulate content
-			if (result.has("content")) {
-				String chunkContent = result.get("content").asText();
+			if (choiceNode.has("delta") && (choiceNode.get("finish_reason") == null || choiceNode.get("finish_reason").isNull())) {
+				String chunkContent = choiceNode.get("delta").get("content").asText();
 				fullContent.append(chunkContent);
 
-				System.out.println("\nChunk #" + chunkCount + ": \"" + chunkContent + "\"");
 
 				// Check for token probabilities
 				if (result.has("completion_probabilities")) {
@@ -342,11 +331,9 @@ public class LlamaChatModelTest {
 						// Log top token options for this chunk
 						JsonNode firstToken = probs.get(0);
 						ArrayNode topProbs = (ArrayNode) firstToken.get("top_probs");
-						System.out.println("  Token alternatives:");
 						for (JsonNode prob : topProbs) {
 							String token = prob.get("token").asText();
 							double probability = prob.get("prob").asDouble();
-							System.out.printf("    \"%s\" (%.4f)%n", token, probability);
 						}
 					}
 				}
@@ -360,10 +347,6 @@ public class LlamaChatModelTest {
 		Assert.assertTrue("Should have received at least one chunk", chunkCount > 0);
 		Assert.assertTrue("Final chunk should have been received", isFinal);
 		Assert.assertFalse("Accumulated content should not be empty", fullContent.toString().isEmpty());
-
-		System.out.println("\nFinal content from streaming: \"" + fullContent + "\"");
-		System.out.println("Received " + chunkCount + " chunks in total");
-
 	}
 
 }

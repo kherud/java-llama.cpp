@@ -16,7 +16,7 @@ public class InfillExample {
 		String suffix = "\n    return result\n";
 		try (LlamaModel model = new LlamaModel(modelParams)) {
 			System.out.print(prefix);
-			InferenceParameters inferParams = new InferenceParameters("")
+			InferenceParameters inferParams = new InferenceParameters().setPrompt("")
 					.setInputPrefix(prefix)
 					.setInputSuffix(suffix);
 			for (LlamaOutput output : model.generate(inferParams)) {

@@ -11,7 +11,6 @@ import de.kherud.llama.LlamaOutput;
 import de.kherud.llama.ModelParameters;
 import de.kherud.llama.args.MiroStat;
 
-@SuppressWarnings("InfiniteLoopStatement")
 public class MainExample {
 
     public static void main(String... args) throws IOException {
@@ -34,7 +33,7 @@ public class MainExample {
                 prompt += input;
                 System.out.print("Llama: ");
                 prompt += "\nLlama: ";
-				InferenceParameters inferParams = new InferenceParameters(prompt)
+				InferenceParameters inferParams = new InferenceParameters().setPrompt(prompt)
 						.setTemperature(0.7f)
 						.setPenalizeNl(true)
 						.setMiroStat(MiroStat.V2)

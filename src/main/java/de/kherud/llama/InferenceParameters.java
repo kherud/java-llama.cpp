@@ -57,11 +57,6 @@ public final class InferenceParameters extends JsonParameters {
 	private static final String PARAM_CHAT_FORMAT ="chat_format";
 	private static final String PARAM_CHAT_TEMPLATE ="chat_template";
 
-	public InferenceParameters(String prompt) {
-		// we always need a prompt
-		setPrompt(prompt);
-	}
-
 	/**
 	 * Set the prompt to start generation with (default: empty)
 	 */

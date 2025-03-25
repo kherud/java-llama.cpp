@@ -69,7 +69,7 @@ public class LlamaModelToolSupportTest {
 
 		userMessages.add(new Pair<>("user", "What's the temperature in San Francisco today?"));
 		
-		InferenceParameters params = new InferenceParameters(null)
+		InferenceParameters params = new InferenceParameters()
 				.setMessages("You are a helpful assistant.\\n\\nCurrent Date: 2024-09-30", userMessages)
 				.setTemperature(0f).setTools(get_current_temperatureFunction, get_temperature_dateFunction)
 				.setNPredict(512).setUseChatTemplate(true);

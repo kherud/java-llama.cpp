@@ -62,7 +62,8 @@ public class LlamaModelTest {
 		System.out.println("***** Running the test:  testGenerateAnswer");
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters(prefix)
+		InferenceParameters params = new InferenceParameters()
+				.setPrompt(prefix)
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
@@ -81,7 +82,8 @@ public class LlamaModelTest {
 		System.out.println("***** Running the test:  testGenerateInfill");
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters("")
+		InferenceParameters params = new InferenceParameters()
+				.setPrompt("")
 				.setInputPrefix(prefix)
 				.setInputSuffix(suffix )
 				.setTemperature(0.95f)
@@ -100,7 +102,7 @@ public class LlamaModelTest {
 	@Test
 	public void testGenerateGrammar() {
 		System.out.println("***** Running the test:  testGenerateGrammar");
-		InferenceParameters params = new InferenceParameters("code")
+		InferenceParameters params = new InferenceParameters().setPrompt(prefix)
 				.setGrammar("root ::= (\"a\" | \"b\")+")
 				.setNPredict(nPredict);
 		List<Pair<String, String>> userMessages = new ArrayList<>();
@@ -121,7 +123,7 @@ public class LlamaModelTest {
 		System.out.println("***** Running the test:  testGenerateGrammar");
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters(prefix)
+		InferenceParameters params = new InferenceParameters().setPrompt(prefix)
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
@@ -137,7 +139,7 @@ public class LlamaModelTest {
 		System.out.println("***** Running the test:  testCompleteInfillCustom");
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters("code ")
+		InferenceParameters params = new InferenceParameters().setPrompt("code ")
 				.setInputPrefix(prefix)
 				.setInputSuffix(suffix)
 				.setTemperature(0.95f)
@@ -153,7 +155,7 @@ public class LlamaModelTest {
 	@Test
 	public void testCompleteGrammar() {
 		System.out.println("***** Running the test:  testCompleteGrammar");
-		InferenceParameters params = new InferenceParameters("code ")
+		InferenceParameters params = new InferenceParameters().setPrompt("code ")
 				.setGrammar("root ::= (\"a\" | \"b\")+")
 				.setTemperature(0.6f)
 				.setTopP(0.95f)
@@ -170,7 +172,7 @@ public class LlamaModelTest {
 		
 		System.out.println("***** Running the test:  testCancelGenerating");
 
-		InferenceParameters params = new InferenceParameters(prefix).setNPredict(nPredict);
+		InferenceParameters params = new InferenceParameters().setPrompt(prefix).setNPredict(nPredict);
 
 		int generated = 0;
 		LlamaIterator iterator = model.generate(params).iterator();
@@ -202,7 +204,7 @@ public class LlamaModelTest {
 		List<LogMessage> messages = new ArrayList<>();
 		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> messages.add(new LogMessage(level, msg)));
 
-		InferenceParameters params = new InferenceParameters(prefix)
+		InferenceParameters params = new InferenceParameters().setPrompt(prefix)
 				.setNPredict(nPredict)
 				.setSeed(42);
 		model.complete(params);
@@ -221,7 +223,7 @@ public class LlamaModelTest {
 		List<LogMessage> messages = new ArrayList<>();
 		LlamaModel.setLogger(LogFormat.JSON, (level, msg) -> messages.add(new LogMessage(level, msg)));
 
-		InferenceParameters params = new InferenceParameters(prefix)
+		InferenceParameters params = new InferenceParameters().setPrompt(prefix)
 				.setNPredict(nPredict)
 				.setSeed(42);
 		model.complete(params);
@@ -240,7 +242,7 @@ public class LlamaModelTest {
 		System.out.println("***** Running the test:  testLogStdout");
 		
 		// Unfortunately, `printf` can't be easily re-directed to Java. This test only works manually, thus.
-		InferenceParameters params = new InferenceParameters(prefix)
+		InferenceParameters params = new InferenceParameters().setPrompt(prefix)
 				.setNPredict(nPredict)
 				.setSeed(42);
 
@@ -266,7 +268,7 @@ public class LlamaModelTest {
 		System.setOut(printStream);
 
 		try {
-			InferenceParameters params = new InferenceParameters(prefix)
+			InferenceParameters params = new InferenceParameters().setPrompt(prefix)
 					.setNPredict(nPredict)
 					.setSeed(42);
 			model.complete(params);
@@ -336,7 +338,7 @@ public class LlamaModelTest {
         userMessages.add(new Pair<>("user", "What is the best book?"));
         userMessages.add(new Pair<>("assistant", "It depends on your interests. Do you like fiction or non-fiction?"));
         
-		InferenceParameters params = new InferenceParameters("A book recommendation system.")
+		InferenceParameters params = new InferenceParameters()
 				.setMessages("Book", userMessages)
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")

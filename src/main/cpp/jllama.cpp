@@ -996,6 +996,7 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_handleCompletions(
         ctx_server -> params_base.reasoning_format,
         ctx_server -> chat_templates.get());
       oai_type = OAICOMPAT_TYPE_CHAT;
+      std::cout << "printing this datatype for chat: " + data.dump(4) << std::endl;
     } else if (data.contains("oai_compatible") && data["oai_compatible"].is_boolean() && data["oai_compatible"].get < bool > ()) {
       // Regular completion with OAI compatibility requested
       oai_type = OAICOMPAT_TYPE_COMPLETION;
@@ -1167,6 +1168,7 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_getNextStreamResult(
 
     // Return the response as a JSON string
     std::string response_str = response.dump();
+    response_str = sanitize_utf8(response_str);
     jstring result_str = env -> NewStringUTF(response_str.c_str());
 
     return result_str;
