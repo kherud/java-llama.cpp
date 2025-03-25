@@ -56,6 +56,8 @@ public final class InferenceParameters extends JsonParameters {
 	private static final String PARAM_POST_SAMPLING_PROBS = "post_sampling_probs";
 	private static final String PARAM_CHAT_FORMAT ="chat_format";
 	private static final String PARAM_CHAT_TEMPLATE ="chat_template";
+	private static final String PARAM_QUERY = "query";
+	private static final String PARAM_DOCUMENTS = "documents";
 
 	/**
 	 * Set the prompt to start generation with (default: empty)
@@ -573,6 +575,30 @@ public final class InferenceParameters extends JsonParameters {
 
 	public InferenceParameters setChatTemplate(String chatTemplate) {
 		parameters.put(PARAM_CHAT_TEMPLATE, toJsonString(chatTemplate));
+		return this;
+	}
+
+	public InferenceParameters setQuery(String query) {
+		parameters.put(PARAM_QUERY, toJsonString(query));
+		return this;
+		
+	}
+
+	public InferenceParameters setDocuments(String[] documents) {
+		
+		if (documents.length > 0) {
+			StringBuilder builder = new StringBuilder();
+			builder.append("[");
+			for (int i = 0; i < documents.length; i++) {
+				builder.append(toJsonString(documents[i]));
+				if (i < documents.length - 1) {
+					builder.append(", ");
+				}
+			}
+			builder.append("]");
+			parameters.put(PARAM_DOCUMENTS, builder.toString());
+		}
+		
 		return this;
 	}
 

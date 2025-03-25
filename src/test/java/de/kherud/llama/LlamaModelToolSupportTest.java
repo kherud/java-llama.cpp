@@ -28,7 +28,7 @@ public class LlamaModelToolSupportTest {
 	}
 
 	@AfterClass
-	public static void tearDown() {
+	public static void tearDown() throws Exception {
 		if (model != null) {
 			model.close();
 		}
@@ -74,7 +74,7 @@ public class LlamaModelToolSupportTest {
 				.setTemperature(0f).setTools(get_current_temperatureFunction, get_temperature_dateFunction)
 				.setNPredict(512).setUseChatTemplate(true);
 
-		String responseJson = model.handleCompletions(params.toString(), false, 0);
+		String responseJson = model.handleCompletions(params.toString(), false);
 
 		// Parse the JSON response using your existing JsonUtils
 		JsonNode response = JsonUtils.INSTANCE.jsonToNode(responseJson);

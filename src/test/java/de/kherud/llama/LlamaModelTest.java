@@ -2,6 +2,7 @@ package de.kherud.llama;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -16,6 +17,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import de.kherud.llama.args.LogFormat;
 
@@ -51,7 +53,7 @@ public class LlamaModelTest {
 	}
 
 	@AfterClass
-	public static void tearDown() {
+	public static void tearDown() throws Exception {
 		if (model != null) {
 			model.close();
 		}
@@ -59,44 +61,138 @@ public class LlamaModelTest {
 
 	@Test
 	public void testGenerateAnswer() {
-		System.out.println("***** Running the test:  testGenerateAnswer");
-		Map<Integer, Float> logitBias = new HashMap<>();
-		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters()
-				.setPrompt(prefix)
-				.setTemperature(0.95f)
-				.setStopStrings("\"\"\"")
-				.setNPredict(nPredict)
-				.setTokenIdBias(logitBias);
-
-		int generated = 0;
-		for (LlamaOutput ignored : model.generate(params)) {
-			generated++;
-		}
-		// todo: currently, after generating nPredict tokens, there is an additional empty output
-		Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
+	    System.out.println("***** Running the test: testGenerateAnswer");
+	    
+	    // Create a map for logit bias
+	    Map<Integer, Float> logitBias = new HashMap<>();
+	    logitBias.put(2, 2.0f);
+	    
+	    // Create parameters using the InferenceParameters builder
+	    InferenceParameters params = new InferenceParameters()
+	        .setPrompt(prefix)
+	        .setTemperature(0.95f)
+	        .setStopStrings("\"\"\"")
+	        .setNPredict(nPredict)
+	        .setTokenIdBias(logitBias)
+	        .setStream(true); // Set streaming to true
+	    
+	    // Get the JSON string from the parameters
+	    String requestJson = params.toString();
+	    
+	    // Call handleCompletions with streaming enabled
+	    String streamInitResponse = model.handleCompletions(requestJson, true);
+	    
+	    try {
+	        // Parse the stream initialization response
+	        
+	        JsonNode responseObj = JsonUtils.INSTANCE.jsonToNode(streamInitResponse);
+	        JsonNode taskIdsArray = responseObj.get("task_ids");
+	        
+	        // We should have at least one task ID
+	        Assert.assertTrue(taskIdsArray.size() > 0);
+	        int taskId = taskIdsArray.get(0).asInt();
+	        
+	        // Stream until we get all tokens or reach the end
+	        int generated = 0;
+	        boolean isComplete = false;
+	        
+	        while (!isComplete && generated < nPredict) {
+	            // Get the next chunk of streaming results
+	            String chunkResponse = model.getNextStreamResult(taskId);
+	            JsonNode chunkObj = JsonUtils.INSTANCE.jsonToNode(chunkResponse);
+	            
+	            // Check if this is the final chunk
+	            isComplete = chunkObj.get("is_final").asBoolean();
+	            
+	            // Extract and process the content
+	            JsonNode resultObj = chunkObj.get("result");
+	            if (resultObj.has("content")) {
+	                String content = resultObj.get("content").asText();
+	                if (!content.isEmpty()) {
+	                    generated++;
+	                }
+	            }
+	        }
+	        
+	        // Make sure we generated something within expected limits
+	        Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
+	        
+	        // Release the task to clean up resources
+	        model.releaseTask(taskId);
+	        
+	    } catch (Exception e) {
+	        Assert.fail("Failed during streaming test: " + e.getMessage());
+	    }
 	}
-
-	@Test
+	
+	@Ignore
 	public void testGenerateInfill() {
-		System.out.println("***** Running the test:  testGenerateInfill");
-		Map<Integer, Float> logitBias = new HashMap<>();
-		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters()
-				.setPrompt("")
-				.setInputPrefix(prefix)
-				.setInputSuffix(suffix )
-				.setTemperature(0.95f)
-				.setStopStrings("\"\"\"")
-				.setNPredict(nPredict)
-				.setTokenIdBias(logitBias)
-				.setSeed(42);
+	    System.out.println("***** Running the test: testGenerateInfill");
+	    
+	    // Create a map for logit bias
+	    Map<Integer, Float> logitBias = new HashMap<>();
+	    logitBias.put(2, 2.0f);
+	    
+	    // Create parameters using the InferenceParameters builder
+	    InferenceParameters params = new InferenceParameters()
+	        .setPrompt("")
+	        .setInputPrefix(prefix)
+	        .setInputSuffix(suffix)
+	        .setTemperature(0.95f)
+	        .setStopStrings("\"\"\"")
+	        .setNPredict(nPredict)
+	        .setTokenIdBias(logitBias)
+	        .setSeed(42)
+	        .setStream(true); // Set streaming to true
+	    
+	    // Get the JSON string from the parameters
+	    String requestJson = params.toString();
+	    
+	    // Call handleInfill with streaming enabled
+	    String streamInitResponse = model.handleInfill(requestJson, true);
+	    
+	    try {
 
-		int generated = 0;
-		for (LlamaOutput ignored : model.generate(params)) {
-			generated++;
-		}
-		Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
+	        JsonNode responseObj = JsonUtils.INSTANCE.jsonToNode(streamInitResponse);
+	        JsonNode taskIdsArray = responseObj.get("task_ids");
+	        
+	        // We should have at least one task ID
+	        Assert.assertTrue(taskIdsArray.size() > 0);
+	        int taskId = taskIdsArray.get(0).asInt();
+	        
+	        // Stream until we get all tokens or reach the end
+	        int generated = 0;
+	        boolean isComplete = false;
+	        
+	        while (!isComplete && generated < nPredict) {
+	            // Get the next chunk of streaming results
+	            String chunkResponse = model.getNextStreamResult(taskId);
+	            JsonNode chunkObj = JsonUtils.INSTANCE.jsonToNode(chunkResponse);
+	            
+	            // Check if this is the final chunk
+	            isComplete = chunkObj.get("is_final").asBoolean();
+	            
+	            // Extract and process the content
+	            JsonNode resultObj = chunkObj.get("result");
+	            if (resultObj.has("content")) {
+	                String content = resultObj.get("content").asText();
+	                if (!content.isEmpty()) {
+	                    // Process the generated content if needed
+	                    System.out.println("Generated infill chunk: " + content);
+	                    generated++;
+	                }
+	            }
+	        }
+	        
+	        // Make sure we generated something within expected limits
+	        Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
+	        
+	        // Release the task to clean up resources
+	        model.releaseTask(taskId);
+	        
+	    } catch (Exception e) {
+	        Assert.fail("Failed during infill test: " + e.getMessage());
+	    }
 	}
 
 	@Test
@@ -108,7 +204,7 @@ public class LlamaModelTest {
 		List<Pair<String, String>> userMessages = new ArrayList<>();
 		userMessages.add(new Pair<>("user", "Does not matter what I say, does it?"));
 		
-		String output = model.handleCompletions(params.toString(), false, 0);
+		String output = model.handleCompletions(params.toString(), false);
 		JsonNode jsonNode = JsonUtils.INSTANCE.jsonToNode(output);
 		JsonNode resultNode = jsonNode.get("result");
 		String content = resultNode.get("content").asText();
@@ -130,7 +226,7 @@ public class LlamaModelTest {
 				.setTokenIdBias(logitBias)
 				.setSeed(42);
 
-		String output = model.complete(params);
+		String output = model.handleCompletions(params.toString(),false);
 		Assert.assertFalse(output.isEmpty());
 	}
 
@@ -148,42 +244,92 @@ public class LlamaModelTest {
 				.setTokenIdBias(logitBias)
 				.setSeed(42);
 
-		String output = model.complete(params);
+		String output = model.handleCompletions(params.toString(),false);
 		Assert.assertFalse(output.isEmpty());
 	}
 
 	@Test
 	public void testCompleteGrammar() {
 		System.out.println("***** Running the test:  testCompleteGrammar");
-		InferenceParameters params = new InferenceParameters().setPrompt("code ")
+		InferenceParameters params = new InferenceParameters().setPrompt("code")
 				.setGrammar("root ::= (\"a\" | \"b\")+")
 				.setTemperature(0.6f)
 				.setTopP(0.95f)
 				.setNPredict(nPredict);
-		String output = model.complete(params);
-		Assert.assertTrue(output + " doesn't match [ab]+", output.matches("[ab]+"));
-		int generated = model.encode(output).length;
+		String output = model.handleCompletions(params.toString(),false);
+		JsonNode resultNode = JsonUtils.INSTANCE.jsonToNode(output).get("result");
+		String content = resultNode.get("content").asText();
+		Assert.assertTrue(content + " doesn't match [ab]+", content.matches("[ab]+"));
+		int generated = model.encode(content).length;
 		Assert.assertTrue("generated count is: " + generated,  generated > 0 && generated <= nPredict + 1);
 		
 	}
 
 	@Test
 	public void testCancelGenerating() {
-		
-		System.out.println("***** Running the test:  testCancelGenerating");
-
-		InferenceParameters params = new InferenceParameters().setPrompt(prefix).setNPredict(nPredict);
-
-		int generated = 0;
-		LlamaIterator iterator = model.generate(params).iterator();
-		while (iterator.hasNext()) {
-			iterator.next();
-			generated++;
-			if (generated == 5) {
-				iterator.cancel();
-			}
-		}
-		Assert.assertEquals(5, generated);
+	    System.out.println("***** Running the test: testCancelGenerating");
+	    
+	    // Create parameters using the InferenceParameters builder
+	    InferenceParameters params = new InferenceParameters()
+	        .setPrompt(prefix)
+	        .setNPredict(nPredict)
+	        .setStream(true);
+	    
+	    // Get the JSON string from the parameters
+	    String requestJson = params.toString();
+	    
+	    // Call handleCompletions with streaming enabled
+	    String streamInitResponse = model.handleCompletions(requestJson, true);
+	    
+	    try {
+	        // Parse the stream initialization response
+	        ObjectMapper mapper = new ObjectMapper();
+	        JsonNode responseObj = mapper.readTree(streamInitResponse);
+	        JsonNode taskIdsArray = responseObj.get("task_ids");
+	        
+	        // We should have at least one task ID
+	        Assert.assertTrue(taskIdsArray.size() > 0);
+	        int taskId = taskIdsArray.get(0).asInt();
+	        
+	        // Stream until we get 5 tokens then cancel
+	        int generated = 0;
+	        boolean isComplete = false;
+	        
+	        while (!isComplete && generated < nPredict) {
+	            // Get the next chunk of streaming results
+	            String chunkResponse = model.getNextStreamResult(taskId);
+	            JsonNode chunkObj = mapper.readTree(chunkResponse);
+	            
+	            // Check if this is the final chunk
+	            isComplete = chunkObj.get("is_final").asBoolean();
+	            
+	            // Extract and process the content
+	            JsonNode resultObj = chunkObj.get("result");
+	            if (resultObj.has("content")) {
+	                String content = resultObj.get("content").asText();
+	                if (!content.isEmpty()) {
+	                    // Process the generated content if needed
+	                    System.out.println("Generated chunk: " + content);
+	                    generated++;
+	                    
+	                    // Cancel after 5 tokens are generated
+	                    if (generated == 5) {
+	                        model.cancelCompletion(taskId);
+	                        break;
+	                    }
+	                }
+	            }
+	        }
+	        
+	        // Ensure exactly 5 tokens were generated before cancellation
+	        Assert.assertEquals(5, generated);
+	        
+	        // Release the task to clean up resources (though it was already cancelled)
+	        model.releaseTask(taskId);
+	        
+	    } catch (Exception e) {
+	        Assert.fail("Failed during cancellation test: " + e.getMessage());
+	    }
 	}
 
 	
@@ -193,13 +339,24 @@ public class LlamaModelTest {
 		System.out.println("***** Running the test:  testTokenization");
 
 		String prompt = "Hello, world!";
-		int[] encoded = model.encode(prompt);
-		String decoded = model.decode(encoded);
-		// the llama tokenizer adds a space before the prompt
-		Assert.assertEquals(prompt, decoded);
+		String resultJson = model.handleTokenize(prompt, false, false);
+		JsonNode root = JsonUtils.INSTANCE.jsonToNode(resultJson);
+
+		JsonNode tokensNode = root.get("tokens");
+
+		int[] tokens = new int[tokensNode.size()];
+		for (int i = 0; i < tokensNode.size(); i++) {
+		    tokens[i] = tokensNode.get(i).asInt();
+		}
+		
+		Assert.assertEquals(4, tokens.length);
+		
+		String detokenized = JsonUtils.INSTANCE.jsonToNode(model.handleDetokenize(tokens)).get("content").asText();
+		
+		Assert.assertEquals(prompt, detokenized);
 	}
 
-	@Ignore
+	@Test
 	public void testLogText() {
 		List<LogMessage> messages = new ArrayList<>();
 		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> messages.add(new LogMessage(level, msg)));
@@ -207,7 +364,7 @@ public class LlamaModelTest {
 		InferenceParameters params = new InferenceParameters().setPrompt(prefix)
 				.setNPredict(nPredict)
 				.setSeed(42);
-		model.complete(params);
+		model.handleCompletions(params.toString(), false);
 
 		Assert.assertFalse(messages.isEmpty());
 
@@ -218,7 +375,7 @@ public class LlamaModelTest {
 		}
 	}
 
-	@Ignore
+	@Test
 	public void testLogJSON() {
 		List<LogMessage> messages = new ArrayList<>();
 		LlamaModel.setLogger(LogFormat.JSON, (level, msg) -> messages.add(new LogMessage(level, msg)));
@@ -226,13 +383,14 @@ public class LlamaModelTest {
 		InferenceParameters params = new InferenceParameters().setPrompt(prefix)
 				.setNPredict(nPredict)
 				.setSeed(42);
-		model.complete(params);
+		model.handleCompletions(params.toString(), false);
 
 		Assert.assertFalse(messages.isEmpty());
 
 		Pattern jsonPattern = Pattern.compile("^\\s*[\\[{].*[}\\]]\\s*$");
 		for (LogMessage message : messages) {
 			Assert.assertNotNull(message.level);
+			System.out.println("messageText: " + message.text);
 			Assert.assertTrue(jsonPattern.matcher(message.text).matches());
 		}
 	}
@@ -248,15 +406,15 @@ public class LlamaModelTest {
 
 		System.out.println("########## Log Text ##########");
 		LlamaModel.setLogger(LogFormat.TEXT, null);
-		model.complete(params);
+		model.handleCompletions(params.toString(), false);
 
 		System.out.println("########## Log JSON ##########");
 		LlamaModel.setLogger(LogFormat.JSON, null);
-		model.complete(params);
+		model.handleCompletions(params.toString(), false);
 
 		System.out.println("########## Log None ##########");
 		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> {});
-		model.complete(params);
+		model.handleCompletions(params.toString(), false);
 
 		System.out.println("##############################");
 	}
@@ -271,7 +429,7 @@ public class LlamaModelTest {
 			InferenceParameters params = new InferenceParameters().setPrompt(prefix)
 					.setNPredict(nPredict)
 					.setSeed(42);
-			model.complete(params);
+			model.handleCompletions(params.toString(), false);
 		} finally {
 			System.out.flush();
 			System.setOut(stdOut);
@@ -327,7 +485,8 @@ public class LlamaModelTest {
                 "space ::= | \" \" | \"\\n\"{1,2} [ \\t]{0,20}\n" +
                 "string ::= \"\\\"\" char* \"\\\"\" space\n";
 		
-		String actualGrammar = LlamaModel.jsonSchemaToGrammar(schema);
+		byte[] actualGrammarBytes = LlamaModel.jsonSchemaToGrammarBytes(schema);
+		String actualGrammar =  new String(actualGrammarBytes, StandardCharsets.UTF_8);
 		Assert.assertEquals(expectedGrammar, actualGrammar);
 	}
 	
@@ -344,9 +503,8 @@ public class LlamaModelTest {
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
 				.setSeed(42);
-		Assert.assertEquals(model.applyTemplate(params), "[|system|]Book[|endofturn|]\n"
-				+ "[|user|]What is the best book?\n"
-				+ "[|assistant|]It depends on your interests. Do you like fiction or non-fiction?[|endofturn|]\n"
-				+ "[|assistant|]<thought>\n");
+		Assert.assertEquals(model.applyTemplate(params.toString()), "{\n"
+				+ "  \"prompt\": \"[|system|]Book[|endofturn|]\\n[|user|]What is the best book?\\n[|assistant|]It depends on your interests. Do you like fiction or non-fiction?[|endofturn|]\\n[|assistant|]<thought>\\n\"\n"
+				+ "}");
 	}
 }

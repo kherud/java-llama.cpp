@@ -48,42 +48,243 @@ public class LlamaModel implements AutoCloseable {
 	}
 
 	/**
-	 * Generate and return a whole answer with custom parameters. Note, that the prompt isn't preprocessed in any
-	 * way, nothing like "User: ", "###Instruction", etc. is added.
-	 *
-	 * @return an LLM response
-	 */
-	public String complete(InferenceParameters parameters) {
-		parameters.setStream(false);
-		int taskId = requestCompletion(parameters.toString());
-		LlamaOutput output = receiveCompletion(taskId);
-		return output.text;
-	}
-	
-	/**
-	 * Generate and stream outputs with custom inference parameters. Note, that the prompt isn't preprocessed in any
-	 * way, nothing like "User: ", "###Instruction", etc. is added.
-	 *
-	 * @return iterable LLM outputs
-	 */
-	public LlamaIterable generate(InferenceParameters parameters) {
-		return () -> new LlamaIterator(this, parameters);
-	}
-	
-	
-	
-    
-	/**
-	 * Get the embedding of a string. Note, that the prompt isn't preprocessed in any way, nothing like
-	 * "User: ", "###Instruction", etc. is added.
-	 *
-	 * @param prompt the string to embed
-	 * @return an embedding float array
-	 * @throws IllegalStateException if embedding mode was not activated (see {@link ModelParameters#enableEmbedding()})
-	 */
-	public  native float[] embed(String prompt);
-		
+     * Load a model with the given parameters.
+     * 
+     * @param params Command line-style parameters for model loading
+     */
+    public native void loadModel(String[] params);
 
+    /**
+     * Clean up resources and unload the model.
+     */
+    public native void delete();
+
+    /**
+     * Set a logger to receive log messages from the native library.
+     * 
+     * @param logFormat The format of log messages (JSON or TEXT)
+     * @param callback Callback to receive log messages
+     */
+    public static native void setLogger(LogFormat logFormat, BiConsumer<LogLevel, String> callback);
+
+    // Server Information Endpoints
+
+    /**
+     * Get the server health status.
+     * Equivalent to GET /health endpoint.
+     * 
+     * @return JSON string with health information
+     */
+    public native String getHealth();
+
+    /**
+     * Get detailed server metrics.
+     * Equivalent to GET /metrics endpoint.
+     * 
+     * @return JSON string with metrics information
+     */
+    public native String getMetrics();
+
+    /**
+     * Get model properties.
+     * Equivalent to GET /props endpoint.
+     * 
+     * @return JSON string with model properties
+     */
+    public native String getProps();
+
+    /**
+     * Update model properties.
+     * Equivalent to POST /props endpoint.
+     * 
+     * @param propsJson JSON string with properties to update
+     */
+    public native void updateProps(String propsJson);
+
+    /**
+     * Get the list of available models.
+     * Equivalent to GET /models or GET /v1/models endpoints.
+     * 
+     * @return JSON string with model information
+     */
+    public native String getModels();
+
+    /**
+     * Get the current server state.
+     * 
+     * @return String indicating server state ("UNLOADED", "LOADING_MODEL", "READY")
+     */
+    public native String getServerState();
+
+    // Text Generation Endpoints
+
+    /**
+     * Handle standard completions request.
+     * Equivalent to POST /completions endpoint.
+     * 
+     * @param requestData JSON string with completion parameters
+     * @param stream Whether to stream the results
+     * @return JSON string with task information or completion results
+     */
+    public native String handleCompletions(String requestData, boolean stream);
+
+    /**
+     * Handle OpenAI compatible completions request.
+     * Equivalent to POST /v1/completions endpoint.
+     * 
+     * @param requestData JSON string with OpenAI format completion parameters
+     * @param stream Whether to stream the results
+     * @return JSON string with task information or completion results in OpenAI format
+     */
+    public native String handleCompletionsOai(String requestData, boolean stream);
+
+    /**
+     * Handle chat completions request.
+     * Equivalent to POST /chat/completions or POST /v1/chat/completions endpoints.
+     * 
+     * @param requestData JSON string with chat parameters
+     * @param stream Whether to stream the results
+     * @return JSON string with task information or chat completion results
+     */
+    public native String handleChatCompletions(String requestData, boolean stream);
+
+    /**
+     * Handle text infill request (completing text with given prefix and suffix).
+     * Equivalent to POST /infill endpoint.
+     * 
+     * @param requestData JSON string with infill parameters
+     * @param stream Whether to stream the results
+     * @return JSON string with task information or infill results
+     */
+    public native String handleInfill(String requestData, boolean stream);
+
+    /**
+     * Get the next chunk of streaming results for a completion task.
+     * 
+     * @param taskId The ID of the task to get results for
+     * @return JSON string with the next chunk of results
+     */
+    public native String getNextStreamResult(int taskId);
+
+    /**
+     * Release resources associated with a task.
+     * 
+     * @param taskId The ID of the task to release
+     */
+    public native void releaseTask(int taskId);
+
+    /**
+     * Cancel an ongoing completion.
+     * 
+     * @param taskId The ID of the task to cancel
+     */
+    public native void cancelCompletion(int taskId);
+
+    // Embeddings and Reranking Endpoints
+
+    /**
+     * Handle embeddings request.
+     * Equivalent to POST /embeddings endpoint.
+     * 
+     * @param requestData JSON string with embedding parameters
+     * @param oaiCompat Whether to use OpenAI compatible format
+     * @return JSON string with embedding results
+     */
+    public native String handleEmbeddings(String requestData, boolean oaiCompat);
+
+    /**
+     * Handle reranking request.
+     * Equivalent to POST /rerank, POST /reranking, POST /v1/rerank, or POST /v1/reranking endpoints.
+     * 
+     * @param requestData JSON string with reranking parameters
+     * @return JSON string with reranking results
+     */
+    public native String handleRerank(String requestData);
+
+    // Tokenization Endpoints
+
+    /**
+     * Handle tokenization request.
+     * Equivalent to POST /tokenize endpoint.
+     * 
+     * @param content The text to tokenize
+     * @param addSpecial Whether to add special tokens
+     * @param withPieces Whether to include token pieces in the response
+     * @return JSON string with tokenization results
+     */
+    public native String handleTokenize(String content, boolean addSpecial, boolean withPieces);
+
+    /**
+     * Handle detokenization request.
+     * Equivalent to POST /detokenize endpoint.
+     * 
+     * @param tokens Array of token IDs to detokenize
+     * @return JSON string with detokenization results
+     */
+    public native String handleDetokenize(int[] tokens);
+
+    /**
+     * Apply a chat template to messages.
+     * Equivalent to POST /apply-template endpoint.
+     * 
+     * @param requestData JSON string with template parameters
+     * @return String with the template applied to the messages
+     */
+    public native String applyTemplate(String requestData);
+
+    // LoRA Adapters Endpoints
+
+    /**
+     * Get the list of available LoRA adapters.
+     * Equivalent to GET /lora-adapters endpoint.
+     * 
+     * @return JSON string with LoRA adapter information
+     */
+    public native String getLoraAdapters();
+
+    /**
+     * Apply LoRA adapters to the model.
+     * Equivalent to POST /lora-adapters endpoint.
+     * 
+     * @param adaptersJson JSON string with LoRA adapter parameters
+     * @return boolean indicating success
+     */
+    public native boolean applyLoraAdapters(String adaptersJson);
+
+    // Slots Management Endpoints
+
+    /**
+     * Handle slot management operations.
+     * Consolidates GET /slots and POST /slots/:id_slot endpoints.
+     * 
+     * @param action Action to perform: 0=GET (list), 1=SAVE, 2=RESTORE, 3=ERASE
+     * @param slotId Slot ID (ignored for GET action)
+     * @param filename Filename for save/restore (ignored for GET and ERASE actions)
+     * @return JSON string with operation results
+     */
+    public native String handleSlotAction(int action, int slotId, String filename);
+
+    // Constants for slot actions
+    public static final int SLOT_ACTION_GET = 0;
+    public static final int SLOT_ACTION_SAVE = 1;
+    public static final int SLOT_ACTION_RESTORE = 2;
+    public static final int SLOT_ACTION_ERASE = 3;
+    // Utility Methods
+
+    /**
+     * Convert a JSON schema to a grammar.
+     * 
+     * @param schema JSON string with schema definition
+     * @return Byte array with the grammar
+     */
+    public static native byte[] jsonSchemaToGrammarBytes(String schema);
+
+	@Override
+	public void close() throws Exception {
+		delete();
+		
+	}
+	
 	/**
 	 * Tokenize a prompt given the native tokenizer
 	 *
@@ -91,91 +292,4 @@ public class LlamaModel implements AutoCloseable {
 	 * @return an array of integers each representing a token id
 	 */
 	public native int[] encode(String prompt);
-
-	/**
-	 * Convert an array of token ids to its string representation
-	 *
-	 * @param tokens an array of tokens
-	 * @return the token ids decoded to a string
-	 */
-	public String decode(int[] tokens) {
-		byte[] bytes = decodeBytes(tokens);
-		return new String(bytes, StandardCharsets.UTF_8);
-	}
-
-	/**
-	 * Sets a callback for native llama.cpp log messages.
-	 * Per default, log messages are written in JSON to stdout. Note, that in text mode the callback will be also
-	 * invoked with log messages of the GGML backend, while JSON mode can only access request log messages.
-	 * In JSON mode, GGML messages will still be written to stdout.
-	 * To only change the log format but keep logging to stdout, the given callback can be <code>null</code>.
-	 * To disable logging, pass an empty callback, i.e., <code>(level, msg) -> {}</code>.
-	 *
-	 * @param format the log format to use
-	 * @param callback a method to call for log messages
-	 */
-	public static native void setLogger(LogFormat format, @Nullable BiConsumer<LogLevel, String> callback);
-
-	@Override
-	public void close() {
-		delete();
-	}
-
-	// don't overload native methods since the C++ function names get nasty
-	native int requestCompletion(String params) throws LlamaException;
-	
-	native LlamaOutput receiveCompletion(int taskId) throws LlamaException;
-	
-	
-	native void cancelCompletion(int taskId);
-
-	native byte[] decodeBytes(int[] tokens);
-
-	private native void loadModel(String... parameters) throws LlamaException;
-
-	private native void delete();
-	
-	native void releaseTask(int taskId);
-
-	private static native byte[] jsonSchemaToGrammarBytes(String schema);
-	
-	public static String jsonSchemaToGrammar(String schema) {
-		return new String(jsonSchemaToGrammarBytes(schema), StandardCharsets.UTF_8);
-	}
-	
-	public List<Pair<String, Float>> rerank(boolean reRank, String query, String ... documents) {
-		LlamaOutput output = rerank(query, documents);
-		
-		Map<String, Float> scoredDocumentMap = output.probabilities;
-		
-		List<Pair<String, Float>> rankedDocuments = new ArrayList<>();
-		
-		if (reRank) {
-            // Sort in descending order based on Float values
-            scoredDocumentMap.entrySet()
-                    .stream()
-                    .sorted((a, b) -> Float.compare(b.getValue(), a.getValue())) // Descending order
-                    .forEach(entry -> rankedDocuments.add(new Pair<>(entry.getKey(), entry.getValue())));
-        } else {
-            // Copy without sorting
-            scoredDocumentMap.forEach((key, value) -> rankedDocuments.add(new Pair<>(key, value)));
-        }
-		
-		return rankedDocuments;
-	}
-	
-	public native LlamaOutput rerank(String query, String... documents);
-	
-	public  String applyTemplate(InferenceParameters parameters) {
-		return applyTemplate(parameters.toString());
-	}
-	public native String applyTemplate(String parametersJson);
-	
-	public native String handleCompletions(String requestData, boolean stream, int taskType);
-	
-	public native String getNextStreamResult(int taskId);
-	
-	public native String handleCompletionsOai(String requestData, boolean stream);
-	
-	public native String handleChatCompletionsOai(String requestData, boolean stream);
 }

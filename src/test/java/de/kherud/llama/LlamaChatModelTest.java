@@ -40,7 +40,7 @@ public class LlamaChatModelTest {
 	}
 
 	@AfterClass
-	public static void tearDown() {
+	public static void tearDown() throws Exception {
 		if (model != null) {
 			model.close();
 		}
@@ -54,15 +54,15 @@ public class LlamaChatModelTest {
 		InferenceParameters params = new InferenceParameters()
 				.setMessages("You are a Book Recommendation System", userMessages).setTemperature(0.6f).setTopP(0.95f).setNPredict(50);
 
-		 // Call handleCompletions with streaming = false and task type = chat
-	    String response1 = model.handleCompletions(params.toString(), false, 0);
+		 // Call handleChatCompletions with streaming = false and task type = chat
+	    String response1 = model.handleChatCompletions(params.toString(), false);
 
 	    // Parse the response JSON
 	    JsonNode responseNode1 = JsonUtils.INSTANCE.jsonToNode(response1);
 
 	    // Verify response structure
 	    Assert.assertNotNull("Response should not be null", response1);
-	    Assert.assertEquals("Completion type should be 'completion'", "completion", responseNode1.get("type").asText());
+	    Assert.assertEquals("Completion type should be 'completion'", "oai_chat", responseNode1.get("type").asText());
 	    Assert.assertTrue("Should have a completion_id", responseNode1.has("completion_id"));
 
 	    // Extract content from result
@@ -83,7 +83,7 @@ public class LlamaChatModelTest {
 	        "Can you compare that book specifically with 'Hands-on Machine Learning with Scikit-Learn, Keras, and TensorFlow'?"));
 
 	    params.setMessages("Book", userMessages);
-	    String response2 = model.handleCompletions(params.toString(), false, 0);
+	    String response2 = model.handleChatCompletions(params.toString(), false);
 
 	    // Parse the second response
 	    JsonNode responseNode2 = JsonUtils.INSTANCE.jsonToNode(response2);
@@ -180,8 +180,8 @@ public class LlamaChatModelTest {
 		InferenceParameters params = new InferenceParameters()
 				.setMessages("Book", userMessages).setTemperature(0.5f).setNPredict(20);
 
-		// Call handleCompletions
-		String response = model.handleCompletions(params.toString(), false, 0);
+		// Call handleChatCompletions
+		String response = model.handleChatCompletions(params.toString(), false);
 
 		// Parse the response JSON
 		JsonNode responseNode = JsonUtils.INSTANCE.jsonToNode(response);
@@ -204,8 +204,8 @@ public class LlamaChatModelTest {
 				.setMessages("AI Assistant", userMessages).setStopStrings("\"\"\"") // Ensures stopping at proper place
 				.setTemperature(0.7f).setNPredict(50);
 
-		// Call handleCompletions
-		String response = model.handleCompletions(params.toString(), false, 0);
+		// Call handleChatCompletions
+		String response = model.handleChatCompletions(params.toString(), false);
 
 		// Parse the response JSON
 		JsonNode responseNode = JsonUtils.INSTANCE.jsonToNode(response);
@@ -238,8 +238,8 @@ public class LlamaChatModelTest {
 
 		// Run this test multiple times with assertions for partial matching
 	    for (int i = 0; i < 3; i++) {
-	        // Call handleCompletions for the first response
-	        String response1 = model.handleCompletions(params.toString(), false, 0);
+	        // Call handleChatCompletions for the first response
+	        String response1 = model.handleChatCompletions(params.toString(), false);
 
 	        // Parse the first response JSON
 	        JsonNode responseNode1 = JsonUtils.INSTANCE.jsonToNode(response1);
@@ -249,8 +249,8 @@ public class LlamaChatModelTest {
 	        JsonNode contentNode1 = messageNode1.get("content");
 	        String content1 = contentNode1.asText();
 
-	        // Call handleCompletions again with the same parameters
-	        String response2 = model.handleCompletions(params.toString(), false, 0);
+	        // Call handleChatCompletions again with the same parameters
+	        String response2 = model.handleChatCompletions(params.toString(), false);
 
 	        // Parse the second response JSON
 	        JsonNode responseNode2 = JsonUtils.INSTANCE.jsonToNode(response2);
@@ -286,8 +286,8 @@ public class LlamaChatModelTest {
 		InferenceParameters params = new InferenceParameters()
 				.setMessages("Book", userMessages).setTemperature(0.7f).setNPredict(50);
 
-		// Call handleCompletions
-		String response = model.handleCompletions(params.toString(), false, 0);
+		// Call handleChatCompletions
+		String response = model.handleChatCompletions(params.toString(), false);
 
 		// Parse the response JSON
 		JsonNode responseNode = JsonUtils.INSTANCE.jsonToNode(response);
@@ -308,15 +308,15 @@ public class LlamaChatModelTest {
 		InferenceParameters params = new InferenceParameters().setMessages(null, userMessages).setTemperature(0.7f).setNPredict(50)
 				.setNProbs(1).setPostSamplingProbs(true).setStopStrings("\"\"\"");
 
-		// Call handleCompletions with streaming = false and task type = completion
-		String response = model.handleCompletions(params.toString(), false, 0);
+		// Call handleChatCompletions with streaming = false and task type = completion
+		String response = model.handleChatCompletions(params.toString(), false);
 
 		// Parse the response JSON
 		JsonNode responseNode = JsonUtils.INSTANCE.jsonToNode(response);
 
 		// Verify basic response structure
 		Assert.assertNotNull("Response should not be null", response);
-		Assert.assertEquals("Completion type should be 'completion'", "completion", responseNode.get("type").asText());
+		Assert.assertEquals("Completion type should be 'completion'", "oai_chat", responseNode.get("type").asText());
 		Assert.assertEquals("Streaming should be false", false, responseNode.get("streaming").asBoolean());
 		Assert.assertTrue("Should have a completion_id", responseNode.has("completion_id"));
 
@@ -338,7 +338,7 @@ public class LlamaChatModelTest {
 		InferenceParameters params = new InferenceParameters().setMessages(null, userMessages).setTemperature(0.7f).setNPredict(50)
 				.setNProbs(1).setPostSamplingProbs(true).setStopStrings("\"\"\"");
 
-		String response = model.handleCompletions(params.toString(), true, 0);
+		String response = model.handleChatCompletions(params.toString(), true);
 
 		JsonNode node = JsonUtils.INSTANCE.jsonToNode(response);
 
