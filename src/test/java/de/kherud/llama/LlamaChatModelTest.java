@@ -145,6 +145,10 @@ public class LlamaChatModelTest {
 	        content2Lower.contains("chapter") ||
 	        content2Lower.contains("topic");
 	    
+	    System.out.println("Content1: " + content1);
+	    
+	    System.out.println("Content2: " + content2);
+	    
 	    // Print debug info if the test might fail
 	    if (!(mentionsRequestedBook && (usesComparisonLanguage || isContextuallyRelevant))) {
 	        System.out.println("Warning: Response might not meet criteria. Content: " + content2);
