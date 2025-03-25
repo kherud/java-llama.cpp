@@ -33,23 +33,9 @@ public class LlamaModelTest {
 	public static void setup() {
 
 		model = new LlamaModel(new ModelParameters()
-				.setModel("models/EXAONE-Deep-2.4B-Q4_K_M.gguf")
+				.setModel("models/Phi-4-mini-instruct-Q2_K.gguf")
 				.setGpuLayers(43)
-				.enableJinja()
-				.setChatTemplate("{% for message in messages %}{% if "
-						+ "loop.first and message['role'] != 'system' %}"
-						+ "{{ '[|system|][|endofturn|]\\n' }}{% endif %}"
-						+ "{% set content = message['content'] %}"
-						+ "{% if '</thought>' in content %}{% "
-						+ "set content = content.split('</thought>')"
-						+ "[-1].lstrip('\\\\n') %}{% endif %}"
-						+ "{{ '[|' + message['role'] + '|]' + content }}"
-						+ "{% if not message['role'] == 'user' %}"
-						+ "{{ '[|endofturn|]' }}{% endif %}{% if not loop.last %}"
-						+ "{{ '\\n' }}{% endif %}{% endfor %}"
-						+ "{% if add_generation_prompt %}"
-						+ "{{ '\\n[|assistant|]<thought>\\n' }}"
-						+ "{% endif %}"));
+				.enableJinja());
 	}
 
 	@AfterClass
@@ -503,8 +489,9 @@ public class LlamaModelTest {
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
 				.setSeed(42);
+		
 		Assert.assertEquals(model.applyTemplate(params.toString()), "{\n"
-				+ "  \"prompt\": \"[|system|]Book[|endofturn|]\\n[|user|]What is the best book?\\n[|assistant|]It depends on your interests. Do you like fiction or non-fiction?[|endofturn|]\\n[|assistant|]<thought>\\n\"\n"
+				+ "  \"prompt\": \"<|system|>Book<|end|><|user|>What is the best book?<|end|><|assistant|>It depends on your interests. Do you like fiction or non-fiction?<|end|><|assistant|>\"\n"
 				+ "}");
 	}
 }
