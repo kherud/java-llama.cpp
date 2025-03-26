@@ -25,6 +25,7 @@ public class ParallelTests {
 		model = new LlamaModel(new ModelParameters()
 				.setModel("models/Phi-4-mini-instruct-Q2_K.gguf")
 				.setGpuLayers(43)
+				.setCtxSize(4096)
 				.enableLogTimestamps()
 				.enableLogPrefix()
 				.enableJinja()

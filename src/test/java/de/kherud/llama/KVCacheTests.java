@@ -20,6 +20,7 @@ public class KVCacheTests {
 				.enableLogTimestamps()
 				.enableLogPrefix()
 				.enableJinja()
+				.setCtxSize(4096)
 				.slotSavePath("models"));
 				;
 	}
