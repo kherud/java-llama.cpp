@@ -19,7 +19,7 @@ public class LlamaChatModelTest {
 	@BeforeClass
 	public static void setup() {
 		model = new LlamaModel(new ModelParameters()
-				.setModel("models/Phi-4-mini-instruct-Q2_K.gguf")
+				.setModel("models/stories260K.gguf")
 				.enableLogTimestamps()
 				.setCtxSize(4096)
 				.enableLogPrefix()

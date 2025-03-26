@@ -32,6 +32,8 @@ namespace {
   jclass c_log_level = nullptr;
   jclass c_log_format = nullptr;
   jclass c_error_oom = nullptr;
+  jclass c_charset_class = nullptr;
+
 
   // constructors
   jmethodID cc_hash_map = nullptr;
@@ -50,6 +52,8 @@ namespace {
   jmethodID m_int_value = nullptr;
   jmethodID m_float_value = nullptr;
   jmethodID m_biconsumer_accept = nullptr;
+  jmethodID m_forname = nullptr;
+
 
   // fields
   jfieldID f_model_pointer = nullptr;
@@ -76,20 +80,17 @@ namespace {
   /**
    * Convert a Java string to a std::string
    */
-  std::string parse_jstring(JNIEnv * env, jstring java_string) {
-    auto *
-      const string_bytes = (jbyteArray) env -> CallObjectMethod(java_string, m_get_bytes, o_utf_8);
-
-    auto length = (size_t) env -> GetArrayLength(string_bytes);
-    jbyte * byte_elements = env -> GetByteArrayElements(string_bytes, nullptr);
-
-    std::string string = std::string((char * ) byte_elements, length);
-
-    env -> ReleaseByteArrayElements(string_bytes, byte_elements, JNI_ABORT);
-    env -> DeleteLocalRef(string_bytes);
-
-    return string;
-  }
+ 	std::string parse_jstring(JNIEnv* env, jstring java_string) {
+    	const char* utf_chars = env->GetStringUTFChars(java_string, nullptr);
+    	if (utf_chars == nullptr) {
+        	return "";
+    	}
+    
+    	std::string result(utf_chars);
+    	env->ReleaseStringUTFChars(java_string, utf_chars);
+    
+    	return result;
+	}
 
   char ** parse_string_array(JNIEnv * env,
     const jobjectArray string_array,
@@ -226,6 +227,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM * vm, void * reserved) {
   }
 
   // find classes
+  c_charset_class = env->FindClass("java/nio/charset/Charset");
   c_llama_model = env -> FindClass("de/kherud/llama/LlamaModel");
   c_standard_charsets = env -> FindClass("java/nio/charset/StandardCharsets");
   c_string = env -> FindClass("java/lang/String");
@@ -242,13 +244,15 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM * vm, void * reserved) {
   c_log_format = env -> FindClass("de/kherud/llama/args/LogFormat");
   c_error_oom = env -> FindClass("java/lang/OutOfMemoryError");
 
-  if (!(c_llama_model &&  c_standard_charsets  && c_string && c_hash_map && c_map &&
+
+  if (!(c_llama_model && c_charset_class &&  c_standard_charsets  && c_string && c_hash_map && c_map &&
       c_set && c_entry && c_iterator && c_integer && c_float && c_biconsumer && c_llama_error && c_log_level &&
       c_log_format && c_error_oom)) {
     goto error;
   }
 
   // create references
+  c_charset_class = (jclass) env -> NewGlobalRef(c_charset_class);
   c_llama_model = (jclass) env -> NewGlobalRef(c_llama_model);
   c_string = (jclass) env -> NewGlobalRef(c_string);
   c_hash_map = (jclass) env -> NewGlobalRef(c_hash_map);
@@ -285,9 +289,10 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM * vm, void * reserved) {
   m_int_value = env -> GetMethodID(c_integer, "intValue", "()I");
   m_float_value = env -> GetMethodID(c_float, "floatValue", "()F");
   m_biconsumer_accept = env -> GetMethodID(c_biconsumer, "accept", "(Ljava/lang/Object;Ljava/lang/Object;)V");
+  m_forname = env->GetStaticMethodID(c_charset_class, "forName", "(Ljava/lang/String;)Ljava/nio/charset/Charset;");
 
   if (!(m_get_bytes && m_entry_set && m_set_iterator && m_iterator_has_next && m_iterator_next && m_entry_key &&
-      m_entry_value && m_map_put && m_int_value && m_float_value && m_biconsumer_accept)) {
+      m_entry_value && m_map_put && m_int_value && m_float_value && m_biconsumer_accept && m_forname)) {
     goto error;
   }
 
@@ -359,6 +364,7 @@ JNIEXPORT void JNICALL JNI_OnUnload(JavaVM * vm, void * reserved) {
   }
 
   env -> DeleteGlobalRef(c_llama_model);
+  env -> DeleteGlobalRef(c_charset_class);
   env -> DeleteGlobalRef(c_string);
   env -> DeleteGlobalRef(c_hash_map);
   env -> DeleteGlobalRef(c_map);

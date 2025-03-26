@@ -18,7 +18,7 @@ public class LlamaModelToolSupportTest {
 	@BeforeClass
 	public static void setup() {
 		model = new LlamaModel(new ModelParameters()
-				.setModel("models/Phi-4-mini-instruct-Q2_K.gguf")
+				.setModel("models/qwen2.5-0.5b-instruct-q2_k.gguf")
 				.setCtxSize(4096)
 				.enableLogTimestamps()
 				.enableLogPrefix()

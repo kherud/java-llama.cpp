@@ -17,7 +17,7 @@ public class LlamaEmbedingModelTest {
 	public static void setup() {
 
 		model = new LlamaModel(new ModelParameters()
-				.setModel("models/Phi-4-mini-instruct-Q2_K.gguf")
+				.setModel("models/ggml-model-f16.gguf")
 				.enableLogTimestamps()
 				.setGpuLayers(99)
 				.enableLogPrefix()
@@ -61,7 +61,7 @@ public class LlamaEmbedingModelTest {
 	        }
 	        
 	        // Verify the embedding dimensions
-	        Assert.assertEquals(3072, embedding.length);
+	        Assert.assertEquals(384, embedding.length);
 	    } catch (Exception e) {
 	        Assert.fail("Failed to parse embedding response: " + e.getMessage());
 	    }
