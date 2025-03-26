@@ -15,7 +15,7 @@ public class KVCacheTests {
 	@BeforeClass
 	public static void setup() {
 		model = new LlamaModel(new ModelParameters()
-				.setModel("models/qwen2.5-0.5b-instruct-q2_k.gguf")
+				.setModel("models/stories260K.gguf")
 				.enableLogTimestamps()
 				.enableLogPrefix()
 				.enableJinja()
