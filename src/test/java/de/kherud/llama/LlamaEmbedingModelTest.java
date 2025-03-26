@@ -22,6 +22,7 @@ public class LlamaEmbedingModelTest {
 				.enableLogTimestamps()
 				.enableLogPrefix()
 				.enableJinja()
+				.setCtxSize(4096)
 				.enableEmbedding());
 	}
 
