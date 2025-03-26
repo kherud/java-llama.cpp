@@ -16,7 +16,6 @@ public class KVCacheTests {
 	public static void setup() {
 		model = new LlamaModel(new ModelParameters()
 				.setModel("models/Phi-4-mini-instruct-Q2_K.gguf")
-				.setGpuLayers(43)
 				.enableLogTimestamps()
 				.enableLogPrefix()
 				.enableJinja()

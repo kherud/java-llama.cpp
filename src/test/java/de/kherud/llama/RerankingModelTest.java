@@ -24,8 +24,8 @@ public class RerankingModelTest {
 	@BeforeClass
 	public static void setup() {
 		model = new LlamaModel(
-				new ModelParameters().setCtxSize(128).setModel("models/jina-reranker-v1-tiny-en-Q4_0.gguf")
-						.setGpuLayers(43).enableReranking().enableLogTimestamps().enableLogPrefix());
+				new ModelParameters().setCtxSize(4096).setModel("models/jina-reranker-v1-tiny-en-Q4_0.gguf")
+						.enableReranking().enableLogTimestamps().enableLogPrefix());
 	}
 
 	@AfterClass

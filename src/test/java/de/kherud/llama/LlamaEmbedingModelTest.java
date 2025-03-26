@@ -18,11 +18,10 @@ public class LlamaEmbedingModelTest {
 
 		model = new LlamaModel(new ModelParameters()
 				.setModel("models/Phi-4-mini-instruct-Q2_K.gguf")
-				.setGpuLayers(43)
 				.enableLogTimestamps()
 				.enableLogPrefix()
 				.enableJinja()
-				.setCtxSize(4096)
+				.setCtxSize(8192)
 				.enableEmbedding());
 	}
 
