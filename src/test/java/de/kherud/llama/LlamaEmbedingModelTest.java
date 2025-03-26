@@ -18,13 +18,11 @@ public class LlamaEmbedingModelTest {
 
 		model = new LlamaModel(new ModelParameters()
 				.setModel("models/ggml-model-f16.gguf")
-				.enableLogTimestamps()
-				.setGpuLayers(99)
-				.enableLogPrefix()
-				.enableJinja()
-				.setCtxSize(2048)
+				.setCtxSize(512)
+				.setBatchSize(128)
+				.setUbatchSize(128)
 				.setDefragThold(0.1f)
-				.setPredict(50)
+				.setParallel(2)
 				.enableEmbedding());
 	}
 
@@ -37,13 +35,13 @@ public class LlamaEmbedingModelTest {
 	
 	@Test
 	public void testEmbedding() {
-		
+
 		model.handleKVCacheAction(LlamaModel.KVCACHE_ACTION_CLEAR, 0, null);
 	    // Create the request in JSON format
 	    String request = "{\"content\": \"AI Assistant\"}";
 	    
 	    // Call the handleEmbeddings method
-	    String response = model.handleEmbeddings(request, false);
+	    String response = model.handleEmbeddings(request, true);
 	    
 	    // Parse the JSON response
 	    try {

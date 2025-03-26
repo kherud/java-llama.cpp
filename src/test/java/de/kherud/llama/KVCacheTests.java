@@ -20,7 +20,7 @@ public class KVCacheTests {
 				.enableLogPrefix()
 				.enableJinja()
 				.setCtxSize(4096)
-				.slotSavePath("models"));
+				.setSlotSavePath("models"));
 				;
 	}
 

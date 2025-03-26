@@ -28,7 +28,7 @@ public class ParallelTests {
 				.enableLogTimestamps()
 				.enableLogPrefix()
 				.enableJinja()
-				.slotSavePath("models"));
+				.setSlotSavePath("models"));
 				;
 	}
 

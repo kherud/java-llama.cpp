@@ -959,9 +959,4 @@ public final class ModelParameters extends CliParameters {
         return this;
     }
 
-	public ModelParameters slotSavePath(String slotPath) {
-		parameters.put("--slot-save-path", slotPath);
-		return this;
-	}
-
 }
