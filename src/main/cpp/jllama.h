@@ -151,6 +151,12 @@ JNIEXPORT jbyteArray JNICALL Java_de_kherud_llama_LlamaModel_jsonSchemaToGrammar
 
 JNIEXPORT jintArray JNICALL Java_de_kherud_llama_LlamaModel_encode(JNIEnv * , jobject, jstring);
 
+/**
+ * Manage KV cache operations for a specific slot.
+ * Consolidated function for KV cache info, clear, save, and load.
+ */
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_handleKVCacheAction(JNIEnv* env, jobject obj, jint action, jint slotId, jstring jfilename);
+
   #ifdef __cplusplus
 }
 #endif

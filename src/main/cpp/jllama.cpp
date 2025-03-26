@@ -2106,3 +2106,202 @@ JNIEXPORT jintArray JNICALL Java_de_kherud_llama_LlamaModel_encode(JNIEnv * env,
 
   return java_tokens;
 }
+
+/**
+ * Manage KV cache operations for a specific slot.
+ * Consolidated function for KV cache info, clear, save, and load.
+ */
+JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_handleKVCacheAction(JNIEnv* env, jobject obj, jint action, jint slotId, jstring jfilename) {
+    try {
+        // Get server context pointer from Java object
+        jlong server_handle = env->GetLongField(obj, f_model_pointer);
+        if (server_handle == 0) {
+            env->ThrowNew(c_llama_error, "Model is not loaded");
+            return nullptr;
+        }
+
+        auto* ctx_server = reinterpret_cast<server_context*>(server_handle);
+        
+        // Process based on action type
+        switch (action) {
+            case 0: { // INFO - Get KV cache information
+                // Create a task to get KV cache info
+                server_task task(SERVER_TASK_TYPE_METRICS);  // Use metrics task to get info
+                task.id = ctx_server->queue_tasks.get_new_id();
+                task.slot_action.slot_id = slotId;
+                
+                ctx_server->queue_results.add_waiting_task_id(task.id);
+                ctx_server->queue_tasks.post(task, true);  // High priority
+                
+                server_task_result_ptr result = ctx_server->queue_results.recv(task.id);
+                ctx_server->queue_results.remove_waiting_task_id(task.id);
+                
+                if (result->is_error()) {
+                    std::string error_msg = result->to_json()["message"].get<std::string>();
+                    env->ThrowNew(c_llama_error, error_msg.c_str());
+                    return nullptr;
+                }
+                
+                // Extract KV cache information from metrics
+                auto* metrics_result = dynamic_cast<server_task_result_metrics*>(result.get());
+                if (metrics_result == nullptr) {
+                    env->ThrowNew(c_llama_error, "Invalid metrics result");
+                    return nullptr;
+                }
+                
+                // Create response with KV cache information
+                json kv_info = {
+                    {"action", "info"},
+                    {"slot_id", slotId},
+                    {"kv_cache_tokens", metrics_result->kv_cache_tokens_count},
+                    {"kv_cache_used_cells", metrics_result->kv_cache_used_cells},
+                    {"success", true}
+                };
+                
+                // Return as JSON string
+                std::string info_str = kv_info.dump(2);
+                return env->NewStringUTF(info_str.c_str());
+            }
+                
+            case 1: { // CLEAR - Clear KV cache
+                // Create a task to clear KV cache
+                server_task task(SERVER_TASK_TYPE_SLOT_ERASE);  // Use slot erase to clear cache
+                task.id = ctx_server->queue_tasks.get_new_id();
+                task.slot_action.slot_id = slotId;
+                
+                ctx_server->queue_results.add_waiting_task_id(task.id);
+                ctx_server->queue_tasks.post(task);
+                
+                server_task_result_ptr result = ctx_server->queue_results.recv(task.id);
+                ctx_server->queue_results.remove_waiting_task_id(task.id);
+                
+                if (result->is_error()) {
+                    std::string error_msg = result->to_json()["message"].get<std::string>();
+                    env->ThrowNew(c_llama_error, error_msg.c_str());
+                    return nullptr;
+                }
+                
+                // Create response indicating success
+                json clear_response = {
+                    {"action", "clear"},
+                    {"slot_id", slotId},
+                    {"success", true}
+                };
+                
+                SRV_INF("KV cache cleared for slot %d\n", slotId);
+                
+                // Return as JSON string
+                std::string clear_str = clear_response.dump(2);
+                return env->NewStringUTF(clear_str.c_str());
+            }
+                
+            case 2: { // SAVE - Save KV cache
+                // Check if slot save is enabled
+                if (ctx_server->params_base.slot_save_path.empty()) {
+                    env->ThrowNew(c_llama_error, "This server does not support KV cache save. Start it with `--slot-save-path`");
+                    return nullptr;
+                }
+                
+                // Get the filename
+                std::string filename = parse_jstring(env, jfilename);
+                if (!fs_validate_filename(filename)) {
+                    env->ThrowNew(c_llama_error, "Invalid filename");
+                    return nullptr;
+                }
+                
+                std::string filepath = ctx_server->params_base.slot_save_path + filename;
+                
+                // Create the save task
+                server_task task(SERVER_TASK_TYPE_SLOT_SAVE);
+                task.id = ctx_server->queue_tasks.get_new_id();
+                task.slot_action.slot_id = slotId;
+                task.slot_action.filename = filename;
+                task.slot_action.filepath = filepath;
+                
+                ctx_server->queue_results.add_waiting_task_id(task.id);
+                ctx_server->queue_tasks.post(task);
+                
+                server_task_result_ptr result = ctx_server->queue_results.recv(task.id);
+                ctx_server->queue_results.remove_waiting_task_id(task.id);
+                
+                if (result->is_error()) {
+                    std::string error_msg = result->to_json()["message"].get<std::string>();
+                    env->ThrowNew(c_llama_error, error_msg.c_str());
+                    return nullptr;
+                }
+                
+                // Create response indicating success
+                json save_response = {
+                    {"action", "save"},
+                    {"slot_id", slotId},
+                    {"filename", filename},
+                    {"success", true}
+                };
+                
+                SRV_INF("KV cache saved for slot %d to file %s\n", slotId, filename.c_str());
+                
+                // Return as JSON string
+                std::string save_str = save_response.dump(2);
+                return env->NewStringUTF(save_str.c_str());
+            }
+                
+            case 3: { // LOAD - Load KV cache
+                // Check if slot save is enabled
+                if (ctx_server->params_base.slot_save_path.empty()) {
+                    env->ThrowNew(c_llama_error, "This server does not support KV cache load. Start it with `--slot-save-path`");
+                    return nullptr;
+                }
+                
+                // Get the filename
+                std::string filename = parse_jstring(env, jfilename);
+                if (!fs_validate_filename(filename)) {
+                    env->ThrowNew(c_llama_error, "Invalid filename");
+                    return nullptr;
+                }
+                
+                std::string filepath = ctx_server->params_base.slot_save_path + filename;
+                
+                // Create the restore task
+                server_task task(SERVER_TASK_TYPE_SLOT_RESTORE);
+                task.id = ctx_server->queue_tasks.get_new_id();
+                task.slot_action.slot_id = slotId;
+                task.slot_action.filename = filename;
+                task.slot_action.filepath = filepath;
+                
+                ctx_server->queue_results.add_waiting_task_id(task.id);
+                ctx_server->queue_tasks.post(task);
+                
+                server_task_result_ptr result = ctx_server->queue_results.recv(task.id);
+                ctx_server->queue_results.remove_waiting_task_id(task.id);
+                
+                if (result->is_error()) {
+                    std::string error_msg = result->to_json()["message"].get<std::string>();
+                    env->ThrowNew(c_llama_error, error_msg.c_str());
+                    return nullptr;
+                }
+                
+                // Create response indicating success
+                json load_response = {
+                    {"action", "load"},
+                    {"slot_id", slotId},
+                    {"filename", filename},
+                    {"success", true}
+                };
+                
+                SRV_INF("KV cache loaded for slot %d from file %s\n", slotId, filename.c_str());
+                
+                // Return as JSON string
+                std::string load_str = load_response.dump(2);
+                return env->NewStringUTF(load_str.c_str());
+            }
+                
+            default:
+                env->ThrowNew(c_llama_error, "Invalid KV cache action");
+                return nullptr;
+        }
+    } catch (const std::exception& e) {
+        SRV_ERR("Exception in handleKVCacheAction: %s\n", e.what());
+        env->ThrowNew(c_llama_error, e.what());
+        return nullptr;
+    }
+}

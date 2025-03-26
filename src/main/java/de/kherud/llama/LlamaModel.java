@@ -292,4 +292,20 @@ public class LlamaModel implements AutoCloseable {
 	 * @return an array of integers each representing a token id
 	 */
 	public native int[] encode(String prompt);
+	
+	/**
+	 * Manage KV cache operations for a specific slot.
+	 * 
+	 * @param action Action to perform: 0=INFO, 1=CLEAR, 2=SAVE, 3=LOAD
+	 * @param slotId The ID of the slot to operate on
+	 * @param filename Filename for save/load operations (ignored for INFO and CLEAR)
+	 * @return JSON string with operation result
+	 */
+	public native String handleKVCacheAction(int action, int slotId, String filename);
+
+	// Constants for KV cache actions
+	public static final int KVCACHE_ACTION_INFO = 0;
+	public static final int KVCACHE_ACTION_CLEAR = 1;
+	public static final int KVCACHE_ACTION_SAVE = 2;
+	public static final int KVCACHE_ACTION_LOAD = 3;
 }

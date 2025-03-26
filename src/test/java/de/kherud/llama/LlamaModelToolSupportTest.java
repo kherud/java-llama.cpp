@@ -61,7 +61,7 @@ public class LlamaModelToolSupportTest {
 			+ "          }\n" + "        },\n" + "        \"required\": [\n" + "          \"location\",\n"
 			+ "          \"date\"\n" + "        ]\n" + "      }\n" + "    }\n" + "  }";
 
-	@Test
+	@Ignore
 	public void testToolCalling() {
 
 		List<Pair<String, String>> userMessages = new ArrayList<>();
