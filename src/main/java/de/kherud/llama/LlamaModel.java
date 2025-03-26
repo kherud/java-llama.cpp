@@ -308,4 +308,7 @@ public class LlamaModel implements AutoCloseable {
 	public static final int KVCACHE_ACTION_CLEAR = 1;
 	public static final int KVCACHE_ACTION_SAVE = 2;
 	public static final int KVCACHE_ACTION_LOAD = 3;
+	
+	
+	public native boolean configureParallelInference(String config);
 }

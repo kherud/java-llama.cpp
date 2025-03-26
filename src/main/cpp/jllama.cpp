@@ -2305,3 +2305,129 @@ JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_handleKVCacheAction(JN
         return nullptr;
     }
 }
+
+/**
+ * Configure parallel inference settings.
+ * Controls how inference tasks are distributed and executed in parallel.
+ */
+JNIEXPORT jboolean JNICALL Java_de_kherud_llama_LlamaModel_configureParallelInference(JNIEnv* env, jobject obj, jstring jconfig) {
+    try {
+        // Get server context pointer from Java object
+        jlong server_handle = env->GetLongField(obj, f_model_pointer);
+        if (server_handle == 0) {
+            env->ThrowNew(c_llama_error, "Model is not loaded");
+            return JNI_FALSE;
+        }
+
+        auto* ctx_server = reinterpret_cast<server_context*>(server_handle);
+        
+        // Parse configuration from JSON
+        std::string config_str = parse_jstring(env, jconfig);
+        json config = json::parse(config_str);
+        
+        // Store original settings for rollback in case of failure
+        int original_n_parallel = ctx_server->params_base.n_parallel;
+        float original_similarity_threshold = ctx_server->slot_prompt_similarity;
+        
+        // Track changes to report
+        json changes = json::object();
+        bool changes_made = false;
+        
+        if (config.contains("n_parallel")) {
+            int n_parallel = config["n_parallel"].get<int>();
+            if (n_parallel <= 0) {
+                env->ThrowNew(c_llama_error, "n_parallel must be greater than 0");
+                return JNI_FALSE;
+            }
+            
+            if (n_parallel != ctx_server->params_base.n_parallel) {
+                // Changing the number of parallel slots requires model reloading
+                // which isn't supported at runtime, so we'll throw an error
+                env->ThrowNew(c_llama_error, "Changing the number of parallel slots requires restarting the model");
+                return JNI_FALSE;
+            }
+            
+            changes["n_parallel"] = n_parallel;
+        }
+        
+        if (config.contains("slot_prompt_similarity")) {
+            float similarity = config["slot_prompt_similarity"].get<float>();
+            if (similarity < 0.0f || similarity > 1.0f) {
+                env->ThrowNew(c_llama_error, "slot_prompt_similarity must be between 0.0 and 1.0");
+                return JNI_FALSE;
+            }
+            
+            ctx_server->slot_prompt_similarity = similarity;
+            changes["slot_prompt_similarity"] = similarity;
+            changes_made = true;
+        }
+        
+        // Check for other parameters in server context that you want to configure
+        // For example, n_threads, n_threads_batch, etc.
+        if (config.contains("n_threads")) {
+            int n_threads = config["n_threads"].get<int>();
+            if (n_threads <= 0) {
+                env->ThrowNew(c_llama_error, "n_threads must be greater than 0");
+                return JNI_FALSE;
+            }
+            
+            ctx_server->params_base.cpuparams.n_threads = n_threads;
+            changes["n_threads"] = n_threads;
+            changes_made = true;
+        }
+        
+        if (config.contains("n_threads_batch")) {
+            int n_threads_batch = config["n_threads_batch"].get<int>();
+            if (n_threads_batch <= 0) {
+                env->ThrowNew(c_llama_error, "n_threads_batch must be greater than 0");
+                return JNI_FALSE;
+            }
+            
+            ctx_server->params_base.cpuparams_batch.n_threads = n_threads_batch;
+            changes["n_threads_batch"] = n_threads_batch;
+            changes_made = true;
+        }
+        
+        // Since there's no dedicated task type for updating parallel config,
+        // we'll use the metrics task to ensure the changes are propagated
+        // through the server context
+        if (changes_made) {
+            // Request metrics to ensure changes are propagated
+            server_task task(SERVER_TASK_TYPE_METRICS);
+            task.id = ctx_server->queue_tasks.get_new_id();
+            
+            ctx_server->queue_results.add_waiting_task_id(task.id);
+            ctx_server->queue_tasks.post(task, true);  // High priority
+            
+            // Wait for the result
+            server_task_result_ptr result = ctx_server->queue_results.recv(task.id);
+            ctx_server->queue_results.remove_waiting_task_id(task.id);
+            
+            if (result->is_error()) {
+                // Rollback changes if there was an error
+                ctx_server->params_base.n_parallel = original_n_parallel;
+                ctx_server->slot_prompt_similarity = original_similarity_threshold;
+                
+                std::string error_msg = result->to_json()["message"].get<std::string>();
+                env->ThrowNew(c_llama_error, error_msg.c_str());
+                return JNI_FALSE;
+            }
+            
+            // Create a success response
+            json response = {
+                {"success", true},
+                {"changes", changes}
+            };
+            
+            SRV_INF("Parallel inference configuration updated: %s\n", changes.dump().c_str());
+            return JNI_TRUE;
+        } else {
+            SRV_INF("No parallel inference parameters were changed\n", " ");
+            return JNI_TRUE;
+        }
+    } catch (const std::exception& e) {
+        SRV_ERR("Exception in configureParallelInference: %s\n", e.what());
+        env->ThrowNew(c_llama_error, e.what());
+        return JNI_FALSE;
+    }
+}

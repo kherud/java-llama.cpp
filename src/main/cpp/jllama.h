@@ -157,6 +157,8 @@ JNIEXPORT jintArray JNICALL Java_de_kherud_llama_LlamaModel_encode(JNIEnv * , jo
  */
 JNIEXPORT jstring JNICALL Java_de_kherud_llama_LlamaModel_handleKVCacheAction(JNIEnv* env, jobject obj, jint action, jint slotId, jstring jfilename);
 
+JNIEXPORT jboolean JNICALL Java_de_kherud_llama_LlamaModel_configureParallelInference(JNIEnv* , jobject , jstring );
+
   #ifdef __cplusplus
 }
 #endif
