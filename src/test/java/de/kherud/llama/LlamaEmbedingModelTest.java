@@ -37,7 +37,7 @@ public class LlamaEmbedingModelTest {
 		
 		model.handleKVCacheAction(LlamaModel.KVCACHE_ACTION_CLEAR, 0, null);
 	    // Create the request in JSON format
-	    String request = "{\"content\": \"You are an AI Assistant\"}";
+	    String request = "{\"content\": \"AI Assistant\"}";
 	    
 	    // Call the handleEmbeddings method
 	    String response = model.handleEmbeddings(request, false);
