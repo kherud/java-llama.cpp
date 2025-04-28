@@ -2,20 +2,20 @@ package de.kherud.llama.args;
 
 public enum RopeScalingType {
 
-    UNSPECIFIED(-1),
-    NONE(0),
-    LINEAR(1),
-    YARN2(2),
-    LONGROPE(3),
-    MAX_VALUE(3);
+    UNSPECIFIED("unspecified"),
+    NONE("none"),
+    LINEAR("linear"),
+    YARN2("yarn"),
+    LONGROPE("longrope"),
+    MAX_VALUE("maxvalue");
 
-    private final int id;
+    private final String argValue;
 
-    RopeScalingType(int value) {
-        this.id = value;
+    RopeScalingType(String value) {
+        this.argValue = value;
     }
 
-    public int getId() {
-        return id;
+    public String getArgValue() {
+        return argValue;
     }
 }

@@ -2,20 +2,20 @@ package de.kherud.llama.args;
 
 public enum PoolingType {
 
-    UNSPECIFIED(-1),
-    NONE(0),
-    MEAN(1),
-    CLS(2),
-    LAST(3),
-    RANK(4);
+    UNSPECIFIED("unspecified"),
+    NONE("none"),
+    MEAN("mean"),
+    CLS("cls"),
+    LAST("last"),
+    RANK("rank");
 
-    private final int id;
+    private final String argValue;
 
-    PoolingType(int value) {
-        this.id = value;
+    PoolingType(String value) {
+        this.argValue = value;
     }
 
-    public int getId() {
-        return id;
+    public String getArgValue() {
+        return argValue;
     }
 }
