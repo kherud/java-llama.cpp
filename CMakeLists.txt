@@ -69,7 +69,7 @@ endif()
 
 # include jni.h and jni_md.h
 if(NOT DEFINED JNI_INCLUDE_DIRS)
-    if(OS_NAME MATCHES "^Linux" OR OS_NAME STREQUAL "Mac")
+    if(OS_NAME MATCHES "^Linux" OR OS_NAME STREQUAL "Darwin")
         set(JNI_INCLUDE_DIRS .github/include/unix)
     elseif(OS_NAME STREQUAL "Windows")
         set(JNI_INCLUDE_DIRS .github/include/windows)
