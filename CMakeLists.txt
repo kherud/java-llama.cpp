@@ -7,6 +7,8 @@ include(FetchContent)
 set(BUILD_SHARED_LIBS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_SHARED_LIBS OFF)
+set(LLAMA_BUILD_TOOLS ON)
+set(LLAMA_CURL OFF)
 
 option(LLAMA_VERBOSE	"llama: verbose output"		OFF)
 
@@ -15,7 +17,7 @@ option(LLAMA_VERBOSE	"llama: verbose output"		OFF)
 FetchContent_Declare(
 	json
 	GIT_REPOSITORY https://github.com/nlohmann/json
-	GIT_TAG        v3.11.3
+	GIT_TAG        v3.12.0
 )
 FetchContent_MakeAvailable(json)
 
@@ -25,7 +27,7 @@ set(LLAMA_BUILD_COMMON ON)
 FetchContent_Declare(
 	llama.cpp
 	GIT_REPOSITORY https://github.com/ggerganov/llama.cpp.git
-	GIT_TAG        b4916
+	GIT_TAG        b5688
 )
 FetchContent_MakeAvailable(llama.cpp)
 
@@ -96,7 +98,7 @@ add_library(jllama SHARED src/main/cpp/jllama.cpp src/main/cpp/server.hpp src/ma
 
 set_target_properties(jllama PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(jllama PRIVATE src/main/cpp ${JNI_INCLUDE_DIRS})
-target_link_libraries(jllama PRIVATE common llama nlohmann_json)
+target_link_libraries(jllama PRIVATE common mtmd llama nlohmann_json)
 target_compile_features(jllama PRIVATE cxx_std_11)
 
 target_compile_definitions(jllama PRIVATE
