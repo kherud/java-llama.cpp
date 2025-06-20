@@ -200,7 +200,7 @@ class OSInfo {
 			}
 
 			// Java 1.8 introduces a system property to determine armel or armhf
-			// http://bugs.java.com/bugdatabase/view_bug.do?bug_id=8005545
+			// https://bugs.openjdk.org/browse/JDK-8005545
 			String abi = System.getProperty("sun.arch.abi");
 			if (abi != null && abi.startsWith("gnueabihf")) {
 				return "armv7";
