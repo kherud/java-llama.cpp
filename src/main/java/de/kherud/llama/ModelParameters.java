@@ -459,7 +459,7 @@ public final class ModelParameters extends CliParameters {
      * Set pooling type for embeddings (default: model default if unspecified).
      */
     public ModelParameters setPoolingType(PoolingType type) {
-        parameters.put("--pooling", String.valueOf(type.getId()));
+        parameters.put("--pooling", type.getArgValue());
         return this;
     }
 
@@ -467,7 +467,7 @@ public final class ModelParameters extends CliParameters {
      * Set RoPE frequency scaling method (default: linear unless specified by the model).
      */
     public ModelParameters setRopeScaling(RopeScalingType type) {
-        parameters.put("--rope-scaling", String.valueOf(type.getId()));
+        parameters.put("--rope-scaling", type.getArgValue());
         return this;
     }
 
@@ -960,3 +960,5 @@ public final class ModelParameters extends CliParameters {
     }
 
 }
+
+
