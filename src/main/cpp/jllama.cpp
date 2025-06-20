@@ -452,16 +452,6 @@ JNIEXPORT void JNICALL Java_de_kherud_llama_LlamaModel_loadModel(JNIEnv *env, jo
         llama_init_dft.context.reset();
     }
 
-    ctx_server->chat_templates = common_chat_templates_init(ctx_server->model, params.chat_template);
-    try {
-        common_chat_format_example(ctx_server->chat_templates.get(), params.use_jinja);
-    } catch (const std::exception &e) {
-        SRV_WRN("%s: The chat template that comes with this model is not yet supported, falling back to chatml. This "
-                "may cause the model to output suboptimal responses\n",
-                __func__);
-        ctx_server->chat_templates = common_chat_templates_init(ctx_server->model, "chatml");
-    }
-
     // print sample chat example to make it clear which template is used
     LOG_INF("%s: chat template, chat_template: %s, example_format: '%s'\n", __func__,
             common_chat_templates_source(ctx_server->chat_templates.get()),
