@@ -9,10 +9,16 @@ on:
   release:
     types: [ created ]
 env:
-  MODEL_URL: "https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf"
-  MODEL_NAME: "codellama-7b.Q2_K.gguf"
+  REASONING_MODEL_URL: "https://huggingface.co/ggml-org/models/resolve/main/tinyllamas/stories260K.gguf"
+  REASONING_MODEL_NAME: "stories260K.gguf"
+  INFILL_MODEL_URL: "https://huggingface.co/ggml-org/models/resolve/main/tinyllamas/stories260K-infill.gguf"
+  INFILL_MODEL_NAME: "stories260K-infill.gguf"
+  MOE_MODEL_URL: "https://huggingface.co/ggml-org/stories15M_MOE/resolve/main/stories15M_MOE-F16.gguf"
+  MOE_MODEL_NAME: "stories15M_MOE-F16.gguf"
   RERANKING_MODEL_URL: "https://huggingface.co/gpustack/jina-reranker-v1-tiny-en-GGUF/resolve/main/jina-reranker-v1-tiny-en-Q4_0.gguf"
   RERANKING_MODEL_NAME: "jina-reranker-v1-tiny-en-Q4_0.gguf"
+  EMBEDDING_MODEL_URL: "https://huggingface.co/ggml-org/models/resolve/main/bert-bge-small/ggml-model-f16.gguf"
+  EMBEDDING_MODEL_NAME: "ggml-model-f16.gguf"
 jobs:
 
 # todo: doesn't work with the newest llama.cpp version
@@ -146,10 +152,21 @@ jobs:
         with:
           name: Linux-x86_64-libraries
           path: ${{ github.workspace }}/src/main/resources/de/kherud/llama/
-      - name: Download text generation model
-        run: curl -L ${MODEL_URL} --create-dirs -o models/${MODEL_NAME}
-      - name: Download reranking model 
+
+      - name: Download reranking model
         run: curl -L ${RERANKING_MODEL_URL} --create-dirs -o models/${RERANKING_MODEL_NAME}
+
+      - name: Download reasoning calling model
+        run: curl -L ${REASONING_MODEL_URL} --create-dirs -o models/${REASONING_MODEL_NAME}
+
+      - name: Download infill  calling model
+        run: curl -L ${INFILL_MODEL_URL} --create-dirs -o models/${INFILL_MODEL_NAME}
+
+      - name: Download MOE  model
+        run: curl -L ${MOE_MODEL_URL} --create-dirs -o models/${MOE_MODEL_NAME}
+
+      - name: Download EMBEDDING  model
+        run: curl -L ${EMBEDDING_MODEL_URL} --create-dirs -o models/${EMBEDDING_MODEL_NAME}
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'

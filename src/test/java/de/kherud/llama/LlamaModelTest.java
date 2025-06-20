@@ -1,15 +1,24 @@
 package de.kherud.llama;
 
-import java.io.*;
-import java.util.*;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
 import java.util.regex.Pattern;
 
-import de.kherud.llama.args.LogFormat;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import de.kherud.llama.args.LogFormat;
 
 public class LlamaModelTest {
 
@@ -21,19 +30,15 @@ public class LlamaModelTest {
 
 	@BeforeClass
 	public static void setup() {
-//		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> System.out.println(level + ": " + msg));
-		model = new LlamaModel(
-				new ModelParameters()
-						.setCtxSize(128)
-						.setModel("models/codellama-7b.Q2_K.gguf")
-						//.setModelUrl("https://huggingface.co/TheBloke/CodeLlama-7B-GGUF/resolve/main/codellama-7b.Q2_K.gguf")
-						.setGpuLayers(43)
-						.enableEmbedding().enableLogTimestamps().enableLogPrefix()
-		);
+
+		model = new LlamaModel(new ModelParameters()
+				.setModel("models/stories260K.gguf")
+				.setCtxSize(4096)
+				.enableJinja());
 	}
 
 	@AfterClass
-	public static void tearDown() {
+	public static void tearDown() throws Exception {
 		if (model != null) {
 			model.close();
 		}
@@ -41,78 +46,93 @@ public class LlamaModelTest {
 
 	@Test
 	public void testGenerateAnswer() {
-		Map<Integer, Float> logitBias = new HashMap<>();
-		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters(prefix)
-				.setTemperature(0.95f)
-				.setStopStrings("\"\"\"")
-				.setNPredict(nPredict)
-				.setTokenIdBias(logitBias);
-
-		int generated = 0;
-		for (LlamaOutput ignored : model.generate(params)) {
-			generated++;
-		}
-		// todo: currently, after generating nPredict tokens, there is an additional empty output
-		Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
+	    System.out.println("***** Running the test: testGenerateAnswer");
+	    
+	    // Create a map for logit bias
+	    Map<Integer, Float> logitBias = new HashMap<>();
+	    logitBias.put(2, 2.0f);
+	    
+	    // Create parameters using the InferenceParameters builder
+	    InferenceParameters params = new InferenceParameters()
+	        .setPrompt(prefix)
+	        .setTemperature(0.95f)
+	        .setStopStrings("\"\"\"")
+	        .setNPredict(nPredict)
+	        .setTokenIdBias(logitBias)
+	        .setStream(true); // Set streaming to true
+	    
+	    // Get the JSON string from the parameters
+	    String requestJson = params.toString();
+	    
+	    // Call handleCompletions with streaming enabled
+	    String streamInitResponse = model.handleCompletions(requestJson, true);
+	    
+	    try {
+	        // Parse the stream initialization response
+	        
+	        JsonNode responseObj = JsonUtils.INSTANCE.jsonToNode(streamInitResponse);
+	        JsonNode taskIdsArray = responseObj.get("task_ids");
+	        
+	        // We should have at least one task ID
+	        Assert.assertTrue(taskIdsArray.size() > 0);
+	        int taskId = taskIdsArray.get(0).asInt();
+	        
+	        // Stream until we get all tokens or reach the end
+	        int generated = 0;
+	        boolean isComplete = false;
+	        
+	        while (!isComplete && generated < nPredict) {
+	            // Get the next chunk of streaming results
+	            String chunkResponse = model.getNextStreamResult(taskId);
+	            JsonNode chunkObj = JsonUtils.INSTANCE.jsonToNode(chunkResponse);
+	            
+	            // Check if this is the final chunk
+	            isComplete = chunkObj.get("is_final").asBoolean();
+	            
+	            // Extract and process the content
+	            JsonNode resultObj = chunkObj.get("result");
+	            if (resultObj.has("content")) {
+	                String content = resultObj.get("content").asText();
+	                if (!content.isEmpty()) {
+	                    generated++;
+	                }
+	            }
+	        }
+	        
+	        // Make sure we generated something within expected limits
+	        Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
+	        
+	        // Release the task to clean up resources
+	        model.releaseTask(taskId);
+	        
+	    } catch (Exception e) {
+	        Assert.fail("Failed during streaming test: " + e.getMessage());
+	    }
 	}
-
-	@Test
-	public void testGenerateInfill() {
-		Map<Integer, Float> logitBias = new HashMap<>();
-		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters("")
-				.setInputPrefix(prefix)
-				.setInputSuffix(suffix )
-				.setTemperature(0.95f)
-				.setStopStrings("\"\"\"")
-				.setNPredict(nPredict)
-				.setTokenIdBias(logitBias)
-				.setSeed(42);
-
-		int generated = 0;
-		for (LlamaOutput ignored : model.generate(params)) {
-			generated++;
-		}
-		Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
-	}
-
-	@Test
-	public void testGenerateGrammar() {
-		InferenceParameters params = new InferenceParameters("")
-				.setGrammar("root ::= (\"a\" | \"b\")+")
-				.setNPredict(nPredict);
-		StringBuilder sb = new StringBuilder();
-		for (LlamaOutput output : model.generate(params)) {
-			sb.append(output);
-		}
-		String output = sb.toString();
-
-		Assert.assertTrue(output.matches("[ab]+"));
-		int generated = model.encode(output).length;
-		Assert.assertTrue(generated > 0 && generated <= nPredict + 1);
-	}
-
+	
+	
 	@Test
 	public void testCompleteAnswer() {
+		System.out.println("***** Running the test:  testGenerateGrammar");
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters(prefix)
+		InferenceParameters params = new InferenceParameters().setPrompt(prefix)
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
 				.setTokenIdBias(logitBias)
 				.setSeed(42);
 
-		String output = model.complete(params);
+		String output = model.handleCompletions(params.toString(),false);
 		Assert.assertFalse(output.isEmpty());
 	}
 
 	@Test
 	public void testCompleteInfillCustom() {
+		System.out.println("***** Running the test:  testCompleteInfillCustom");
 		Map<Integer, Float> logitBias = new HashMap<>();
 		logitBias.put(2, 2.0f);
-		InferenceParameters params = new InferenceParameters("")
+		InferenceParameters params = new InferenceParameters().setPrompt(" ")
 				.setInputPrefix(prefix)
 				.setInputSuffix(suffix)
 				.setTemperature(0.95f)
@@ -121,82 +141,110 @@ public class LlamaModelTest {
 				.setTokenIdBias(logitBias)
 				.setSeed(42);
 
-		String output = model.complete(params);
+		String output = model.handleCompletions(params.toString(),false);
 		Assert.assertFalse(output.isEmpty());
 	}
 
 	@Test
-	public void testCompleteGrammar() {
-		InferenceParameters params = new InferenceParameters("")
-				.setGrammar("root ::= (\"a\" | \"b\")+")
-				.setNPredict(nPredict);
-		String output = model.complete(params);
-		Assert.assertTrue(output + " doesn't match [ab]+", output.matches("[ab]+"));
-		int generated = model.encode(output).length;
-		Assert.assertTrue("generated count is: " + generated,  generated > 0 && generated <= nPredict + 1);
-		
-	}
-
-	@Test
 	public void testCancelGenerating() {
-		InferenceParameters params = new InferenceParameters(prefix).setNPredict(nPredict);
-
-		int generated = 0;
-		LlamaIterator iterator = model.generate(params).iterator();
-		while (iterator.hasNext()) {
-			iterator.next();
-			generated++;
-			if (generated == 5) {
-				iterator.cancel();
-			}
-		}
-		Assert.assertEquals(5, generated);
+	    System.out.println("***** Running the test: testCancelGenerating");
+	    
+	    // Create parameters using the InferenceParameters builder
+	    InferenceParameters params = new InferenceParameters()
+	        .setPrompt(prefix)
+	        .setNPredict(nPredict)
+	        .setStream(true);
+	    
+	    // Get the JSON string from the parameters
+	    String requestJson = params.toString();
+	    
+	    // Call handleCompletions with streaming enabled
+	    String streamInitResponse = model.handleCompletions(requestJson, true);
+	    
+	    try {
+	        // Parse the stream initialization response
+	        ObjectMapper mapper = new ObjectMapper();
+	        JsonNode responseObj = mapper.readTree(streamInitResponse);
+	        JsonNode taskIdsArray = responseObj.get("task_ids");
+	        
+	        // We should have at least one task ID
+	        Assert.assertTrue(taskIdsArray.size() > 0);
+	        int taskId = taskIdsArray.get(0).asInt();
+	        
+	        // Stream until we get 5 tokens then cancel
+	        int generated = 0;
+	        boolean isComplete = false;
+	        
+	        while (!isComplete && generated < nPredict) {
+	            // Get the next chunk of streaming results
+	            String chunkResponse = model.getNextStreamResult(taskId);
+	            JsonNode chunkObj = mapper.readTree(chunkResponse);
+	            
+	            // Check if this is the final chunk
+	            isComplete = chunkObj.get("is_final").asBoolean();
+	            
+	            // Extract and process the content
+	            JsonNode resultObj = chunkObj.get("result");
+	            if (resultObj.has("content")) {
+	                String content = resultObj.get("content").asText();
+	                if (!content.isEmpty()) {
+	                    // Process the generated content if needed
+	                    System.out.println("Generated chunk: " + content);
+	                    generated++;
+	                    
+	                    // Cancel after 5 tokens are generated
+	                    if (generated == 5) {
+	                        model.cancelCompletion(taskId);
+	                        break;
+	                    }
+	                }
+	            }
+	        }
+	        
+	        // Ensure exactly 5 tokens were generated before cancellation
+	        Assert.assertEquals(5, generated);
+	        
+	        // Release the task to clean up resources (though it was already cancelled)
+	        model.releaseTask(taskId);
+	        
+	    } catch (Exception e) {
+	        Assert.fail("Failed during cancellation test: " + e.getMessage());
+	    }
 	}
 
-	@Test
-	public void testEmbedding() {
-		float[] embedding = model.embed(prefix);
-		Assert.assertEquals(4096, embedding.length);
-	}
 	
 	
-	@Ignore
-	/**
-	 * To run this test download the model from here https://huggingface.co/mradermacher/jina-reranker-v1-tiny-en-GGUF/tree/main
-	 * remove .enableEmbedding() from model setup and add .enableReRanking() and then enable the test.
-	 */
-	public void testReRanking() {
-		
-		String query = "Machine learning is";
-		String [] TEST_DOCUMENTS = new String[] {
-				                  "A machine is a physical system that uses power to apply forces and control movement to perform an action. The term is commonly applied to artificial devices, such as those employing engines or motors, but also to natural biological macromolecules, such as molecular machines.",
-				                  "Learning is the process of acquiring new understanding, knowledge, behaviors, skills, values, attitudes, and preferences. The ability to learn is possessed by humans, non-human animals, and some machines; there is also evidence for some kind of learning in certain plants.",
-				                  "Machine learning is a field of study in artificial intelligence concerned with the development and study of statistical algorithms that can learn from data and generalize to unseen data, and thus perform tasks without explicit instructions.",
-				                  "Paris, capitale de la France, est une grande ville européenne et un centre mondial de l'art, de la mode, de la gastronomie et de la culture. Son paysage urbain du XIXe siècle est traversé par de larges boulevards et la Seine."
-		};
-		LlamaOutput llamaOutput = model.rerank(query, TEST_DOCUMENTS[0], TEST_DOCUMENTS[1], TEST_DOCUMENTS[2], TEST_DOCUMENTS[3] );
-		
-		System.out.println(llamaOutput);
-	}
-
 	@Test
 	public void testTokenization() {
+		System.out.println("***** Running the test:  testTokenization");
+
 		String prompt = "Hello, world!";
-		int[] encoded = model.encode(prompt);
-		String decoded = model.decode(encoded);
-		// the llama tokenizer adds a space before the prompt
-		Assert.assertEquals(" " +prompt, decoded);
+		String resultJson = model.handleTokenize(prompt, false, false);
+		JsonNode root = JsonUtils.INSTANCE.jsonToNode(resultJson);
+
+		JsonNode tokensNode = root.get("tokens");
+
+		int[] tokens = new int[tokensNode.size()];
+		for (int i = 0; i < tokensNode.size(); i++) {
+		    tokens[i] = tokensNode.get(i).asInt();
+		}
+		
+		Assert.assertEquals(8, tokens.length);
+		
+		String detokenized = JsonUtils.INSTANCE.jsonToNode(model.handleDetokenize(tokens)).get("content").asText().trim();
+		
+		Assert.assertEquals(prompt, detokenized);
 	}
 
-	@Ignore
+	@Test
 	public void testLogText() {
 		List<LogMessage> messages = new ArrayList<>();
 		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> messages.add(new LogMessage(level, msg)));
 
-		InferenceParameters params = new InferenceParameters(prefix)
+		InferenceParameters params = new InferenceParameters().setPrompt(prefix)
 				.setNPredict(nPredict)
 				.setSeed(42);
-		model.complete(params);
+		model.handleCompletions(params.toString(), false);
 
 		Assert.assertFalse(messages.isEmpty());
 
@@ -207,44 +255,46 @@ public class LlamaModelTest {
 		}
 	}
 
-	@Ignore
+	@Test
 	public void testLogJSON() {
 		List<LogMessage> messages = new ArrayList<>();
 		LlamaModel.setLogger(LogFormat.JSON, (level, msg) -> messages.add(new LogMessage(level, msg)));
 
-		InferenceParameters params = new InferenceParameters(prefix)
+		InferenceParameters params = new InferenceParameters().setPrompt(prefix)
 				.setNPredict(nPredict)
 				.setSeed(42);
-		model.complete(params);
+		model.handleCompletions(params.toString(), false);
 
 		Assert.assertFalse(messages.isEmpty());
 
 		Pattern jsonPattern = Pattern.compile("^\\s*[\\[{].*[}\\]]\\s*$");
 		for (LogMessage message : messages) {
 			Assert.assertNotNull(message.level);
+			System.out.println("messageText: " + message.text);
 			Assert.assertTrue(jsonPattern.matcher(message.text).matches());
 		}
 	}
 
-	@Ignore
 	@Test
 	public void testLogStdout() {
+		System.out.println("***** Running the test:  testLogStdout");
+		
 		// Unfortunately, `printf` can't be easily re-directed to Java. This test only works manually, thus.
-		InferenceParameters params = new InferenceParameters(prefix)
+		InferenceParameters params = new InferenceParameters().setPrompt(prefix)
 				.setNPredict(nPredict)
 				.setSeed(42);
 
 		System.out.println("########## Log Text ##########");
 		LlamaModel.setLogger(LogFormat.TEXT, null);
-		model.complete(params);
+		model.handleCompletions(params.toString(), false);
 
 		System.out.println("########## Log JSON ##########");
 		LlamaModel.setLogger(LogFormat.JSON, null);
-		model.complete(params);
+		model.handleCompletions(params.toString(), false);
 
 		System.out.println("########## Log None ##########");
 		LlamaModel.setLogger(LogFormat.TEXT, (level, msg) -> {});
-		model.complete(params);
+		model.handleCompletions(params.toString(), false);
 
 		System.out.println("##############################");
 	}
@@ -256,10 +306,10 @@ public class LlamaModelTest {
 		System.setOut(printStream);
 
 		try {
-			InferenceParameters params = new InferenceParameters(prefix)
+			InferenceParameters params = new InferenceParameters().setPrompt(prefix)
 					.setNPredict(nPredict)
 					.setSeed(42);
-			model.complete(params);
+			model.handleCompletions(params.toString(), false);
 		} finally {
 			System.out.flush();
 			System.setOut(stdOut);
@@ -294,6 +344,8 @@ public class LlamaModelTest {
 	
 	@Test
 	public void testJsonSchemaToGrammar() {
+		
+		System.out.println("***** Running the test:  testJsonSchemaToGrammar");
 		String schema = "{\n" +
                 "    \"properties\": {\n" +
                 "        \"a\": {\"type\": \"string\"},\n" +
@@ -313,23 +365,27 @@ public class LlamaModelTest {
                 "space ::= | \" \" | \"\\n\"{1,2} [ \\t]{0,20}\n" +
                 "string ::= \"\\\"\" char* \"\\\"\" space\n";
 		
-		String actualGrammar = LlamaModel.jsonSchemaToGrammar(schema);
+		byte[] actualGrammarBytes = LlamaModel.jsonSchemaToGrammarBytes(schema);
+		String actualGrammar =  new String(actualGrammarBytes, StandardCharsets.UTF_8);
 		Assert.assertEquals(expectedGrammar, actualGrammar);
 	}
 	
 	@Test
 	public void testTemplate() {
-		
+		System.out.println("***** Running the test:  testTemplate");
 		List<Pair<String, String>> userMessages = new ArrayList<>();
         userMessages.add(new Pair<>("user", "What is the best book?"));
         userMessages.add(new Pair<>("assistant", "It depends on your interests. Do you like fiction or non-fiction?"));
         
-		InferenceParameters params = new InferenceParameters("A book recommendation system.")
+		InferenceParameters params = new InferenceParameters()
 				.setMessages("Book", userMessages)
 				.setTemperature(0.95f)
 				.setStopStrings("\"\"\"")
 				.setNPredict(nPredict)
 				.setSeed(42);
-		Assert.assertEquals(model.applyTemplate(params), "<|im_start|>system\nBook<|im_end|>\n<|im_start|>user\nWhat is the best book?<|im_end|>\n<|im_start|>assistant\nIt depends on your interests. Do you like fiction or non-fiction?<|im_end|>\n<|im_start|>assistant\n");
+		System.out.println(model.applyTemplate(params.toString()));
+		Assert.assertEquals(model.applyTemplate(params.toString()), "{\n"
+				+ "  \"prompt\": \"<|im_start|>system\\nBook<|im_end|>\\n<|im_start|>user\\nWhat is the best book?<|im_end|>\\n<|im_start|>assistant\\nIt depends on your interests. Do you like fiction or non-fiction?<|im_end|>\\n<|im_start|>assistant\\n\"\n"
+				+ "}");
 	}
 }

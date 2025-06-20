@@ -43,3 +43,5 @@ src/test/resources/**/*.gbnf
 **/*.etag
 **/*.lastModified
 src/main/cpp/llama.cpp/
+/.classpath
+/.project

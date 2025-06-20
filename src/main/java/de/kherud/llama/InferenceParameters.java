@@ -50,11 +50,14 @@ public final class InferenceParameters extends JsonParameters {
 	private static final String PARAM_USE_CHAT_TEMPLATE = "use_chat_template";
 	private static final String PARAM_USE_JINJA = "use_jinja";
 	private static final String PARAM_MESSAGES = "messages";
-
-	public InferenceParameters(String prompt) {
-		// we always need a prompt
-		setPrompt(prompt);
-	}
+	private static final String PARAM_TOOLS = "tools";
+	private static final String PARAM_TOOL_CHOICE = "tool_choice";
+	private static final String PARAM_PARALLEL_TOOL_CALLS = "parallel_tool_calls";
+	private static final String PARAM_POST_SAMPLING_PROBS = "post_sampling_probs";
+	private static final String PARAM_CHAT_FORMAT ="chat_format";
+	private static final String PARAM_CHAT_TEMPLATE ="chat_template";
+	private static final String PARAM_QUERY = "query";
+	private static final String PARAM_DOCUMENTS = "documents";
 
 	/**
 	 * Set the prompt to start generation with (default: empty)
@@ -537,9 +540,65 @@ public final class InferenceParameters extends JsonParameters {
         parameters.put(PARAM_MESSAGES, messagesBuilder.toString());
         return this;
     }
+    
+    
 
 	InferenceParameters setStream(boolean stream) {
 		parameters.put(PARAM_STREAM, String.valueOf(stream));
+		return this;
+	}
+	
+	/**
+	 * Set Tools
+	 */
+	public InferenceParameters setTools(String... tools) {
+		StringBuilder toolBuilder = new StringBuilder();
+		
+		for (String tool:tools) {
+			if (toolBuilder.length() > 0) {
+				toolBuilder.append(",");
+			}
+			toolBuilder.append(tool);
+			
+		}
+		
+ 		parameters.put(PARAM_TOOLS, "[" + toolBuilder.toString() +"]");
+ 		parameters.put(PARAM_TOOL_CHOICE, toJsonString("required"));
+// 		parameters.put(PARAM_PARALLEL_TOOL_CALLS,String.valueOf(false));
+		return this;
+	}
+	
+	public InferenceParameters setPostSamplingProbs(boolean postSamplingProbs) {
+		parameters.put(PARAM_POST_SAMPLING_PROBS, String.valueOf(postSamplingProbs));
+		return this;
+	}
+
+	public InferenceParameters setChatTemplate(String chatTemplate) {
+		parameters.put(PARAM_CHAT_TEMPLATE, toJsonString(chatTemplate));
+		return this;
+	}
+
+	public InferenceParameters setQuery(String query) {
+		parameters.put(PARAM_QUERY, toJsonString(query));
+		return this;
+		
+	}
+
+	public InferenceParameters setDocuments(String[] documents) {
+		
+		if (documents.length > 0) {
+			StringBuilder builder = new StringBuilder();
+			builder.append("[");
+			for (int i = 0; i < documents.length; i++) {
+				builder.append(toJsonString(documents[i]));
+				if (i < documents.length - 1) {
+					builder.append(", ");
+				}
+			}
+			builder.append("]");
+			parameters.put(PARAM_DOCUMENTS, builder.toString());
+		}
+		
 		return this;
 	}
 
