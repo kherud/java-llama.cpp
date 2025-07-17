@@ -459,7 +459,10 @@ public final class ModelParameters extends CliParameters {
      * Set pooling type for embeddings (default: model default if unspecified).
      */
     public ModelParameters setPoolingType(PoolingType type) {
-        parameters.put("--pooling", type.getArgValue());
+        if (type != PoolingType.UNSPECIFIED) {
+            // Don't set if unspecified, as it will use the model's default pooling type
+            parameters.put("--pooling", type.name().toLowerCase());
+        }
         return this;
     }
 
@@ -960,5 +963,3 @@ public final class ModelParameters extends CliParameters {
     }
 
 }
-
-
