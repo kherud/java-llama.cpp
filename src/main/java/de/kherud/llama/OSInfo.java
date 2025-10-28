@@ -175,7 +175,7 @@ class OSInfo {
 			if (isAndroid()) {
 				if (armType.startsWith("aarch64")) {
 					// Use arm64
-					return "aarch64";
+					return "arm64-v8a";
 				}
 				else {
 					return "arm";

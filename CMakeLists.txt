@@ -33,13 +33,17 @@ FetchContent_MakeAvailable(llama.cpp)
 
 # find which OS we build for if not set (make sure to run mvn compile first)
 if(NOT DEFINED OS_NAME)
-    find_package(Java REQUIRED)
-    find_program(JAVA_EXECUTABLE NAMES java)
-	execute_process(
-      COMMAND ${JAVA_EXECUTABLE} -cp ${CMAKE_SOURCE_DIR}/target/classes de.kherud.llama.OSInfo --os
-      OUTPUT_VARIABLE OS_NAME
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
+    if(ANDROID_ABI)
+        set(OS_NAME "Android")
+    else()
+        find_package(Java REQUIRED)
+        find_program(JAVA_EXECUTABLE NAMES java)
+        execute_process(
+            COMMAND ${JAVA_EXECUTABLE} -cp ${CMAKE_SOURCE_DIR}/target/classes de.kherud.llama.OSInfo --os
+            OUTPUT_VARIABLE OS_NAME
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+    endif()
 endif()
 if(NOT OS_NAME)
     message(FATAL_ERROR "Could not determine OS name")
@@ -47,13 +51,17 @@ endif()
 
 # find which architecture we build for if not set  (make sure to run mvn compile first)
 if(NOT DEFINED OS_ARCH)
-    find_package(Java REQUIRED)
-    find_program(JAVA_EXECUTABLE NAMES java)
-    execute_process(
-      COMMAND ${JAVA_EXECUTABLE} -cp ${CMAKE_SOURCE_DIR}/target/classes de.kherud.llama.OSInfo --arch
-      OUTPUT_VARIABLE OS_ARCH
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
+    if(ANDROID_ABI)
+        set(OS_ARCH ${ANDROID_ABI})
+    else()
+        find_package(Java REQUIRED)
+        find_program(JAVA_EXECUTABLE NAMES java)
+        execute_process(
+            COMMAND ${JAVA_EXECUTABLE} -cp ${CMAKE_SOURCE_DIR}/target/classes de.kherud.llama.OSInfo --arch
+            OUTPUT_VARIABLE OS_ARCH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+        )
+    endif()
 endif()
 if(NOT OS_ARCH)
     message(FATAL_ERROR "Could not determine CPU architecture")
@@ -89,7 +97,12 @@ if(NOT DEFINED JNI_INCLUDE_DIRS)
     endif()
 endif()
 if(NOT JNI_INCLUDE_DIRS)
-    message(FATAL_ERROR "Could not determine JNI include directories")
+    if(ANDROID_ABI)
+        find_package(JNI REQUIRED)
+        set(JNI_INCLUDE_DIRS ${JNI_INCLUDE_DIRS})
+    else()
+        message(FATAL_ERROR "Could not determine JNI include directories")
+    endif()
 endif()
 
 add_library(jllama SHARED src/main/cpp/jllama.cpp src/main/cpp/server.hpp src/main/cpp/utils.hpp)

@@ -1,6 +1,7 @@
 .idea
 target
 build
+build-android
 cmake-build-*
 .DS_Store
 .directory

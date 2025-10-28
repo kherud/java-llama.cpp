@@ -959,6 +959,10 @@ public final class ModelParameters extends CliParameters {
         return this;
     }
 
+    public boolean isDefault(String key) {
+        return !parameters.containsKey("--" + key);
+    }
+
 }
 
 
