@@ -3,6 +3,10 @@
 
 # Java Bindings for [llama.cpp](https://github.com/ggerganov/llama.cpp)
 
+> [!WARNING]
+> **This project is no longer maintained.**
+> It has been forked and is actively maintained at: **[https://github.com/bernardladenthin/java-llama.cpp](https://github.com/bernardladenthin/java-llama.cpp)**
+
 Inference of Meta's LLaMA model (and others) in pure C/C++.
 
 **You are welcome to contribute**
